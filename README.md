@@ -34,6 +34,11 @@ If you host this app on `https://burgosaxel.github.io/finance-tracker-web/`:
 2. In Firebase Console, add `burgosaxel.github.io` to:
    Authentication -> Settings -> Authorized domains.
 3. Rebuild and redeploy after env changes.
+4. In GitHub repo settings, set Pages source to `GitHub Actions`.
+5. Add these repository secrets so the Pages build has Firebase config:
+   `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`,
+   `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`,
+   `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`, `VITE_ALLOWED_EMAILS`.
 
 ## Local development
 ```bash
