@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Modal from "../components/Modal";
 import {
   deleteEntity,
@@ -16,7 +16,7 @@ const EMPTY_ACCOUNT = {
   balance: 0,
 };
 
-export default function SettingsPage({ uid, settings, accounts, onToast }) {
+export default function SettingsPage({ uid, settings, accounts, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [localSettings, setLocalSettings] = useState(cfg);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -24,14 +24,23 @@ export default function SettingsPage({ uid, settings, accounts, onToast }) {
   const [editingId, setEditingId] = useState(null);
   const fileRef = useRef(null);
 
+  useEffect(() => {
+    setLocalSettings(cfg);
+  }, [cfg.currency, cfg.monthStartDay, cfg.recommendedPaymentRate, cfg.utilizationThreshold]);
+
   async function persistSettings() {
-    await saveSettings(uid, {
-      utilizationThreshold: safeNumber(localSettings.utilizationThreshold, 30),
-      currency: localSettings.currency || "USD",
-      monthStartDay: Math.max(1, Math.min(31, safeNumber(localSettings.monthStartDay, 1))),
-      recommendedPaymentRate: safeNumber(localSettings.recommendedPaymentRate, 0.03),
-    });
-    onToast("Settings saved.");
+    try {
+      await saveSettings(uid, {
+        utilizationThreshold: safeNumber(localSettings.utilizationThreshold, 30),
+        currency: localSettings.currency || "USD",
+        monthStartDay: Math.max(1, Math.min(31, safeNumber(localSettings.monthStartDay, 1))),
+        recommendedPaymentRate: safeNumber(localSettings.recommendedPaymentRate, 0.03),
+      });
+      onToast("Settings saved.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to save settings.", "error");
+    }
   }
 
   function startAddAccount() {
@@ -48,46 +57,71 @@ export default function SettingsPage({ uid, settings, accounts, onToast }) {
 
   async function saveAccount() {
     if (!accountForm.name.trim()) return;
-    await upsertEntity(
-      uid,
-      "accounts",
-      {
-        ...accountForm,
-        name: accountForm.name.trim(),
-        balance: safeNumber(accountForm.balance, 0),
-      },
-      editingId || undefined
-    );
-    setAccountOpen(false);
-    onToast("Account saved.");
+    try {
+      await upsertEntity(
+        uid,
+        "accounts",
+        {
+          ...accountForm,
+          name: accountForm.name.trim(),
+          balance: safeNumber(accountForm.balance, 0),
+        },
+        editingId || undefined
+      );
+      setAccountOpen(false);
+      onToast("Account saved.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to save account.", "error");
+    }
   }
 
   async function removeAccount(id) {
-    await deleteEntity(uid, "accounts", id);
-    onToast("Account deleted.");
+    try {
+      await deleteEntity(uid, "accounts", id);
+      onToast("Account deleted.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to delete account.", "error");
+    }
   }
 
   async function exportJson() {
-    const payload = await exportAllUserData(uid);
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `finance-tracker-export-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const payload = await exportAllUserData(uid);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `finance-tracker-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to export data.", "error");
+    }
   }
 
   async function handleImportFile(file) {
-    const text = await file.text();
-    const payload = JSON.parse(text);
-    await importAllUserData(uid, payload);
-    onToast("JSON import complete.");
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      await importAllUserData(uid, payload);
+      onToast("JSON import complete.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to import JSON data.", "error");
+    }
   }
 
   async function runLegacyImport() {
-    await importLegacySnapshot(uid);
-    onToast("Legacy snapshot imported (idempotent).");
+    try {
+      await importLegacySnapshot(uid);
+      onToast("Legacy snapshot imported (idempotent).");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to import legacy snapshot.", "error");
+    }
   }
 
   return (
@@ -189,7 +223,7 @@ export default function SettingsPage({ uid, settings, accounts, onToast }) {
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
-                handleImportFile(file).catch((err) => onToast(err.message || String(err), "error"));
+                handleImportFile(file);
               }
               e.target.value = "";
             }}

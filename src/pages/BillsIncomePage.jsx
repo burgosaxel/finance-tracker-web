@@ -28,7 +28,7 @@ const EMPTY_INCOME = {
   depositAccountId: "",
 };
 
-export default function BillsIncomePage({ uid, bills, income, accounts, settings, onToast }) {
+export default function BillsIncomePage({ uid, bills, income, accounts, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [billOpen, setBillOpen] = useState(false);
   const [billForm, setBillForm] = useState(EMPTY_BILL);
@@ -78,30 +78,45 @@ export default function BillsIncomePage({ uid, bills, income, accounts, settings
 
   async function saveBill() {
     if (!billForm.name.trim()) return;
-    await upsertEntity(
-      uid,
-      "bills",
-      {
-        ...billForm,
-        name: billForm.name.trim(),
-        amount: Math.abs(safeNumber(billForm.amount, 0)),
-        dueDay: Math.max(1, Math.min(31, Number(billForm.dueDay) || 1)),
-        autopay: Boolean(billForm.autopay),
-      },
-      billEditingId || undefined
-    );
-    setBillOpen(false);
-    onToast("Bill saved.");
+    try {
+      await upsertEntity(
+        uid,
+        "bills",
+        {
+          ...billForm,
+          name: billForm.name.trim(),
+          amount: Math.abs(safeNumber(billForm.amount, 0)),
+          dueDay: Math.max(1, Math.min(31, Number(billForm.dueDay) || 1)),
+          autopay: Boolean(billForm.autopay),
+        },
+        billEditingId || undefined
+      );
+      setBillOpen(false);
+      onToast("Bill saved.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to save bill.", "error");
+    }
   }
 
   async function removeBill(id) {
-    await deleteEntity(uid, "bills", id);
-    onToast("Bill deleted.");
+    try {
+      await deleteEntity(uid, "bills", id);
+      onToast("Bill deleted.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to delete bill.", "error");
+    }
   }
 
   async function paid(bill) {
-    await markBillPaid(uid, bill);
-    onToast(`Marked ${bill.name} as paid.`);
+    try {
+      await markBillPaid(uid, bill);
+      onToast(`Marked ${bill.name} as paid.`);
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast(`Failed to mark ${bill.name} as paid.`, "error");
+    }
   }
 
   function startIncomeAdd() {
@@ -118,23 +133,33 @@ export default function BillsIncomePage({ uid, bills, income, accounts, settings
 
   async function saveIncome() {
     if (!incomeForm.name.trim()) return;
-    await upsertEntity(
-      uid,
-      "income",
-      {
-        ...incomeForm,
-        name: incomeForm.name.trim(),
-        expectedAmount: Math.abs(safeNumber(incomeForm.expectedAmount, 0)),
-      },
-      incomeEditingId || undefined
-    );
-    setIncomeOpen(false);
-    onToast("Income entry saved.");
+    try {
+      await upsertEntity(
+        uid,
+        "income",
+        {
+          ...incomeForm,
+          name: incomeForm.name.trim(),
+          expectedAmount: Math.abs(safeNumber(incomeForm.expectedAmount, 0)),
+        },
+        incomeEditingId || undefined
+      );
+      setIncomeOpen(false);
+      onToast("Income entry saved.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to save income entry.", "error");
+    }
   }
 
   async function removeIncome(id) {
-    await deleteEntity(uid, "income", id);
-    onToast("Income entry deleted.");
+    try {
+      await deleteEntity(uid, "income", id);
+      onToast("Income entry deleted.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to delete income entry.", "error");
+    }
   }
 
   return (

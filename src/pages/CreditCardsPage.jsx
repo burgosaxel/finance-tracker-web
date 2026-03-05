@@ -13,7 +13,7 @@ const EMPTY_CARD = {
   dueDay: "",
 };
 
-export default function CreditCardsPage({ uid, cards, settings, onToast }) {
+export default function CreditCardsPage({ uid, cards, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [sortBy, setSortBy] = useState("utilization");
   const [open, setOpen] = useState(false);
@@ -77,27 +77,37 @@ export default function CreditCardsPage({ uid, cards, settings, onToast }) {
 
   async function save() {
     if (!form.name.trim()) return;
-    await upsertEntity(
-      uid,
-      "creditCards",
-      {
-        ...form,
-        name: form.name.trim(),
-        limit: safeNumber(form.limit, 0),
-        balance: safeNumber(form.balance, 0),
-        apr: safeNumber(form.apr, 0),
-        minimumPayment: safeNumber(form.minimumPayment, 0),
-        dueDay: form.dueDay ? Number(form.dueDay) : null,
-      },
-      editingId || undefined
-    );
-    setOpen(false);
-    onToast("Credit card saved.");
+    try {
+      await upsertEntity(
+        uid,
+        "creditCards",
+        {
+          ...form,
+          name: form.name.trim(),
+          limit: safeNumber(form.limit, 0),
+          balance: safeNumber(form.balance, 0),
+          apr: safeNumber(form.apr, 0),
+          minimumPayment: safeNumber(form.minimumPayment, 0),
+          dueDay: form.dueDay ? Number(form.dueDay) : null,
+        },
+        editingId || undefined
+      );
+      setOpen(false);
+      onToast("Credit card saved.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to save credit card.", "error");
+    }
   }
 
   async function remove(id) {
-    await deleteEntity(uid, "creditCards", id);
-    onToast("Credit card deleted.");
+    try {
+      await deleteEntity(uid, "creditCards", id);
+      onToast("Credit card deleted.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to delete credit card.", "error");
+    }
   }
 
   return (

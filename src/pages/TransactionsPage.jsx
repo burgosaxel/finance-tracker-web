@@ -12,7 +12,7 @@ const EMPTY_TX = {
   notes: "",
 };
 
-export default function TransactionsPage({ uid, transactions, accounts, settings, onToast }) {
+export default function TransactionsPage({ uid, transactions, accounts, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -47,23 +47,33 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
 
   async function save() {
     if (!form.payee.trim()) return;
-    await upsertEntity(
-      uid,
-      "transactions",
-      {
-        ...form,
-        payee: form.payee.trim(),
-        amount: safeNumber(form.amount, 0),
-      },
-      editingId || undefined
-    );
-    setOpen(false);
-    onToast("Transaction saved.");
+    try {
+      await upsertEntity(
+        uid,
+        "transactions",
+        {
+          ...form,
+          payee: form.payee.trim(),
+          amount: safeNumber(form.amount, 0),
+        },
+        editingId || undefined
+      );
+      setOpen(false);
+      onToast("Transaction saved.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to save transaction.", "error");
+    }
   }
 
   async function remove(id) {
-    await deleteEntity(uid, "transactions", id);
-    onToast("Transaction deleted.");
+    try {
+      await deleteEntity(uid, "transactions", id);
+      onToast("Transaction deleted.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to delete transaction.", "error");
+    }
   }
 
   return (

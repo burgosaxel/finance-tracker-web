@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { getBudgetDocIdForMonth, upsertEntity } from "../lib/db";
 import { DEFAULT_SETTINGS, formatCurrency, monthKey, safeNumber } from "../lib/finance";
 
-export default function BudgetPage({ uid, budgets, bills, income, transactions, settings, onToast }) {
+export default function BudgetPage({ uid, budgets, bills, income, transactions, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [selectedMonth, setSelectedMonth] = useState(monthKey());
 
@@ -59,20 +59,25 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
   }, [monthIncome, rows]);
 
   async function saveBudget() {
-    const nextCategories = {};
-    rows.forEach((r) => {
-      nextCategories[r.name] = safeNumber(r.assigned, 0);
-    });
-    await upsertEntity(
-      uid,
-      "budgets",
-      {
-        month: selectedMonth,
-        categories: nextCategories,
-      },
-      getBudgetDocIdForMonth(selectedMonth)
-    );
-    onToast("Budget saved.");
+    try {
+      const nextCategories = {};
+      rows.forEach((r) => {
+        nextCategories[r.name] = safeNumber(r.assigned, 0);
+      });
+      await upsertEntity(
+        uid,
+        "budgets",
+        {
+          month: selectedMonth,
+          categories: nextCategories,
+        },
+        getBudgetDocIdForMonth(selectedMonth)
+      );
+      onToast("Budget saved.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to save budget.", "error");
+    }
   }
 
   return (

@@ -28,6 +28,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authError, setAuthError] = useState("");
   const [status, setStatus] = useState("");
+  const [pendingWrites, setPendingWrites] = useState(0);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "info" });
   const [data, setData] = useState(EMPTY_DATA);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -92,6 +94,23 @@ export default function App() {
     return () => unsubs.forEach((u) => u?.());
   }, [user]);
 
+  useEffect(() => {
+    const onMutation = (event) => {
+      const { phase, message } = event.detail || {};
+      if (phase === "start") {
+        setPendingWrites((n) => n + 1);
+      } else if (phase === "success") {
+        setPendingWrites((n) => Math.max(0, n - 1));
+        setLastSavedAt(new Date());
+      } else if (phase === "error") {
+        setPendingWrites((n) => Math.max(0, n - 1));
+        setAuthError(message || "Failed to save data.");
+      }
+    };
+    window.addEventListener("ft-mutation", onMutation);
+    return () => window.removeEventListener("ft-mutation", onMutation);
+  }, []);
+
   async function handleLogin() {
     setAuthError("");
     setStatus("Signing in...");
@@ -109,12 +128,20 @@ export default function App() {
     setRoute("dashboard");
   }
 
+  const topStatus =
+    pendingWrites > 0
+      ? "Saving..."
+      : lastSavedAt
+        ? `Last saved ${lastSavedAt.toLocaleTimeString()}`
+        : status;
+
   const page = useMemo(() => {
     if (!user) return null;
     const shared = {
       uid: user.uid,
       settings,
       onToast: showToast,
+      onError: (message) => setAuthError(message),
     };
     if (route === "dashboard") return <DashboardPage data={data} settings={settings} />;
     if (route === "budget")
@@ -153,7 +180,7 @@ export default function App() {
 
   return (
     <div className="container">
-      <AppShell route={route} user={user} status={status} onSignOut={handleLogout}>
+      <AppShell route={route} user={user} status={topStatus} onSignOut={handleLogout}>
         {authError ? <div className="errorText">{authError}</div> : null}
         {page}
       </AppShell>

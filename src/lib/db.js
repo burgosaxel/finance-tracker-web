@@ -51,6 +51,18 @@ function withId(snap) {
   return { id: snap.id, ...snap.data() };
 }
 
+function emitMutation(phase, error) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("ft-mutation", {
+      detail: {
+        phase,
+        message: error?.message || String(error || ""),
+      },
+    })
+  );
+}
+
 export function subscribeCollection(uid, collectionName, onData, onError, orderField = "name") {
   const col = userCollection(uid, collectionName);
   const q = orderField ? query(col, orderBy(orderField)) : col;
@@ -74,29 +86,50 @@ export function subscribeSettings(uid, onData, onError) {
 }
 
 export async function upsertEntity(uid, collectionName, payload, id = payload?.id) {
-  const nextId = id || crypto.randomUUID();
-  const ref = userDoc(uid, collectionName, nextId);
-  await setDoc(
-    ref,
-    {
-      ...payload,
-      id: nextId,
-      updatedAt: serverTimestamp(),
-      createdAt: payload?.createdAt || serverTimestamp(),
-    },
-    { merge: true }
-  );
-  return nextId;
+  emitMutation("start");
+  try {
+    const nextId = id || crypto.randomUUID();
+    const ref = userDoc(uid, collectionName, nextId);
+    await setDoc(
+      ref,
+      {
+        ...payload,
+        id: nextId,
+        updatedAt: serverTimestamp(),
+        createdAt: payload?.createdAt || serverTimestamp(),
+      },
+      { merge: true }
+    );
+    emitMutation("success");
+    return nextId;
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
 }
 
 export async function deleteEntity(uid, collectionName, id) {
-  const ref = userDoc(uid, collectionName, id);
-  await deleteDoc(ref);
+  emitMutation("start");
+  try {
+    const ref = userDoc(uid, collectionName, id);
+    await deleteDoc(ref);
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
 }
 
 export async function saveSettings(uid, settings) {
-  const ref = userDoc(uid, "settings", "preferences");
-  await setDoc(ref, { ...settings, updatedAt: serverTimestamp() }, { merge: true });
+  emitMutation("start");
+  try {
+    const ref = userDoc(uid, "settings", "preferences");
+    await setDoc(ref, { ...settings, updatedAt: serverTimestamp() }, { merge: true });
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
 }
 
 export async function markBillPaid(uid, bill) {
