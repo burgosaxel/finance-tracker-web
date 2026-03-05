@@ -1,110 +1,318 @@
 :root {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: #111;
-  background: #fafafa;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #111827;
+  background: #f3f4f6;
 }
-body { margin: 0; }
-a { color: inherit; }
-.container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+}
+
+.container {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 14px;
+}
+
 .card {
-  background: white;
-  border: 1px solid #e6e6e6;
+  background: #fff;
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.spacer { flex: 1; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
 button {
-  border: 1px solid #ddd;
+  border: 1px solid #d1d5db;
   background: #fff;
   padding: 8px 12px;
   border-radius: 10px;
   cursor: pointer;
 }
+
 button.primary {
-  background: #111;
+  background: #111827;
   color: #fff;
-  border-color: #111;
+  border-color: #111827;
 }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
-input, textarea {
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  padding: 8px 10px;
-  font: inherit;
-}
-.muted { color: #666; font-size: 13px; }
-.gridWrap { height: calc(100vh - 180px); min-height: 520px; }
-.gridHeader {
-  position: sticky; top: 0; z-index: 2;
-  background: #fff; border-bottom: 1px solid #eee;
-  padding: 10px 12px; border-top-left-radius: 12px; border-top-right-radius: 12px;
-}
-.formulaBar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.nameBox {
-  min-width: 76px;
-  padding: 7px 10px;
-  border: 1px solid #d7dbe0;
-  border-radius: 8px;
-  background: #f7f9fc;
-  font-weight: 600;
-  text-align: center;
-}
-.formulaInput {
-  flex: 1;
-  border: 1px solid #d7dbe0;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font: inherit;
-  background: #fff;
-}
-.cell {
-  box-sizing: border-box;
-  border-right: 1px solid #e6e9ee;
-  border-bottom: 1px solid #e6e9ee;
-  padding: 6px 8px;
-  background: white;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.cell.header {
-  background: #f2f5f9;
-  font-weight: 700;
-  color: #2b2f33;
-}
-.cell.rowHeader {
-  background: #f7f9fc;
-  font-weight: 700;
-  text-align: right;
-  color: #39414a;
-}
-.cell.editable {
-  outline: none;
-  cursor: cell;
-}
-.cell.editable.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.cell.editable.selected {
-  position: relative;
-  z-index: 1;
-  box-shadow: inset 0 0 0 2px #2563eb;
-  background: #f8fbff;
-}
-.cellInput {
+
+input,
+select,
+textarea {
   width: 100%;
-  height: 100%;
-  border: none;
-  outline: none;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 10px;
   background: #fff;
-  font: inherit;
+}
+
+textarea {
+  min-height: 70px;
+}
+
+.errorText {
+  color: #b91c1c;
+  margin-top: 10px;
+}
+
+.appShell {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 12px;
+  min-height: calc(100vh - 28px);
+}
+
+.sidebar {
+  padding: 12px;
+}
+
+.sidebarTitle {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 6px 4px 16px;
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.navLink {
+  color: inherit;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.navLink.active {
+  background: #111827;
+  color: #fff;
+}
+
+.mainPanel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+}
+
+.topbar {
+  padding: 10px 14px;
+}
+
+.pageContent {
+  min-height: 0;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.statsGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.statCard {
+  padding: 12px;
+}
+
+.statValue {
+  margin-top: 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.section {
+  padding: 12px;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 740px;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 9px;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  z-index: 1;
+}
+
+tfoot th,
+tfoot td {
+  background: #f9fafb;
+}
+
+.pill {
+  display: inline-block;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.pill.warn {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.pill.danger {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.cleanList {
+  list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 8px 0;
+}
+
+.listRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.formGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 40;
+  padding: 14px;
+}
+
+.modal {
+  width: min(760px, 100%);
+  padding: 14px;
+}
+
+.toast {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 60;
+  border: 1px solid #d1d5db;
+  background: #111827;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+
+.toast.error {
+  background: #991b1b;
+}
+
+.signInCard {
+  max-width: 460px;
+  margin: 80px auto;
+  padding: 20px;
+}
+
+.neg {
+  color: #b91c1c;
+}
+
+.pos {
+  color: #166534;
+}
+
+@media (max-width: 1024px) {
+  .appShell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebarNav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
 }

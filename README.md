@@ -1,15 +1,21 @@
-# Finance Tracker (private, Firebase Auth + Firestore)
+# Finance Tracker (YNAB-style, Firebase + GitHub Pages)
 
-This is a private web version of your Excel finance tracker.
+This app is a client-only React + Firestore finance tracker with:
+- Google Auth (private access)
+- Dashboard summary + alerts
+- Budget month planning (YNAB-lite)
+- Credit card tracking (limits, utilization, APR, min payment)
+- Bills & Income planning
+- Transactions register + filters
+- Settings, data export/import, and legacy spreadsheet import
 
-## Setup
-1. Create a Firebase project in Firebase Console.
-2. Add a Web App to the Firebase project.
-3. Enable Google Sign-In in Authentication:
-   Authentication -> Sign-in method -> Google.
-4. Create Firestore Database:
-   Build -> Firestore Database.
-5. Add Firestore rules:
+## Tech
+- Vite + React
+- Firebase Auth + Firestore
+- Hash-based navigation (`#/...`) for GitHub Pages compatibility
+
+## Firestore Rules
+Use the repo file [firestore.rules](./firestore.rules), or paste:
 
 ```js
 rules_version = '2';
@@ -18,39 +24,65 @@ service cloud.firestore {
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }
 ```
 
-6. Create `.env.local` from `.env.example`.
-7. Add the Firebase `VITE_FIREBASE_*` values from your Firebase Web App config.
-8. Set `VITE_ALLOWED_EMAILS=your_email@gmail.com`.
-9. Restart the dev server after env changes.
-10. Deploy with Firebase Hosting.
+## Setup
+1. Create Firebase project.
+2. Add Firebase Web App.
+3. Enable Authentication -> Google provider.
+4. Create Firestore database.
+5. Apply Firestore rules from `firestore.rules`.
+6. Add `burgosaxel.github.io` to Auth authorized domains for GitHub Pages use.
+7. Copy `.env.example` to `.env.local`.
+8. Fill all `VITE_FIREBASE_*` values and set:
+   - `VITE_ALLOWED_EMAILS=your_email@gmail.com`
+   - `VITE_BASE_PATH=/finance-tracker-web/`
+9. Run local dev:
 
-## GitHub Pages notes
-If you host this app on `https://burgosaxel.github.io/finance-tracker-web/`:
-1. Set `VITE_BASE_PATH=/finance-tracker-web/` in `.env.local`.
-2. In Firebase Console, add `burgosaxel.github.io` to:
-   Authentication -> Settings -> Authorized domains.
-3. Rebuild and redeploy after env changes.
-4. In GitHub repo settings, set Pages source to `GitHub Actions`.
-5. Add these repository secrets so the Pages build has Firebase config:
-   `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`,
-   `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`,
-   `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`, `VITE_ALLOWED_EMAILS`.
-
-## Local development
 ```bash
 npm install
 npm run dev
 ```
 
-## Deploy (Firebase Hosting)
+## Deploy (GitHub Pages)
+This repo uses GitHub Actions workflow: `.github/workflows/deploy-pages.yml`
+
+1. In GitHub `Settings -> Pages`, set Source to `GitHub Actions`.
+2. Add Actions repository secrets:
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_AUTH_DOMAIN`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_STORAGE_BUCKET`
+   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+   - `VITE_FIREBASE_APP_ID`
+   - `VITE_FIREBASE_MEASUREMENT_ID`
+   - `VITE_ALLOWED_EMAILS`
+3. Push to `main` and wait for `Deploy GitHub Pages` action.
+
+## Data Model
+See [docs/data-model.md](./docs/data-model.md).
+
+Collections under `/users/{uid}/`:
+- `accounts`
+- `creditCards`
+- `bills`
+- `income`
+- `transactions`
+- `budgets`
+- `settings` (`preferences` document)
+
+## Legacy Spreadsheet Import
+Settings page includes `Import legacy snapshot`:
+- Reads `src/seed/seedSheets.json`
+- Maps legacy `Credit Cards` and `Monthly Bills` sheets into new collections
+- Uses deterministic IDs to avoid duplicates when run multiple times
+
+## Build
 ```bash
 npm run build
-npm i -g firebase-tools
-firebase login
-firebase init hosting
-firebase deploy
 ```

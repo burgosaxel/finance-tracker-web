@@ -1,67 +1,55 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
-import { auth, googleProvider } from "./firebase";
-import { isEmailAllowed, getAllowedEmails } from "./auth";
-import { listSeedSheetNames, loadSheet, saveSheet, testFirestore } from "./sheets";
-import SheetGrid from "./components/SheetGrid.jsx";
-import { keyRC } from "./utils";
+import AppShell from "./components/AppShell";
+import Toast from "./components/Toast";
+import DashboardPage from "./pages/DashboardPage";
+import BudgetPage from "./pages/BudgetPage";
+import CreditCardsPage from "./pages/CreditCardsPage";
+import BillsIncomePage from "./pages/BillsIncomePage";
+import TransactionsPage from "./pages/TransactionsPage";
+import SettingsPage from "./pages/SettingsPage";
+import { getAllowedEmails, isEmailAllowed } from "./lib/auth";
+import { subscribeCollection, subscribeSettings } from "./lib/db";
+import { auth, googleProvider } from "./lib/firebase";
+import { DEFAULT_SETTINGS } from "./lib/finance";
+import { getRouteFromHash } from "./lib/hashRouter";
 
-function Header({ user, onLogin, onLogout }) {
-  return (
-    <div className="row" style={{ marginBottom: 12 }}>
-      <div style={{ fontWeight: 800 }}>Finance Tracker</div>
-      <div className="spacer" />
-      {user ? (
-        <>
-          <div className="muted">{user.email}</div>
-          <button type="button" onClick={onLogout}>Sign out</button>
-        </>
-      ) : (
-        <button type="button" className="primary" onClick={onLogin}>Sign in</button>
-      )}
-    </div>
-  );
-}
-
-function getErrorHint(errorMessage) {
-  if (!errorMessage) return "";
-  if (errorMessage.includes("Missing or insufficient permissions")) {
-    return "Firestore rules are blocking access. Update Firestore rules to allow request.auth.uid to access /users/{uid}/...";
-  }
-  if (errorMessage.includes("Cloud Firestore API is not enabled")) {
-    return "Create or enable Firestore Database in Firebase Console (Build -> Firestore Database).";
-  }
-  if (errorMessage.includes("auth/api-key-not-valid")) {
-    return "Firebase web config is missing. Verify .env.local is in the project root and restart the dev server.";
-  }
-  if (errorMessage.includes("auth/unauthorized-domain")) {
-    return "This host is not authorized in Firebase Auth. Add burgosaxel.github.io to Authentication -> Settings -> Authorized domains.";
-  }
-  if (errorMessage.includes("not authorized for OAuth operations")) {
-    return "This host is not authorized in Firebase Auth. Add burgosaxel.github.io to Authentication -> Settings -> Authorized domains.";
-  }
-  return "";
-}
+const EMPTY_DATA = {
+  accounts: [],
+  creditCards: [],
+  bills: [],
+  income: [],
+  transactions: [],
+  budgets: [],
+};
 
 export default function App() {
+  const [route, setRoute] = useState(getRouteFromHash());
   const [user, setUser] = useState(null);
   const [authError, setAuthError] = useState("");
-  const [sheetName, setSheetName] = useState(null);
-  const [sheet, setSheet] = useState(null);
-  const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "info" });
+  const [data, setData] = useState(EMPTY_DATA);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
 
-  const sheetNames = useMemo(() => listSeedSheetNames(), []);
-  const errorHint = getErrorHint(authError);
+  function showToast(message, type = "info") {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: "", type: "info" }), 2200);
+  }
+
+  useEffect(() => {
+    const onHash = () => setRoute(getRouteFromHash());
+    window.addEventListener("hashchange", onHash);
+    onHash();
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setAuthError("");
-      setStatus("");
       if (!u) {
         setUser(null);
-        setSheet(null);
-        setSheetName(null);
+        setData(EMPTY_DATA);
         return;
       }
       if (!isEmailAllowed(u.email)) {
@@ -78,163 +66,98 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+    const unsubs = [];
+    const onErr = (error) => setAuthError(error?.message || String(error));
+    const bind = (collectionName, stateKey, orderField = "name") => {
+      const unsub = subscribeCollection(
+        user.uid,
+        collectionName,
+        (rows) => setData((prev) => ({ ...prev, [stateKey]: rows })),
+        onErr,
+        orderField
+      );
+      unsubs.push(unsub);
+    };
+
+    bind("accounts", "accounts", "name");
+    bind("creditCards", "creditCards", "name");
+    bind("bills", "bills", "dueDay");
+    bind("income", "income", "nextPayDate");
+    bind("transactions", "transactions", "date");
+    bind("budgets", "budgets", "month");
+    unsubs.push(subscribeSettings(user.uid, setSettings, onErr));
+
+    return () => unsubs.forEach((u) => u?.());
+  }, [user]);
+
   async function handleLogin() {
     setAuthError("");
+    setStatus("Signing in...");
     try {
       await signInWithPopup(auth, googleProvider);
+      setStatus("");
     } catch (e) {
+      setStatus("");
       setAuthError(e?.message || String(e));
     }
   }
 
   async function handleLogout() {
     await signOut(auth);
+    setRoute("dashboard");
   }
 
-  useEffect(() => {
-    if (!user || !sheetName) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const s = await loadSheet(user.uid, sheetName);
-        if (cancelled) return;
-        setSheet(s);
-        setDirty(false);
-        setStatus("");
-        setAuthError("");
-      } catch (error) {
-        if (cancelled) return;
-        setSheet(null);
-        setStatus("");
-        setAuthError(error?.message || String(error));
-      }
-    })();
-    return () => {
-      cancelled = true;
+  const page = useMemo(() => {
+    if (!user) return null;
+    const shared = {
+      uid: user.uid,
+      settings,
+      onToast: showToast,
     };
-  }, [user, sheetName]);
+    if (route === "dashboard") return <DashboardPage data={data} settings={settings} />;
+    if (route === "budget")
+      return (
+        <BudgetPage
+          {...shared}
+          budgets={data.budgets}
+          bills={data.bills}
+          income={data.income}
+          transactions={data.transactions}
+        />
+      );
+    if (route === "credit-cards")
+      return <CreditCardsPage {...shared} cards={data.creditCards} />;
+    if (route === "bills-income")
+      return <BillsIncomePage {...shared} bills={data.bills} income={data.income} accounts={data.accounts} />;
+    if (route === "transactions")
+      return <TransactionsPage {...shared} transactions={data.transactions} accounts={data.accounts} />;
+    if (route === "settings")
+      return <SettingsPage {...shared} settings={settings} accounts={data.accounts} />;
+    return <DashboardPage data={data} settings={settings} />;
+  }, [data, route, settings, user]);
 
-  function editCell(r, c, value) {
-    if (!sheet) return;
-    const k = keyRC(r, c);
-    const next = {
-      ...sheet,
-      cells: { ...(sheet.cells || {}) }
-    };
-    if (value === "" || value === null || value === undefined) {
-      delete next.cells[k];
-    } else {
-      next.cells[k] = value;
-    }
-    setSheet(next);
-    setDirty(true);
-  }
-
-  async function handleSave() {
-    if (!user || !sheetName || !sheet) return;
-    setStatus("Saving\u2026");
-    try {
-      await saveSheet(user.uid, sheetName, sheet);
-      setDirty(false);
-      setStatus("Saved \u2705");
-      setTimeout(() => setStatus(""), 1200);
-    } catch (e) {
-      setStatus("");
-      setAuthError(e?.message || String(e));
-    }
-  }
-
-  async function handleTestFirestore() {
-    if (!user) return;
-    setAuthError("");
-    setStatus("Testing\u2026");
-    try {
-      await testFirestore(user.uid);
-      setStatus("Firestore OK \u2705");
-      setTimeout(() => setStatus(""), 1500);
-    } catch (error) {
-      setStatus("");
-      setAuthError(error?.message || String(error));
-    }
+  if (!user) {
+    return (
+      <div className="container">
+        <div className="card signInCard">
+          <h1>Finance Tracker</h1>
+          <p className="muted">Private budgeting app with Firebase Auth + Firestore.</p>
+          <button type="button" className="primary" onClick={handleLogin}>Sign in with Google</button>
+          {authError ? <div className="errorText">{authError}</div> : null}
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="container">
-      <Header user={user} onLogin={handleLogin} onLogout={handleLogout} />
-
-      {!user ? (
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Sign in required</div>
-          <div className="muted">
-            This app uses Firebase Auth. Set VITE_ALLOWED_EMAILS so only your email can access it.
-          </div>
-          {authError ? <div style={{ color: "crimson", marginTop: 10 }}>{authError}</div> : null}
-        </div>
-      ) : (
-        <div className="row" style={{ alignItems: "stretch" }}>
-          <div className="card" style={{ width: 280, padding: 12 }}>
-            <button
-              type="button"
-              className="primary"
-              onClick={handleTestFirestore}
-              style={{ marginBottom: 10 }}
-            >
-              Test Firestore
-            </button>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>Sheets</div>
-            <div className="muted" style={{ marginBottom: 10 }}>
-              Pick a sheet. Your first open will automatically seed Firestore with your current Excel snapshot.
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {sheetNames.map((n) => (
-                <button
-                  type="button"
-                  key={n}
-                  onClick={() => {
-                    setSheetName(n);
-                    setStatus("Loading\u2026");
-                    setAuthError("");
-                  }}
-                  className={n === sheetName ? "primary" : ""}
-                  style={{ textAlign: "left" }}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-            {authError ? (
-              <div style={{ color: "crimson", marginTop: 10 }}>
-                {errorHint ? <div>{errorHint}</div> : null}
-                <div>{authError}</div>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="card" style={{ flex: 1, minWidth: 0 }}>
-            <div className="gridHeader">
-              <div className="row">
-                <div style={{ fontWeight: 700 }}>
-                  {sheetName ? sheetName : "Select a sheet"}
-                </div>
-                <div className="spacer" />
-                <div className="muted">{status}</div>
-                <button type="button" className="primary" disabled={!dirty || !sheet} onClick={handleSave}>
-                  Save
-                </button>
-              </div>
-            </div>
-            <div style={{ padding: 12 }}>
-              {sheet ? (
-                <div className="gridWrap">
-                  <SheetGrid sheet={sheet} onEditCell={editCell} />
-                </div>
-              ) : (
-                <div className="muted">Open a sheet to view/edit.</div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <AppShell route={route} user={user} status={status} onSignOut={handleLogout}>
+        {authError ? <div className="errorText">{authError}</div> : null}
+        {page}
+      </AppShell>
+      <Toast message={toast.message} type={toast.type} />
     </div>
   );
 }
