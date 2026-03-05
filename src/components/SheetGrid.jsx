@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from "react";
-import { FixedSizeGrid as Grid } from "react-window";
+import React, { useMemo, useRef } from "react";
+import { VariableSizeGrid as Grid } from "react-window";
 import { colToLabel, keyRC, normalizeCellValue } from "../utils";
 
 const COL_WIDTH = 160;
@@ -9,13 +9,49 @@ const COL_HEADER_HEIGHT = 34;
 
 export default function SheetGrid({ sheet, onEditCell }) {
   const { bounds, cells } = sheet;
-  const min_r = bounds?.min_r ?? 1;
-  const max_r = bounds?.max_r ?? 1;
-  const min_c = bounds?.min_c ?? 1;
-  const max_c = bounds?.max_c ?? 1;
+  const safe = useMemo(() => {
+    const parseIntSafe = (value, fallback) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.trunc(n) : fallback;
+    };
 
-  const rowCount = (max_r - min_r + 1) + 1; // + header row
-  const colCount = (max_c - min_c + 1) + 1; // + row header col
+    let min_r = parseIntSafe(bounds?.min_r, 1);
+    let max_r = parseIntSafe(bounds?.max_r, min_r);
+    let min_c = parseIntSafe(bounds?.min_c, 1);
+    let max_c = parseIntSafe(bounds?.max_c, min_c);
+
+    // If bounds are broken in Firestore, infer a fallback range from existing cell keys.
+    if (!(max_r >= min_r) || !(max_c >= min_c)) {
+      const keys = Object.keys(cells || {});
+      const parsed = keys
+        .map((k) => k.split(",").map(Number))
+        .filter(([r, c]) => Number.isFinite(r) && Number.isFinite(c));
+      if (parsed.length > 0) {
+        const rows = parsed.map(([r]) => r);
+        const cols = parsed.map(([, c]) => c);
+        min_r = Math.min(...rows);
+        max_r = Math.max(...rows);
+        min_c = Math.min(...cols);
+        max_c = Math.max(...cols);
+      } else {
+        min_r = 1;
+        max_r = 1;
+        min_c = 1;
+        max_c = 1;
+      }
+    }
+
+    return {
+      min_r,
+      max_r,
+      min_c,
+      max_c,
+      rowCount: Math.max(2, max_r - min_r + 2), // + header row
+      colCount: Math.max(2, max_c - min_c + 2), // + row header col
+    };
+  }, [bounds, cells]);
+
+  const { min_r, min_c, rowCount, colCount } = safe;
 
   const gridRef = useRef(null);
 
