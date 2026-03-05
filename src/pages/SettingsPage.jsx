@@ -4,6 +4,7 @@ import {
   deleteEntity,
   exportAllUserData,
   importAllUserData,
+  importExistingBillsAsRecurringTemplates,
   importLegacySnapshot,
   saveSettings,
   upsertEntity,
@@ -16,7 +17,7 @@ const EMPTY_ACCOUNT = {
   balance: 0,
 };
 
-export default function SettingsPage({ uid, settings, accounts, onToast, onError }) {
+export default function SettingsPage({ uid, settings, accounts, onToast, onError, selectedMonth }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [localSettings, setLocalSettings] = useState(cfg);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -124,6 +125,16 @@ export default function SettingsPage({ uid, settings, accounts, onToast, onError
     }
   }
 
+  async function runRecurringMigration() {
+    try {
+      await importExistingBillsAsRecurringTemplates(uid, selectedMonth);
+      onToast("Imported existing bills/income into recurring templates.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to import existing data as recurring templates.", "error");
+    }
+  }
+
   return (
     <div className="page">
       <h2>Settings</h2>
@@ -212,6 +223,7 @@ export default function SettingsPage({ uid, settings, accounts, onToast, onError
       <section className="card section">
         <h3>Data Tools</h3>
         <div className="row">
+          <button type="button" onClick={runRecurringMigration}>Import existing bills as recurring templates</button>
           <button type="button" onClick={runLegacyImport}>Import legacy snapshot</button>
           <button type="button" onClick={exportJson}>Export data (JSON)</button>
           <button type="button" onClick={() => fileRef.current?.click()}>Import data (JSON)</button>

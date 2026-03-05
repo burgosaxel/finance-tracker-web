@@ -67,12 +67,59 @@ export function daysBetween(a, b) {
 }
 
 export function billStatus(bill, now = new Date()) {
-  const due = computeNextDueDate(bill.dueDay, now);
+  const due = getBillDueDate(bill, now);
   const diff = daysBetween(now, due);
   const lastPaid = bill.lastPaidDate ? new Date(bill.lastPaidDate) : null;
   const isPaidThisMonth = lastPaid && monthKey(lastPaid) === monthKey(due);
+  if (bill.status === "paid") return "paid";
   if (isPaidThisMonth) return "paid";
   if (diff < 0) return "overdue";
   if (diff <= 7) return "dueSoon";
   return "upcoming";
+}
+
+export function getBillDueDate(bill, now = new Date()) {
+  if (bill?.dueDate?.toDate) return bill.dueDate.toDate();
+  if (bill?.dueDate) {
+    const parsed = new Date(bill.dueDate);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return computeNextDueDate(bill?.dueDay, now);
+}
+
+export function getIncomePayDate(income, now = new Date()) {
+  if (income?.payDate?.toDate) return income.payDate.toDate();
+  if (income?.payDate) {
+    const parsed = new Date(income.payDate);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  if (income?.nextPayDate) {
+    const parsed = new Date(income.nextPayDate);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return now;
+}
+
+export function getUpcomingBills(bills, { days = 7, now = new Date() } = {}) {
+  const start = startOfDay(now);
+  const end = new Date(start);
+  end.setDate(end.getDate() + days);
+  return (bills || [])
+    .map((bill) => ({
+      ...bill,
+      nextDueDate: getBillDueDate(bill, now),
+      status: billStatus(bill, now),
+    }))
+    .filter((bill) => bill.status !== "paid")
+    .filter((bill) => {
+      const due = startOfDay(bill.nextDueDate);
+      return due >= start && due <= end;
+    })
+    .sort((a, b) => a.nextDueDate - b.nextDueDate);
+}
+
+export function monthFromMonthId(monthId) {
+  const parsed = parseMonthKey(monthId);
+  if (!parsed) return null;
+  return new Date(parsed.y, parsed.m - 1, 1);
 }

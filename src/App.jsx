@@ -9,9 +9,16 @@ import BillsIncomePage from "./pages/BillsIncomePage";
 import TransactionsPage from "./pages/TransactionsPage";
 import SettingsPage from "./pages/SettingsPage";
 import { getAllowedEmails, isEmailAllowed } from "./lib/auth";
-import { subscribeCollection, subscribeSettings } from "./lib/db";
+import {
+  ensureMonthInitialized,
+  importExistingBillsAsRecurringTemplates,
+  subscribeCollection,
+  subscribeSettings,
+  subscribeStatementItems,
+  subscribeTemplates,
+} from "./lib/db";
 import { auth, googleProvider } from "./lib/firebase";
-import { DEFAULT_SETTINGS } from "./lib/finance";
+import { DEFAULT_SETTINGS, monthKey } from "./lib/finance";
 import { getRouteFromHash } from "./lib/hashRouter";
 
 const EMPTY_DATA = {
@@ -21,6 +28,10 @@ const EMPTY_DATA = {
   income: [],
   transactions: [],
   budgets: [],
+  statementBills: [],
+  statementIncomes: [],
+  billTemplates: [],
+  incomeTemplates: [],
 };
 
 export default function App() {
@@ -33,6 +44,7 @@ export default function App() {
   const [toast, setToast] = useState({ message: "", type: "info" });
   const [data, setData] = useState(EMPTY_DATA);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [selectedMonth, setSelectedMonth] = useState(monthKey());
 
   function showToast(message, type = "info") {
     setToast({ message, type });
@@ -90,9 +102,68 @@ export default function App() {
     bind("transactions", "transactions", "date");
     bind("budgets", "budgets", "month");
     unsubs.push(subscribeSettings(user.uid, setSettings, onErr));
+    unsubs.push(
+      subscribeTemplates(
+        user.uid,
+        "bills",
+        (rows) => setData((prev) => ({ ...prev, billTemplates: rows })),
+        onErr
+      )
+    );
+    unsubs.push(
+      subscribeTemplates(
+        user.uid,
+        "incomes",
+        (rows) => setData((prev) => ({ ...prev, incomeTemplates: rows })),
+        onErr
+      )
+    );
 
     return () => unsubs.forEach((u) => u?.());
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await ensureMonthInitialized(user.uid, selectedMonth);
+        await importExistingBillsAsRecurringTemplates(user.uid, selectedMonth);
+        if (cancelled) return;
+      } catch (error) {
+        if (cancelled) return;
+        setAuthError(error?.message || String(error));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMonth, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsubs = [];
+    const onErr = (error) => setAuthError(error?.message || String(error));
+    unsubs.push(
+      subscribeStatementItems(
+        user.uid,
+        selectedMonth,
+        "bills",
+        (rows) => setData((prev) => ({ ...prev, statementBills: rows })),
+        onErr
+      )
+    );
+    unsubs.push(
+      subscribeStatementItems(
+        user.uid,
+        selectedMonth,
+        "incomes",
+        (rows) => setData((prev) => ({ ...prev, statementIncomes: rows })),
+        onErr
+      )
+    );
+    return () => unsubs.forEach((u) => u?.());
+  }, [selectedMonth, user]);
 
   useEffect(() => {
     const onMutation = (event) => {
@@ -142,8 +213,20 @@ export default function App() {
       settings,
       onToast: showToast,
       onError: (message) => setAuthError(message),
+      selectedMonth,
+      setSelectedMonth,
     };
-    if (route === "dashboard") return <DashboardPage data={data} settings={settings} />;
+    if (route === "dashboard")
+      return (
+        <DashboardPage
+          data={data}
+          settings={settings}
+          selectedMonth={selectedMonth}
+          bills={data.statementBills}
+          incomes={data.statementIncomes}
+          loadError={authError}
+        />
+      );
     if (route === "budget")
       return (
         <BudgetPage
@@ -157,13 +240,22 @@ export default function App() {
     if (route === "credit-cards")
       return <CreditCardsPage {...shared} cards={data.creditCards} />;
     if (route === "bills-income")
-      return <BillsIncomePage {...shared} bills={data.bills} income={data.income} accounts={data.accounts} />;
+      return (
+        <BillsIncomePage
+          {...shared}
+          bills={data.statementBills}
+          income={data.statementIncomes}
+          billTemplates={data.billTemplates}
+          incomeTemplates={data.incomeTemplates}
+          accounts={data.accounts}
+        />
+      );
     if (route === "transactions")
       return <TransactionsPage {...shared} transactions={data.transactions} accounts={data.accounts} />;
     if (route === "settings")
       return <SettingsPage {...shared} settings={settings} accounts={data.accounts} />;
     return <DashboardPage data={data} settings={settings} />;
-  }, [data, route, settings, user]);
+  }, [data, route, selectedMonth, settings, user]);
 
   if (!user) {
     return (

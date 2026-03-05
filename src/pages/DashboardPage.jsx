@@ -1,36 +1,34 @@
 import React, { useMemo } from "react";
 import StatCard from "../components/StatCard";
 import {
-  billStatus,
-  computeNextDueDate,
   DEFAULT_SETTINGS,
   formatCurrency,
   formatPercent,
+  getBillDueDate,
+  getUpcomingBills,
+  getIncomePayDate,
   monthKey,
   safeNumber,
 } from "../lib/finance";
 
-export default function DashboardPage({ data, settings }) {
+export default function DashboardPage({ data, settings, selectedMonth, bills = [], incomes = [], loadError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const now = new Date();
-  const currentMonth = monthKey(now);
+  const currentMonth = selectedMonth || monthKey(now);
 
   const summary = useMemo(() => {
     const totalCash = (data.accounts || []).reduce((sum, a) => sum + safeNumber(a.balance, 0), 0);
     const totalDebt = (data.creditCards || []).reduce((sum, c) => sum + Math.max(0, safeNumber(c.balance, 0)), 0);
     const totalLimit = (data.creditCards || []).reduce((sum, c) => sum + Math.max(0, safeNumber(c.limit, 0)), 0);
     const utilization = totalLimit > 0 ? (totalDebt / totalLimit) * 100 : 0;
-    const monthIncome = (data.income || [])
-      .filter((i) => monthKey(new Date(i.nextPayDate || now)) === currentMonth)
-      .reduce((sum, i) => sum + safeNumber(i.expectedAmount, 0), 0);
-    const monthBills = (data.bills || [])
-      .filter((b) => monthKey(computeNextDueDate(b.dueDay, now)) === currentMonth)
+    const monthIncome = (incomes || [])
+      .filter((i) => monthKey(getIncomePayDate(i, now)) === currentMonth)
+      .reduce((sum, i) => sum + safeNumber(i.amount ?? i.expectedAmount, 0), 0);
+    const monthBills = (bills || [])
+      .filter((b) => monthKey(getBillDueDate(b, now)) === currentMonth)
       .reduce((sum, b) => sum + safeNumber(b.amount, 0), 0);
 
-    const dueSoon = (data.bills || [])
-      .map((b) => ({ ...b, nextDueDate: computeNextDueDate(b.dueDay, now), status: billStatus(b, now) }))
-      .filter((b) => b.status === "dueSoon")
-      .sort((a, b) => a.nextDueDate - b.nextDueDate);
+    const dueSoon = getUpcomingBills(bills, { days: 7, now });
 
     const overUtilized = (data.creditCards || [])
       .map((c) => {
@@ -51,7 +49,7 @@ export default function DashboardPage({ data, settings }) {
       dueSoon,
       overUtilized,
     };
-  }, [cfg.utilizationThreshold, currentMonth, data.accounts, data.bills, data.creditCards, data.income]);
+  }, [bills, cfg.utilizationThreshold, currentMonth, data.accounts, data.creditCards, incomes, now]);
 
   return (
     <div className="page">
@@ -68,6 +66,7 @@ export default function DashboardPage({ data, settings }) {
       <div className="twoCol">
         <section className="card section">
           <h3>Bills due in next 7 days</h3>
+          {loadError ? <div className="errorText">{loadError}</div> : null}
           {summary.dueSoon.length === 0 ? (
             <div className="muted">No bills due in the next week.</div>
           ) : (
