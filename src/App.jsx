@@ -34,6 +34,12 @@ function getErrorHint(errorMessage) {
   if (errorMessage.includes("auth/api-key-not-valid")) {
     return "Firebase web config is missing. Verify .env.local is in the project root and restart the dev server.";
   }
+  if (errorMessage.includes("auth/unauthorized-domain")) {
+    return "This host is not authorized in Firebase Auth. Add burgosaxel.github.io to Authentication -> Settings -> Authorized domains.";
+  }
+  if (errorMessage.includes("not authorized for OAuth operations")) {
+    return "This host is not authorized in Firebase Auth. Add burgosaxel.github.io to Authentication -> Settings -> Authorized domains.";
+  }
   return "";
 }
 

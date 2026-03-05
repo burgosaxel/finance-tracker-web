@@ -28,6 +28,13 @@ service cloud.firestore {
 9. Restart the dev server after env changes.
 10. Deploy with Firebase Hosting.
 
+## GitHub Pages notes
+If you host this app on `https://burgosaxel.github.io/finance-tracker-web/`:
+1. Set `VITE_BASE_PATH=/finance-tracker-web/` in `.env.local`.
+2. In Firebase Console, add `burgosaxel.github.io` to:
+   Authentication -> Settings -> Authorized domains.
+3. Rebuild and redeploy after env changes.
+
 ## Local development
 ```bash
 npm install
