@@ -49,10 +49,12 @@ import { parseLegacySnapshot } from "./legacyImport";
  */
 
 function userCollection(uid, name) {
+  if (!uid) return null;
   return collection(db, "users", uid, name);
 }
 
 function userDoc(uid, collectionName, id) {
+  if (!uid) return null;
   return doc(db, "users", uid, collectionName, id);
 }
 
@@ -72,7 +74,15 @@ function emitMutation(phase, error) {
   );
 }
 
+function requireUid(uid) {
+  if (!uid) throw new Error("User not signed in.");
+}
+
 export function subscribeCollection(uid, collectionName, onData, onError, orderField = "name") {
+  if (!uid) {
+    onData?.([]);
+    return () => {};
+  }
   const col = userCollection(uid, collectionName);
   const q = orderField ? query(col, orderBy(orderField)) : col;
   return onSnapshot(
@@ -83,6 +93,10 @@ export function subscribeCollection(uid, collectionName, onData, onError, orderF
 }
 
 export function subscribeSettings(uid, onData, onError) {
+  if (!uid) {
+    onData?.({ ...DEFAULT_SETTINGS });
+    return () => {};
+  }
   const ref = userDoc(uid, "settings", "preferences");
   return onSnapshot(
     ref,
@@ -95,6 +109,7 @@ export function subscribeSettings(uid, onData, onError) {
 }
 
 export async function upsertEntity(uid, collectionName, payload, id = payload?.id) {
+  requireUid(uid);
   emitMutation("start");
   try {
     const nextId = id || crypto.randomUUID();
@@ -118,6 +133,7 @@ export async function upsertEntity(uid, collectionName, payload, id = payload?.i
 }
 
 export async function deleteEntity(uid, collectionName, id) {
+  requireUid(uid);
   emitMutation("start");
   try {
     const ref = userDoc(uid, collectionName, id);
@@ -130,6 +146,7 @@ export async function deleteEntity(uid, collectionName, id) {
 }
 
 export async function saveSettings(uid, settings) {
+  requireUid(uid);
   emitMutation("start");
   try {
     const ref = userDoc(uid, "settings", "preferences");
@@ -142,6 +159,7 @@ export async function saveSettings(uid, settings) {
 }
 
 export async function markBillPaid(uid, bill) {
+  requireUid(uid);
   const today = new Date().toISOString().slice(0, 10);
   const txId = `bill-${bill.id}-${today}`;
 
@@ -172,6 +190,7 @@ export async function markBillPaid(uid, bill) {
 }
 
 export async function exportAllUserData(uid) {
+  requireUid(uid);
   const collections = ["accounts", "creditCards", "bills", "income", "transactions", "budgets"];
   const payload = {
     exportedAt: new Date().toISOString(),
@@ -190,6 +209,7 @@ export async function exportAllUserData(uid) {
 }
 
 export async function importAllUserData(uid, payload) {
+  requireUid(uid);
   const cols = payload?.collections || {};
   const allowed = ["accounts", "creditCards", "bills", "income", "transactions", "budgets"];
   for (const collectionName of allowed) {
@@ -205,6 +225,7 @@ export async function importAllUserData(uid, payload) {
 }
 
 export async function importLegacySnapshot(uid) {
+  requireUid(uid);
   const { creditCards, bills, income } = parseLegacySnapshot();
   for (const card of creditCards) {
     await upsertEntity(uid, "creditCards", card, card.id);
@@ -235,14 +256,18 @@ export function getBudgetDocIdForMonth(month = monthKey()) {
 }
 
 function templateCollection(uid, kind) {
-  return collection(db, "users", uid, "templates", kind);
+  if (!uid) return null;
+  const collectionName = kind === "bills" ? "billTemplates" : "incomeTemplates";
+  return collection(db, "users", uid, collectionName);
 }
 
 function statementDoc(uid, monthId) {
+  if (!uid || !monthId) return null;
   return doc(db, "users", uid, "statements", monthId);
 }
 
 function statementCollection(uid, monthId, kind) {
+  if (!uid || !monthId) return null;
   return collection(db, "users", uid, "statements", monthId, kind);
 }
 
@@ -264,6 +289,10 @@ function toMonthRange(monthId) {
 }
 
 export function subscribeStatementItems(uid, monthId, kind, onData, onError) {
+  if (!uid || !monthId) {
+    onData?.([]);
+    return () => {};
+  }
   const field = kind === "bills" ? "dueDate" : "payDate";
   const q = query(statementCollection(uid, monthId, kind), orderBy(field));
   return onSnapshot(
@@ -274,6 +303,10 @@ export function subscribeStatementItems(uid, monthId, kind, onData, onError) {
 }
 
 export function subscribeTemplates(uid, kind, onData, onError) {
+  if (!uid) {
+    onData?.([]);
+    return () => {};
+  }
   const q = query(templateCollection(uid, kind), orderBy("createdAt"));
   return onSnapshot(
     q,
@@ -283,9 +316,11 @@ export function subscribeTemplates(uid, kind, onData, onError) {
 }
 
 export async function upsertTemplate(uid, kind, payload, id = payload?.id || crypto.randomUUID()) {
+  requireUid(uid);
   emitMutation("start");
   try {
-    const ref = doc(db, "users", uid, "templates", kind, id);
+    const collectionName = kind === "bills" ? "billTemplates" : "incomeTemplates";
+    const ref = doc(db, "users", uid, collectionName, id);
     await setDoc(
       ref,
       {
@@ -305,9 +340,11 @@ export async function upsertTemplate(uid, kind, payload, id = payload?.id || cry
 }
 
 export async function deleteTemplate(uid, kind, id) {
+  requireUid(uid);
   emitMutation("start");
   try {
-    await deleteDoc(doc(db, "users", uid, "templates", kind, id));
+    const collectionName = kind === "bills" ? "billTemplates" : "incomeTemplates";
+    await deleteDoc(doc(db, "users", uid, collectionName, id));
     emitMutation("success");
   } catch (error) {
     emitMutation("error", error);
@@ -316,6 +353,8 @@ export async function deleteTemplate(uid, kind, id) {
 }
 
 export async function upsertStatementItem(uid, monthId, kind, payload, id = payload?.id || crypto.randomUUID()) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
   emitMutation("start");
   try {
     const ref = doc(db, "users", uid, "statements", monthId, kind, id);
@@ -338,6 +377,8 @@ export async function upsertStatementItem(uid, monthId, kind, payload, id = payl
 }
 
 export async function deleteStatementItem(uid, monthId, kind, id) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
   emitMutation("start");
   try {
     await deleteDoc(doc(db, "users", uid, "statements", monthId, kind, id));
@@ -349,6 +390,8 @@ export async function deleteStatementItem(uid, monthId, kind, id) {
 }
 
 export async function markStatementBillPaid(uid, monthId, billId, isPaid) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
   emitMutation("start");
   try {
     const ref = doc(db, "users", uid, "statements", monthId, "bills", billId);
@@ -365,6 +408,8 @@ export async function markStatementBillPaid(uid, monthId, billId, isPaid) {
 }
 
 export async function markStatementIncomeReceived(uid, monthId, incomeId, isReceived) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
   emitMutation("start");
   try {
     const ref = doc(db, "users", uid, "statements", monthId, "incomes", incomeId);
@@ -420,6 +465,8 @@ function templateToIncomeInstance(template, monthId) {
 }
 
 export async function ensureMonthInitialized(uid, monthId) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
   const range = toMonthRange(monthId);
   if (!range) throw new Error(`Invalid monthId: ${monthId}`);
   const ref = statementDoc(uid, monthId);
@@ -467,6 +514,8 @@ export async function ensureMonthInitialized(uid, monthId) {
 }
 
 export async function syncRecurringItemsForMonth(uid, monthId) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
   await ensureMonthInitialized(uid, monthId);
   const existingBills = await getDocs(statementCollection(uid, monthId, "bills"));
   const existingIncomes = await getDocs(statementCollection(uid, monthId, "incomes"));
@@ -500,6 +549,7 @@ export async function syncRecurringItemsForMonth(uid, monthId) {
 }
 
 export async function importExistingBillsAsRecurringTemplates(uid, monthId = monthKey()) {
+  requireUid(uid);
   const migrationRef = doc(db, "users", uid, "settings", "migrations");
   const migrationSnap = await getDoc(migrationRef);
   if (migrationSnap.exists() && migrationSnap.data()?.statementsV1Migrated) return;
