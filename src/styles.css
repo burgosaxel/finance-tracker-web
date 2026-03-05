@@ -40,16 +40,71 @@ input, textarea {
   background: #fff; border-bottom: 1px solid #eee;
   padding: 10px 12px; border-top-left-radius: 12px; border-top-right-radius: 12px;
 }
+.formulaBar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.nameBox {
+  min-width: 76px;
+  padding: 7px 10px;
+  border: 1px solid #d7dbe0;
+  border-radius: 8px;
+  background: #f7f9fc;
+  font-weight: 600;
+  text-align: center;
+}
+.formulaInput {
+  flex: 1;
+  border: 1px solid #d7dbe0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  background: #fff;
+}
 .cell {
   box-sizing: border-box;
-  border-right: 1px solid #eee;
-  border-bottom: 1px solid #eee;
+  border-right: 1px solid #e6e9ee;
+  border-bottom: 1px solid #e6e9ee;
   padding: 6px 8px;
   background: white;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.cell.header { background: #fafafa; font-weight: 600; }
-.cell.rowHeader { background: #fafafa; font-weight: 600; text-align: right; }
-.cell.editable { outline: none; }
+.cell.header {
+  background: #f2f5f9;
+  font-weight: 700;
+  color: #2b2f33;
+}
+.cell.rowHeader {
+  background: #f7f9fc;
+  font-weight: 700;
+  text-align: right;
+  color: #39414a;
+}
+.cell.editable {
+  outline: none;
+  cursor: cell;
+}
+.cell.editable.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cell.editable.selected {
+  position: relative;
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px #2563eb;
+  background: #f8fbff;
+}
+.cellInput {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: #fff;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+}
