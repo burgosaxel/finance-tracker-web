@@ -5,6 +5,7 @@ import Toast from "./components/Toast";
 import DashboardPage from "./pages/DashboardPage";
 import BudgetPage from "./pages/BudgetPage";
 import CreditCardsPage from "./pages/CreditCardsPage";
+import LoansPage from "./pages/LoansPage";
 import BillsIncomePage from "./pages/BillsIncomePage";
 import TransactionsPage from "./pages/TransactionsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -24,6 +25,7 @@ import { getRouteFromHash } from "./lib/hashRouter";
 const EMPTY_DATA = {
   accounts: [],
   creditCards: [],
+  loans: [],
   bills: [],
   income: [],
   transactions: [],
@@ -58,6 +60,24 @@ export default function App() {
     window.addEventListener("hashchange", onHash);
     onHash();
     return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const root = document.documentElement;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      root.setAttribute("data-theme", media.matches ? "dark" : "light");
+    };
+
+    applyTheme();
+    const onThemeChange = () => applyTheme();
+    if (media.addEventListener) {
+      media.addEventListener("change", onThemeChange);
+      return () => media.removeEventListener("change", onThemeChange);
+    }
+    media.addListener(onThemeChange);
+    return () => media.removeListener(onThemeChange);
   }, []);
 
   useEffect(() => {
@@ -99,6 +119,7 @@ export default function App() {
 
     bind("accounts", "accounts", "name");
     bind("creditCards", "creditCards", "name");
+    bind("loans", "loans", "lender");
     bind("bills", "bills", "dueDay");
     bind("income", "income", "nextPayDate");
     bind("transactions", "transactions", "date");
@@ -270,6 +291,8 @@ export default function App() {
       );
     if (route === "credit-cards")
       return <CreditCardsPage {...shared} cards={data.creditCards} />;
+    if (route === "loans")
+      return <LoansPage {...shared} loans={data.loans} />;
     if (route === "bills-income")
       return (
         <BillsIncomePage

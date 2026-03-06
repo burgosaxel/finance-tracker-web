@@ -1,4 +1,4 @@
-const ROUTES = ["dashboard", "budget", "credit-cards", "bills-income", "transactions", "settings"];
+const ROUTES = ["dashboard", "budget", "credit-cards", "loans", "bills-income", "transactions", "settings"];
 
 export function getRouteFromHash() {
   const hash = window.location.hash || "#/dashboard";
