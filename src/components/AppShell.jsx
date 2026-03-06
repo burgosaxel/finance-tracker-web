@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { routeHref } from "../lib/hashRouter";
 
 const NAV_ITEMS = [
@@ -12,9 +12,19 @@ const NAV_ITEMS = [
 ];
 
 export default function AppShell({ route, user, status, onSignOut, children }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [route]);
+
+  function closeMobileMenu() {
+    setMobileMenuOpen(false);
+  }
+
   return (
     <div className="appShell">
-      <aside className="sidebar card">
+      <aside className="sidebar card desktopOnly">
         <div className="sidebarTitle">Finance Tracker</div>
         <nav className="sidebarNav">
           {NAV_ITEMS.map((item) => (
@@ -29,7 +39,46 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
         </nav>
       </aside>
       <div className="mainPanel">
-        <header className="topbar card">
+        <header className="mobileHeader card">
+          <div className="sidebarTitle">Finance Tracker</div>
+          <button
+            type="button"
+            className="menuButton"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav-menu"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+          >
+            <span className={`menuIcon ${mobileMenuOpen ? "open" : ""}`} aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+          </button>
+        </header>
+
+        {mobileMenuOpen ? <button type="button" className="menuBackdrop" aria-label="Close menu" onClick={closeMobileMenu} /> : null}
+
+        <aside id="mobile-nav-menu" className={`mobileMenu card ${mobileMenuOpen ? "open" : ""}`}>
+          <nav className="mobileNav">
+            {NAV_ITEMS.map((item) => (
+              <a
+                key={item.id}
+                className={`navLink ${route === item.id ? "active" : ""}`}
+                href={routeHref(item.id)}
+                onClick={closeMobileMenu}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+          <div className="mobileMenuFooter">
+            <div className="muted">{user.email}</div>
+            <button type="button" onClick={onSignOut}>Sign out</button>
+          </div>
+        </aside>
+
+        <header className="topbar card desktopOnly">
           <div className="muted">{status || ""}</div>
           <div className="row">
             <div className="muted">{user.email}</div>

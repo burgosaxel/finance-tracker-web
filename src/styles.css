@@ -262,6 +262,15 @@ textarea {
   letter-spacing: 0.3px;
 }
 
+.desktopOnly {
+  display: block;
+}
+
+.mobileHeader,
+.mobileMenu {
+  display: none;
+}
+
 .sidebarNav {
   display: flex;
   flex-direction: column;
@@ -511,52 +520,160 @@ tfoot td {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .desktopOnly {
+    display: none !important;
+  }
+
+  .mobileHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    position: sticky;
+    top: 10px;
+    z-index: 30;
+  }
+
+  .mobileHeader .sidebarTitle {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .menuButton {
+    width: 42px;
+    height: 38px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+  }
+
+  .menuIcon {
+    width: 16px;
+    display: grid;
+    gap: 3px;
+  }
+
+  .menuIcon span {
+    display: block;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--text-primary);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .menuIcon.open span:nth-child(1) {
+    transform: translateY(5px) rotate(45deg);
+  }
+
+  .menuIcon.open span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .menuIcon.open span:nth-child(3) {
+    transform: translateY(-5px) rotate(-45deg);
+  }
+
+  .menuBackdrop {
+    position: fixed;
+    inset: 0;
+    border: 0;
+    background: var(--modal-backdrop);
+    z-index: 35;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mobileMenu {
+    display: block;
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: min(320px, calc(100vw - 20px));
+    max-height: calc(100vh - 20px);
+    overflow: auto;
+    z-index: 40;
+    padding: 12px;
+    transform: translateY(-10px) scale(0.98);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .mobileMenu.open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mobileNav {
+    display: grid;
+    gap: 6px;
+  }
+
+  .mobileMenuFooter {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    gap: 8px;
+  }
+
   .container {
     padding: 10px;
   }
 
   .appShell {
-    gap: 10px;
+    gap: 8px;
     min-height: auto;
   }
 
-  .sidebar,
-  .topbar,
-  .card {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .sidebarTitle {
-    margin-bottom: 10px;
-  }
-
-  .sidebarNav {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .page {
     gap: 8px;
   }
 
+  .section {
+    padding: 10px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .statCard {
+    padding: 10px;
+  }
+
+  .statValue {
+    font-size: 18px;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  h3 {
+    font-size: 1.02rem;
+  }
+
+  .muted,
   .navLink {
-    text-align: center;
-  }
-
-  .topbar {
-    display: grid;
-    gap: 8px;
-  }
-
-  .topbar > .row {
-    justify-content: space-between;
+    font-size: 0.92rem;
   }
 
   .row {
     gap: 6px;
   }
+}
 
-  .statsGrid {
-    grid-template-columns: 1fr;
+@media (max-width: 640px) {
+  .sidebar,
+  .topbar,
+  .card {
+    width: 100%;
+    max-width: 100%;
   }
 
   .formGrid {
@@ -581,11 +698,18 @@ tfoot td {
 }
 
 @media (max-width: 480px) {
-  .sidebarNav {
-    grid-template-columns: 1fr;
-  }
-
   .tableWrap {
     -webkit-overflow-scrolling: touch;
+  }
+
+  .mobileHeader .sidebarTitle {
+    font-size: 16px;
+  }
+
+  .mobileMenu {
+    width: calc(100vw - 16px);
+    right: 8px;
+    top: 8px;
+    max-height: calc(100vh - 16px);
   }
 }
