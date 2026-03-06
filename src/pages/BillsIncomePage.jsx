@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import Modal from "../components/Modal";
 import {
@@ -11,10 +11,12 @@ import {
   upsertTemplate,
 } from "../lib/db";
 import {
+  computeMonthTotals,
   DEFAULT_SETTINGS,
   formatCurrency,
+  getBillsDueLaterThisMonth,
+  getBillsDueWithinDays,
   getIncomePayDate,
-  getUpcomingBills,
   monthFromMonthId,
   monthKey,
   safeNumber,
@@ -76,13 +78,25 @@ export default function BillsIncomePage({
   const [incomeTemplateOpen, setIncomeTemplateOpen] = useState(false);
   const [incomeTemplateForm, setIncomeTemplateForm] = useState(EMPTY_INCOME_TEMPLATE);
   const [incomeTemplateEditingId, setIncomeTemplateEditingId] = useState(null);
+  const [templatesCollapsed, setTemplatesCollapsed] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("ft_templates_collapsed") !== "false";
+  });
 
   const now = new Date();
   const currentMonth = selectedMonth || monthKey(now);
   const viewDate = monthFromMonthId(currentMonth) || now;
   const isCurrentMonth = currentMonth === monthKey(now);
+  const isReadOnly = !isCurrentMonth;
 
-  const dueSoon = useMemo(() => getUpcomingBills(bills, { days: 7, now }), [bills, now]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("ft_templates_collapsed", String(templatesCollapsed));
+  }, [templatesCollapsed]);
+
+  const dueSoon = useMemo(() => getBillsDueWithinDays(bills, 7, now), [bills, now]);
+  const dueLater = useMemo(() => getBillsDueLaterThisMonth(bills, now, 7), [bills, now]);
+  const cashflow = useMemo(() => computeMonthTotals(bills, income, { now }), [bills, income, now]);
 
   const billRows = useMemo(() => {
     return [...(bills || [])].sort((a, b) => {
@@ -134,6 +148,7 @@ export default function BillsIncomePage({
   }
 
   async function saveBill() {
+    if (isReadOnly) return;
     if (!billForm.merchant.trim()) return;
     try {
       await upsertStatementItem(
@@ -162,6 +177,7 @@ export default function BillsIncomePage({
   }
 
   async function removeBill(id) {
+    if (isReadOnly) return;
     try {
       await deleteStatementItem(uid, currentMonth, "bills", id);
       onToast("Bill deleted.");
@@ -172,6 +188,7 @@ export default function BillsIncomePage({
   }
 
   async function paid(bill) {
+    if (isReadOnly) return;
     try {
       await markStatementBillPaid(uid, currentMonth, bill.id, bill.status !== "paid");
       onToast(`Updated ${bill.merchant || bill.name} payment status.`);
@@ -199,6 +216,7 @@ export default function BillsIncomePage({
   }
 
   async function saveIncome() {
+    if (isReadOnly) return;
     if (!incomeForm.source.trim()) return;
     try {
       await upsertStatementItem(
@@ -226,6 +244,7 @@ export default function BillsIncomePage({
   }
 
   async function removeIncome(id) {
+    if (isReadOnly) return;
     try {
       await deleteStatementItem(uid, currentMonth, "incomes", id);
       onToast("Income entry deleted.");
@@ -236,6 +255,7 @@ export default function BillsIncomePage({
   }
 
   async function toggleReceived(item) {
+    if (isReadOnly) return;
     try {
       await markStatementIncomeReceived(uid, currentMonth, item.id, item.status !== "received");
       onToast(`Updated ${item.source || item.name} status.`);
@@ -365,51 +385,24 @@ export default function BillsIncomePage({
           <button type="button" onClick={() => goMonth(-1)}>Prev</button>
           <input type="month" value={currentMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
           <button type="button" onClick={() => goMonth(1)}>Next</button>
-          <button type="button" onClick={syncMonth}>Sync recurring items</button>
+          <button type="button" onClick={syncMonth}>Sync now</button>
         </div>
-        {!isCurrentMonth ? <div className="muted">Viewing historical month {currentMonth}.</div> : null}
+        {!isCurrentMonth ? <div className="muted">Viewing historical month {currentMonth} (read-only).</div> : null}
+        <div className="muted">Recurring sync runs automatically. Use "Sync now" only if needed.</div>
       </section>
 
       <section className="card section">
-        <div className="row">
-          <h3>Recurring Templates</h3>
-          <div className="spacer" />
-          <button type="button" onClick={startBillTemplateAdd}>Add Recurring Bill</button>
-          <button type="button" onClick={startIncomeTemplateAdd}>Add Recurring Income</button>
-        </div>
-        <div className="twoCol">
-          <div>
-            <div className="muted" style={{ marginBottom: 6 }}>Bills templates</div>
-            <ul className="cleanList">
-              {billTemplates?.map((t) => (
-                <li key={t.id} className="listRow">
-                  <span>{t.merchant}</span>
-                  <span>Day {t.dueDay}</span>
-                  <span>{formatCurrency(t.defaultAmount, cfg.currency)}</span>
-                  <span className="row">
-                    <button type="button" onClick={() => startBillTemplateEdit(t)}>Edit</button>
-                    <button type="button" onClick={() => removeBillTemplate(t.id)}>Delete</button>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <div className="muted" style={{ marginBottom: 6 }}>Income templates</div>
-            <ul className="cleanList">
-              {incomeTemplates?.map((t) => (
-                <li key={t.id} className="listRow">
-                  <span>{t.source}</span>
-                  <span>Day {t.payDay}</span>
-                  <span>{formatCurrency(t.defaultAmount, cfg.currency)}</span>
-                  <span className="row">
-                    <button type="button" onClick={() => startIncomeTemplateEdit(t)}>Edit</button>
-                    <button type="button" onClick={() => removeIncomeTemplate(t.id)}>Delete</button>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <h3>Cashflow Forecast</h3>
+        <div className="statsGrid" style={{ gridTemplateColumns: "repeat(3, minmax(160px, 1fr))" }}>
+          <div className="card section"><strong>Bills remaining:</strong> {formatCurrency(cashflow.totalBillsUnpaid, cfg.currency)}</div>
+          <div className="card section"><strong>Due next 7 days:</strong> {dueSoon.length}</div>
+          <div className="card section"><strong>Due later this month:</strong> {dueLater.length}</div>
+          <div className="card section"><strong>Income expected:</strong> {formatCurrency(cashflow.totalIncomeExpected, cfg.currency)}</div>
+          <div className="card section"><strong>Income received:</strong> {formatCurrency(cashflow.totalIncomeReceived, cfg.currency)}</div>
+          <div className="card section"><strong>Bills paid:</strong> {formatCurrency(cashflow.totalBillsPaid, cfg.currency)}</div>
+          <div className="card section"><strong>Remaining from received:</strong> {formatCurrency(cashflow.remainingFromReceived, cfg.currency)}</div>
+          <div className="card section"><strong>Projected month end:</strong> {formatCurrency(cashflow.projectedRemaining, cfg.currency)}</div>
+          <div className="card section"><strong>Total bills:</strong> {formatCurrency(cashflow.totalBills, cfg.currency)}</div>
         </div>
       </section>
 
@@ -418,7 +411,7 @@ export default function BillsIncomePage({
           <div className="row">
             <h2>Bills</h2>
             <div className="spacer" />
-            <button type="button" className="primary" onClick={startBillAdd}>Add Bill</button>
+            <button type="button" className="primary" onClick={startBillAdd} disabled={isReadOnly}>Add Bill</button>
           </div>
 
           <h4>Due next 7 days</h4>
@@ -462,8 +455,8 @@ export default function BillsIncomePage({
                       <button type="button" onClick={() => paid(b)}>
                         {b.status === "paid" ? "Mark unpaid" : "Mark paid"}
                       </button>
-                      <button type="button" onClick={() => startBillEdit(b)}>Edit</button>
-                      <button type="button" onClick={() => removeBill(b.id)}>Delete</button>
+                      <button type="button" onClick={() => startBillEdit(b)} disabled={isReadOnly}>Edit</button>
+                      <button type="button" onClick={() => removeBill(b.id)} disabled={isReadOnly}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -476,7 +469,7 @@ export default function BillsIncomePage({
           <div className="row">
             <h2>Income</h2>
             <div className="spacer" />
-            <button type="button" className="primary" onClick={startIncomeAdd}>Add Income</button>
+            <button type="button" className="primary" onClick={startIncomeAdd} disabled={isReadOnly}>Add Income</button>
           </div>
           <div className="muted" style={{ marginBottom: 10 }}>
             This month total: {formatCurrency(monthIncomeTotal, cfg.currency)}
@@ -508,8 +501,8 @@ export default function BillsIncomePage({
                       <button type="button" onClick={() => toggleReceived(i)}>
                         {i.status === "received" ? "Mark expected" : "Mark received"}
                       </button>
-                      <button type="button" onClick={() => startIncomeEdit(i)}>Edit</button>
-                      <button type="button" onClick={() => removeIncome(i.id)}>Delete</button>
+                      <button type="button" onClick={() => startIncomeEdit(i)} disabled={isReadOnly}>Edit</button>
+                      <button type="button" onClick={() => removeIncome(i.id)} disabled={isReadOnly}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -544,6 +537,58 @@ export default function BillsIncomePage({
         </div>
       </Modal>
 
+      <section className="card section">
+        <div className="row">
+          <h3>Recurring Templates</h3>
+          <div className="spacer" />
+          <button type="button" onClick={() => setTemplatesCollapsed((v) => !v)}>
+            {templatesCollapsed ? ">" : "v"}
+          </button>
+        </div>
+        {!templatesCollapsed ? (
+          <>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button type="button" onClick={startBillTemplateAdd}>Add Recurring Bill</button>
+              <button type="button" onClick={startIncomeTemplateAdd}>Add Recurring Income</button>
+            </div>
+            <div className="twoCol">
+              <div>
+                <div className="muted" style={{ marginBottom: 6 }}>Bills templates</div>
+                <ul className="cleanList">
+                  {billTemplates?.map((t) => (
+                    <li key={t.id} className="listRow">
+                      <span>{t.merchant}</span>
+                      <span>Day {t.dueDay}</span>
+                      <span>{formatCurrency(t.defaultAmount, cfg.currency)}</span>
+                      <span className="row">
+                        <button type="button" onClick={() => startBillTemplateEdit(t)}>Edit</button>
+                        <button type="button" onClick={() => removeBillTemplate(t.id)}>Delete</button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="muted" style={{ marginBottom: 6 }}>Income templates</div>
+                <ul className="cleanList">
+                  {incomeTemplates?.map((t) => (
+                    <li key={t.id} className="listRow">
+                      <span>{t.source}</span>
+                      <span>Day {t.payDay}</span>
+                      <span>{formatCurrency(t.defaultAmount, cfg.currency)}</span>
+                      <span className="row">
+                        <button type="button" onClick={() => startIncomeTemplateEdit(t)}>Edit</button>
+                        <button type="button" onClick={() => removeIncomeTemplate(t.id)}>Delete</button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </>
+        ) : null}
+      </section>
+
       <Modal title={billTemplateEditingId ? "Edit Recurring Bill" : "Add Recurring Bill"} open={billTemplateOpen} onClose={() => setBillTemplateOpen(false)}>
         <div className="formGrid">
           <label>Merchant<input value={billTemplateForm.merchant} onChange={(e) => setBillTemplateForm({ ...billTemplateForm, merchant: e.target.value })} /></label>
@@ -571,3 +616,4 @@ export default function BillsIncomePage({
     </div>
   );
 }
+

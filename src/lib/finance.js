@@ -123,3 +123,123 @@ export function monthFromMonthId(monthId) {
   if (!parsed) return null;
   return new Date(parsed.y, parsed.m - 1, 1);
 }
+
+function toDateValue(value, fallback = new Date()) {
+  if (value?.toDate) return value.toDate();
+  if (value instanceof Date) return value;
+  if (value) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return fallback;
+}
+
+function isBillPaid(bill, now = new Date()) {
+  if (bill?.status) return bill.status === "paid";
+  return billStatus(bill, now) === "paid";
+}
+
+function isIncomeReceived(item) {
+  return item?.status === "received";
+}
+
+export function getBillsDueWithinDays(bills, days = 7, fromDate = new Date()) {
+  const start = startOfDay(fromDate);
+  const end = new Date(start);
+  end.setDate(end.getDate() + days);
+  return (bills || [])
+    .map((bill) => ({
+      ...bill,
+      nextDueDate: getBillDueDate(bill, fromDate),
+      status: billStatus(bill, fromDate),
+    }))
+    .filter((bill) => !isBillPaid(bill, fromDate))
+    .filter((bill) => {
+      const due = startOfDay(bill.nextDueDate);
+      return due >= start && due <= end;
+    })
+    .sort((a, b) => a.nextDueDate - b.nextDueDate);
+}
+
+export function getBillsDueLaterThisMonth(bills, fromDate = new Date(), withinDays = 7) {
+  const start = startOfDay(fromDate);
+  const cutoff = new Date(start);
+  cutoff.setDate(cutoff.getDate() + withinDays);
+  const monthEnd = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59, 999);
+  return (bills || [])
+    .map((bill) => ({
+      ...bill,
+      nextDueDate: getBillDueDate(bill, fromDate),
+      status: billStatus(bill, fromDate),
+    }))
+    .filter((bill) => !isBillPaid(bill, fromDate))
+    .filter((bill) => {
+      const due = startOfDay(bill.nextDueDate);
+      return due > cutoff && due <= monthEnd;
+    })
+    .sort((a, b) => a.nextDueDate - b.nextDueDate);
+}
+
+export function computeMonthTotals(bills, incomes, options = {}) {
+  const now = options.now || new Date();
+  const totalIncomeExpected = (incomes || []).reduce(
+    (sum, item) => sum + safeNumber(item.amount ?? item.expectedAmount, 0),
+    0
+  );
+  const totalIncomeReceived = (incomes || [])
+    .filter((item) => isIncomeReceived(item))
+    .reduce((sum, item) => sum + safeNumber(item.amount ?? item.expectedAmount, 0), 0);
+
+  const totalBills = (bills || []).reduce((sum, bill) => sum + safeNumber(bill.amount, 0), 0);
+  const totalBillsPaid = (bills || [])
+    .filter((bill) => isBillPaid(bill, now))
+    .reduce((sum, bill) => sum + safeNumber(bill.amount, 0), 0);
+  const totalBillsUnpaid = Math.max(0, totalBills - totalBillsPaid);
+
+  const remainingFromReceived = totalIncomeReceived - totalBillsPaid;
+  const projectedRemaining = totalIncomeExpected - totalBills;
+
+  const sortedIncome = [...(incomes || [])]
+    .map((item) => ({ ...item, _date: toDateValue(getIncomePayDate(item, now), now) }))
+    .sort((a, b) => a._date - b._date);
+  const sortedBills = [...(bills || [])]
+    .map((bill) => ({ ...bill, _date: toDateValue(getBillDueDate(bill, now), now) }))
+    .sort((a, b) => a._date - b._date);
+
+  const nextExpectedIncome = sortedIncome.find((item) => item._date >= startOfDay(now) && !isIncomeReceived(item)) || null;
+  const nextDueBill = sortedBills.find((bill) => bill._date >= startOfDay(now) && !isBillPaid(bill, now)) || null;
+
+  const events = [
+    ...sortedIncome.map((item) => ({
+      id: `income-${item.id}`,
+      type: "income",
+      label: item.source || item.name || "Income",
+      date: item._date,
+      amount: safeNumber(item.amount ?? item.expectedAmount, 0),
+      status: item.status || "expected",
+    })),
+    ...sortedBills.map((bill) => ({
+      id: `bill-${bill.id}`,
+      type: "bill",
+      label: bill.merchant || bill.name || "Bill",
+      date: bill._date,
+      amount: safeNumber(bill.amount, 0),
+      status: bill.status || "unpaid",
+    })),
+  ]
+    .sort((a, b) => a.date - b.date)
+    .slice(0, 6);
+
+  return {
+    totalIncomeExpected,
+    totalIncomeReceived,
+    totalBills,
+    totalBillsPaid,
+    totalBillsUnpaid,
+    remainingFromReceived,
+    projectedRemaining,
+    nextExpectedIncome,
+    nextDueBill,
+    events,
+  };
+}

@@ -10,7 +10,7 @@ import TransactionsPage from "./pages/TransactionsPage";
 import SettingsPage from "./pages/SettingsPage";
 import { getAllowedEmails, isEmailAllowed } from "./lib/auth";
 import {
-  ensureMonthInitialized,
+  ensureMonthInitializedAndSynced,
   importExistingBillsAsRecurringTemplates,
   subscribeCollection,
   subscribeSettings,
@@ -30,6 +30,8 @@ const EMPTY_DATA = {
   budgets: [],
   statementBills: [],
   statementIncomes: [],
+  currentStatementBills: [],
+  currentStatementIncomes: [],
   billTemplates: [],
   incomeTemplates: [],
 };
@@ -127,8 +129,12 @@ export default function App() {
     let cancelled = false;
     (async () => {
       try {
-        await ensureMonthInitialized(user.uid, selectedMonth);
-        await importExistingBillsAsRecurringTemplates(user.uid, selectedMonth);
+        const currentMonth = monthKey();
+        await importExistingBillsAsRecurringTemplates(user.uid, currentMonth);
+        await ensureMonthInitializedAndSynced(user.uid, currentMonth);
+        if (selectedMonth !== currentMonth) {
+          await ensureMonthInitializedAndSynced(user.uid, selectedMonth);
+        }
         if (cancelled) return;
       } catch (error) {
         if (cancelled) return;
@@ -139,6 +145,32 @@ export default function App() {
       cancelled = true;
     };
   }, [selectedMonth, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const currentMonth = monthKey();
+    const unsubs = [];
+    const onErr = (error) => setAuthError(error?.message || String(error));
+    unsubs.push(
+      subscribeStatementItems(
+        user.uid,
+        currentMonth,
+        "bills",
+        (rows) => setData((prev) => ({ ...prev, currentStatementBills: rows })),
+        onErr
+      )
+    );
+    unsubs.push(
+      subscribeStatementItems(
+        user.uid,
+        currentMonth,
+        "incomes",
+        (rows) => setData((prev) => ({ ...prev, currentStatementIncomes: rows })),
+        onErr
+      )
+    );
+    return () => unsubs.forEach((u) => u?.());
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -221,9 +253,8 @@ export default function App() {
         <DashboardPage
           data={data}
           settings={settings}
-          selectedMonth={selectedMonth}
-          bills={data.statementBills}
-          incomes={data.statementIncomes}
+          bills={data.currentStatementBills}
+          incomes={data.currentStatementIncomes}
           loadError={authError}
         />
       );

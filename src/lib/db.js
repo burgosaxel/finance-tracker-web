@@ -548,6 +548,12 @@ export async function syncRecurringItemsForMonth(uid, monthId) {
   }
 }
 
+export async function ensureMonthInitializedAndSynced(uid, monthId) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
+  await syncRecurringItemsForMonth(uid, monthId);
+}
+
 export async function importExistingBillsAsRecurringTemplates(uid, monthId = monthKey()) {
   requireUid(uid);
   const migrationRef = doc(db, "users", uid, "settings", "migrations");

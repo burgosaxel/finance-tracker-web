@@ -1,20 +1,22 @@
 import React, { useMemo } from "react";
 import StatCard from "../components/StatCard";
 import {
+  computeMonthTotals,
   DEFAULT_SETTINGS,
   formatCurrency,
   formatPercent,
   getBillDueDate,
-  getUpcomingBills,
+  getBillsDueLaterThisMonth,
+  getBillsDueWithinDays,
   getIncomePayDate,
   monthKey,
   safeNumber,
 } from "../lib/finance";
 
-export default function DashboardPage({ data, settings, selectedMonth, bills = [], incomes = [], loadError }) {
+export default function DashboardPage({ data, settings, bills = [], incomes = [], loadError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const now = new Date();
-  const currentMonth = selectedMonth || monthKey(now);
+  const currentMonth = monthKey(now);
 
   const summary = useMemo(() => {
     const totalCash = (data.accounts || []).reduce((sum, a) => sum + safeNumber(a.balance, 0), 0);
@@ -28,7 +30,9 @@ export default function DashboardPage({ data, settings, selectedMonth, bills = [
       .filter((b) => monthKey(getBillDueDate(b, now)) === currentMonth)
       .reduce((sum, b) => sum + safeNumber(b.amount, 0), 0);
 
-    const dueSoon = getUpcomingBills(bills, { days: 7, now });
+    const dueSoon = getBillsDueWithinDays(bills, 7, now);
+    const dueLater = getBillsDueLaterThisMonth(bills, now, 7);
+    const cashflow = computeMonthTotals(bills, incomes, { now });
 
     const overUtilized = (data.creditCards || [])
       .map((c) => {
@@ -47,6 +51,8 @@ export default function DashboardPage({ data, settings, selectedMonth, bills = [
       monthBills,
       utilization,
       dueSoon,
+      dueLater,
+      cashflow,
       overUtilized,
     };
   }, [bills, cfg.utilizationThreshold, currentMonth, data.accounts, data.creditCards, incomes, now]);
@@ -61,6 +67,12 @@ export default function DashboardPage({ data, settings, selectedMonth, bills = [
         <StatCard label="This Month Income" value={formatCurrency(summary.monthIncome, cfg.currency)} />
         <StatCard label="This Month Bills Due" value={formatCurrency(summary.monthBills, cfg.currency)} />
         <StatCard label="Credit Utilization" value={formatPercent(summary.utilization)} />
+        <StatCard label="Bills Remaining" value={formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)} />
+        <StatCard label="Income Received" value={formatCurrency(summary.cashflow.totalIncomeReceived, cfg.currency)} />
+        <StatCard
+          label="Projected Month End"
+          value={formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}
+        />
       </div>
 
       <div className="twoCol">
@@ -73,17 +85,57 @@ export default function DashboardPage({ data, settings, selectedMonth, bills = [
             <ul className="cleanList">
               {summary.dueSoon.map((b) => (
                 <li key={b.id} className="listRow">
-                  <span>{b.name}</span>
+                  <span>{b.merchant || b.name}</span>
                   <span>{new Date(b.nextDueDate).toLocaleDateString()}</span>
                   <strong>{formatCurrency(b.amount, cfg.currency)}</strong>
                 </li>
               ))}
             </ul>
           )}
+          <div className="muted" style={{ marginTop: 8 }}>
+            Due later this month: {summary.dueLater.length}
+          </div>
         </section>
 
         <section className="card section">
-          <h3>Credit utilization alerts</h3>
+          <h3>Cashflow Snapshot</h3>
+          <ul className="cleanList">
+            <li className="listRow">
+              <span>Income expected</span>
+              <strong>{formatCurrency(summary.cashflow.totalIncomeExpected, cfg.currency)}</strong>
+            </li>
+            <li className="listRow">
+              <span>Bills paid</span>
+              <strong>{formatCurrency(summary.cashflow.totalBillsPaid, cfg.currency)}</strong>
+            </li>
+            <li className="listRow">
+              <span>Bills unpaid</span>
+              <strong>{formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)}</strong>
+            </li>
+            <li className="listRow">
+              <span>Remaining from received paychecks</span>
+              <strong>{formatCurrency(summary.cashflow.remainingFromReceived, cfg.currency)}</strong>
+            </li>
+            <li className="listRow">
+              <span>Projected remaining by month end</span>
+              <strong>{formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}</strong>
+            </li>
+          </ul>
+          <h4 style={{ marginTop: 10 }}>Next events</h4>
+          {summary.cashflow.events.length === 0 ? (
+            <div className="muted">No upcoming events this month.</div>
+          ) : (
+            <ul className="cleanList">
+              {summary.cashflow.events.map((e) => (
+                <li key={e.id} className="listRow">
+                  <span>{e.type === "income" ? `Paycheck: ${e.label}` : `Bill: ${e.label}`}</span>
+                  <span>{e.date.toLocaleDateString()}</span>
+                  <strong>{formatCurrency(e.amount, cfg.currency)}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+          <h4 style={{ marginTop: 10 }}>Credit utilization alerts</h4>
           {summary.overUtilized.length === 0 ? (
             <div className="muted">All cards are under the alert threshold.</div>
           ) : (
