@@ -366,6 +366,56 @@ textarea {
   overflow: auto;
 }
 
+.mobileDataList {
+  display: none;
+}
+
+.dataItem {
+  display: grid;
+  gap: 10px;
+}
+
+.dataItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dataItemTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.dataGrid {
+  display: grid;
+  gap: 6px;
+}
+
+.dataRow {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.9fr) 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.dataLabel {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.dataValue {
+  color: var(--text-primary);
+  text-align: right;
+  font-weight: 600;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.dataActions {
+  justify-content: flex-end;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -666,6 +716,23 @@ tfoot td {
   .row {
     gap: 6px;
   }
+
+  .desktopDataTable {
+    display: none;
+  }
+
+  .mobileDataList {
+    display: grid;
+    gap: 8px;
+  }
+
+  .dataActions {
+    justify-content: stretch;
+  }
+
+  .dataActions button {
+    flex: 1 1 auto;
+  }
 }
 
 @media (max-width: 640px) {
@@ -711,5 +778,14 @@ tfoot td {
     right: 8px;
     top: 8px;
     max-height: calc(100vh - 16px);
+  }
+
+  .dataRow {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .dataValue {
+    text-align: left;
   }
 }

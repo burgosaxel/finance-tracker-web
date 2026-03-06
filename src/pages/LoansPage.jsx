@@ -123,7 +123,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         />
       </div>
 
-      <div className="tableWrap card">
+      <div className="tableWrap card desktopDataTable">
         <table>
           <thead>
             <tr>
@@ -166,6 +166,29 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mobileDataList">
+        {rows.length === 0 ? <div className="card section muted">No loans yet.</div> : null}
+        {rows.map((loan) => (
+          <article key={`mobile-${loan.id}`} className="card section dataItem">
+            <div className="dataItemHeader">
+              <h3 className="dataItemTitle">{loan.lender}</h3>
+              <span className="pill">{loan.status || "active"}</span>
+            </div>
+            <div className="dataGrid">
+              <div className="dataRow"><span className="dataLabel">Balance</span><span className="dataValue">{formatCurrency(loan.balance, cfg.currency)}</span></div>
+              <div className="dataRow"><span className="dataLabel">Monthly Payment</span><span className="dataValue">{formatCurrency(loan.monthlyPayment, cfg.currency)}</span></div>
+              <div className="dataRow"><span className="dataLabel">Interest Rate</span><span className="dataValue">{loan.interestRate === null ? "-" : formatPercent(loan.interestRate)}</span></div>
+              <div className="dataRow"><span className="dataLabel">Due Day</span><span className="dataValue">{loan.dueDay || "-"}</span></div>
+              <div className="dataRow"><span className="dataLabel">Notes</span><span className="dataValue">{loan.notes || "-"}</span></div>
+            </div>
+            <div className="row dataActions">
+              <button type="button" onClick={() => startEdit(loan)}>Edit</button>
+              <button type="button" onClick={() => remove(loan.id)}>Delete</button>
+            </div>
+          </article>
+        ))}
       </div>
 
       <Modal title={editingId ? "Edit Loan" : "Add Loan"} open={open} onClose={() => setOpen(false)}>

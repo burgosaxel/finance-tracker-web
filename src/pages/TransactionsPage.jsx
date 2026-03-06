@@ -102,7 +102,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
         <button type="button" className="primary" onClick={startAdd}>Add Transaction</button>
       </div>
 
-      <div className="tableWrap card">
+      <div className="tableWrap card desktopDataTable">
         <table>
           <thead>
             <tr>
@@ -137,6 +137,30 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mobileDataList">
+        {rows.length === 0 ? <div className="card section muted">No transactions for this filter.</div> : null}
+        {rows.map((t) => (
+          <article key={`mobile-${t.id}`} className="card section dataItem">
+            <div className="dataItemHeader">
+              <h3 className="dataItemTitle">{t.payee}</h3>
+              <span className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
+                {formatCurrency(t.amount, cfg.currency)}
+              </span>
+            </div>
+            <div className="dataGrid">
+              <div className="dataRow"><span className="dataLabel">Date</span><span className="dataValue">{t.date || "-"}</span></div>
+              <div className="dataRow"><span className="dataLabel">Category</span><span className="dataValue">{t.category || "-"}</span></div>
+              <div className="dataRow"><span className="dataLabel">Account</span><span className="dataValue">{accounts.find((a) => a.id === t.accountId)?.name || "-"}</span></div>
+              <div className="dataRow"><span className="dataLabel">Notes</span><span className="dataValue">{t.notes || "-"}</span></div>
+            </div>
+            <div className="row dataActions">
+              <button type="button" onClick={() => startEdit(t)}>Edit</button>
+              <button type="button" onClick={() => remove(t.id)}>Delete</button>
+            </div>
+          </article>
+        ))}
       </div>
 
       <Modal title={editingId ? "Edit Transaction" : "Add Transaction"} open={open} onClose={() => setOpen(false)}>
