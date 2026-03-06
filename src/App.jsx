@@ -63,6 +63,24 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const root = document.documentElement;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      root.setAttribute("data-theme", media.matches ? "dark" : "light");
+    };
+
+    applyTheme();
+    const onThemeChange = () => applyTheme();
+    if (media.addEventListener) {
+      media.addEventListener("change", onThemeChange);
+      return () => media.removeEventListener("change", onThemeChange);
+    }
+    media.addListener(onThemeChange);
+    return () => media.removeListener(onThemeChange);
+  }, []);
+
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setAuthError("");
       if (!u) {
