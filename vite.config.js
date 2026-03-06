@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
     // GitHub Pages project site path. Override via VITE_BASE_PATH when needed.
     base: env.VITE_BASE_PATH || "/finance-tracker-web/",
     build: {
+      outDir: env.VITE_BUILD_OUT_DIR || "dist",
       sourcemap: true,
     },
   };
