@@ -266,6 +266,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .navLink {
@@ -302,6 +303,10 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--shadow-sm);
+}
+
+.topbar > .row {
+  justify-content: flex-end;
 }
 
 .pageContent {
@@ -415,6 +420,10 @@ tfoot td {
   border-bottom: 1px solid var(--border);
 }
 
+.listRow > * {
+  min-width: 0;
+}
+
 .formGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(180px, 1fr));
@@ -489,7 +498,8 @@ tfoot td {
 
   .sidebarNav {
     flex-direction: row;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow: visible;
   }
 
   .twoCol {
@@ -506,6 +516,45 @@ tfoot td {
     padding: 10px;
   }
 
+  .appShell {
+    gap: 10px;
+    min-height: auto;
+  }
+
+  .sidebar,
+  .topbar,
+  .card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .sidebarTitle {
+    margin-bottom: 10px;
+  }
+
+  .sidebarNav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .navLink {
+    text-align: center;
+  }
+
+  .topbar {
+    display: grid;
+    gap: 8px;
+  }
+
+  .topbar > .row {
+    justify-content: space-between;
+  }
+
+  .row {
+    gap: 6px;
+  }
+
   .statsGrid {
     grid-template-columns: 1fr;
   }
@@ -518,10 +567,25 @@ tfoot td {
     min-width: 100%;
   }
 
+  .listRow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
   button,
   input,
   select,
   textarea {
     font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebarNav {
+    grid-template-columns: 1fr;
+  }
+
+  .tableWrap {
+    -webkit-overflow-scrolling: touch;
   }
 }
