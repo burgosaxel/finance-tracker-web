@@ -2,7 +2,7 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "test"]
   workflow_dispatch:
 
 permissions:
@@ -18,21 +18,40 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (trigger branch)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-src
+
+      - name: Checkout test branch
+        uses: actions/checkout@v4
+        with:
+          ref: test
+          path: test-src
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: |
+            main-src/package-lock.json
+            test-src/package-lock.json
 
-      - name: Install dependencies
+      - name: Install dependencies (main)
+        working-directory: main-src
         run: npm ci
 
-      - name: Build
+      - name: Build production (main)
         env:
           VITE_BASE_PATH: /finance-tracker-web/
+          VITE_BUILD_OUT_DIR: dist-main
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
@@ -41,7 +60,33 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
           VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
           VITE_ALLOWED_EMAILS: ${{ secrets.VITE_ALLOWED_EMAILS }}
+        working-directory: main-src
         run: npm run build
+
+      - name: Install dependencies (test)
+        working-directory: test-src
+        run: npm ci
+
+      - name: Build preview (test)
+        env:
+          VITE_BASE_PATH: /finance-tracker-web/test/
+          VITE_BUILD_OUT_DIR: dist-test
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+          VITE_ALLOWED_EMAILS: ${{ secrets.VITE_ALLOWED_EMAILS }}
+        working-directory: test-src
+        run: npm run build
+
+      - name: Assemble Pages artifact
+        run: |
+          mkdir -p site/test
+          cp -R main-src/dist-main/. site/
+          cp -R test-src/dist-test/. site/test/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -50,7 +95,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
-          path: dist
+          path: site
 
   deploy:
     environment:
