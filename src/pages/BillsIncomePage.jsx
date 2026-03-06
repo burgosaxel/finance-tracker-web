@@ -426,7 +426,7 @@ export default function BillsIncomePage({
             ))}
           </ul>
 
-          <div className="tableWrap">
+          <div className="tableWrap desktopDataTable">
             <table>
               <thead>
                 <tr>
@@ -463,6 +463,31 @@ export default function BillsIncomePage({
               </tbody>
             </table>
           </div>
+
+          <div className="mobileDataList">
+            {billRows.length === 0 ? <div className="card section muted">No bills this month.</div> : null}
+            {billRows.map((b) => (
+              <article key={`mobile-bill-${b.id}`} className="card section dataItem">
+                <div className="dataItemHeader">
+                  <h3 className="dataItemTitle">{b.merchant || b.name}</h3>
+                  <span className="pill">{b.status || "unpaid"}</span>
+                </div>
+                <div className="dataGrid">
+                  <div className="dataRow"><span className="dataLabel">Amount</span><span className="dataValue">{formatCurrency(b.amount, cfg.currency)}</span></div>
+                  <div className="dataRow"><span className="dataLabel">Due Date</span><span className="dataValue">{(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()}</span></div>
+                  <div className="dataRow"><span className="dataLabel">Paid From</span><span className="dataValue">{b.paidFrom || b.accountId || "-"}</span></div>
+                  <div className="dataRow"><span className="dataLabel">Paid At</span><span className="dataValue">{b.paidAt?.toDate ? b.paidAt.toDate().toLocaleString() : "-"}</span></div>
+                </div>
+                <div className="row dataActions">
+                  <button type="button" onClick={() => paid(b)}>
+                    {b.status === "paid" ? "Mark unpaid" : "Mark paid"}
+                  </button>
+                  <button type="button" onClick={() => startBillEdit(b)} disabled={isReadOnly}>Edit</button>
+                  <button type="button" onClick={() => removeBill(b.id)} disabled={isReadOnly}>Delete</button>
+                </div>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className="card section">
@@ -474,7 +499,7 @@ export default function BillsIncomePage({
           <div className="muted" style={{ marginBottom: 10 }}>
             This month total: {formatCurrency(monthIncomeTotal, cfg.currency)}
           </div>
-          <div className="tableWrap">
+          <div className="tableWrap desktopDataTable">
             <table>
               <thead>
                 <tr>
@@ -508,6 +533,30 @@ export default function BillsIncomePage({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mobileDataList">
+            {incomeRows.length === 0 ? <div className="card section muted">No income entries this month.</div> : null}
+            {incomeRows.map((i) => (
+              <article key={`mobile-income-${i.id}`} className="card section dataItem">
+                <div className="dataItemHeader">
+                  <h3 className="dataItemTitle">{i.source || i.name}</h3>
+                  <span className="pill">{i.status || "expected"}</span>
+                </div>
+                <div className="dataGrid">
+                  <div className="dataRow"><span className="dataLabel">Amount</span><span className="dataValue">{formatCurrency(i.amount ?? i.expectedAmount, cfg.currency)}</span></div>
+                  <div className="dataRow"><span className="dataLabel">Pay Date</span><span className="dataValue">{getIncomePayDate(i).toLocaleDateString()}</span></div>
+                  <div className="dataRow"><span className="dataLabel">Received At</span><span className="dataValue">{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</span></div>
+                </div>
+                <div className="row dataActions">
+                  <button type="button" onClick={() => toggleReceived(i)}>
+                    {i.status === "received" ? "Mark expected" : "Mark received"}
+                  </button>
+                  <button type="button" onClick={() => startIncomeEdit(i)} disabled={isReadOnly}>Edit</button>
+                  <button type="button" onClick={() => removeIncome(i.id)} disabled={isReadOnly}>Delete</button>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
       </div>
