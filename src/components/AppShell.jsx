@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "budget", label: "Budget" },
   { id: "credit-cards", label: "Credit Cards" },
+  { id: "loans", label: "Loans" },
   { id: "bills-income", label: "Bills & Income" },
   { id: "transactions", label: "Transactions" },
   { id: "settings", label: "Settings" },

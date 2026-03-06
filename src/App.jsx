@@ -5,6 +5,7 @@ import Toast from "./components/Toast";
 import DashboardPage from "./pages/DashboardPage";
 import BudgetPage from "./pages/BudgetPage";
 import CreditCardsPage from "./pages/CreditCardsPage";
+import LoansPage from "./pages/LoansPage";
 import BillsIncomePage from "./pages/BillsIncomePage";
 import TransactionsPage from "./pages/TransactionsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -24,6 +25,7 @@ import { getRouteFromHash } from "./lib/hashRouter";
 const EMPTY_DATA = {
   accounts: [],
   creditCards: [],
+  loans: [],
   bills: [],
   income: [],
   transactions: [],
@@ -99,6 +101,7 @@ export default function App() {
 
     bind("accounts", "accounts", "name");
     bind("creditCards", "creditCards", "name");
+    bind("loans", "loans", "lender");
     bind("bills", "bills", "dueDay");
     bind("income", "income", "nextPayDate");
     bind("transactions", "transactions", "date");
@@ -270,6 +273,8 @@ export default function App() {
       );
     if (route === "credit-cards")
       return <CreditCardsPage {...shared} cards={data.creditCards} />;
+    if (route === "loans")
+      return <LoansPage {...shared} loans={data.loans} />;
     if (route === "bills-income")
       return (
         <BillsIncomePage
