@@ -343,10 +343,18 @@ textarea {
   box-shadow: var(--shadow-sm);
 }
 
+.statLabel {
+  font-size: 0.9rem;
+}
+
 .statValue {
   margin-top: 4px;
   font-size: 22px;
   font-weight: 700;
+}
+
+.statSubtitle {
+  margin-top: 2px;
 }
 
 .section {
@@ -390,6 +398,41 @@ textarea {
 .dataGrid {
   display: grid;
   gap: 6px;
+}
+
+.summaryGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.summaryGrid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.summaryGrid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summaryCell {
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  gap: 3px;
+}
+
+.summaryCell strong {
+  font-size: 0.95rem;
+}
+
+.compactSubtext {
+  font-size: 0.85rem;
+}
+
+.pageIntro {
+  margin: -2px 0 4px;
+  font-size: 0.92rem;
 }
 
 .dataRow {
@@ -481,6 +524,17 @@ tfoot td {
 
 .listRow > * {
   min-width: 0;
+}
+
+.compactTriplet {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+}
+
+.compactTriplet span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .formGrid {
@@ -694,10 +748,27 @@ tfoot td {
 
   .statCard {
     padding: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    row-gap: 2px;
+    column-gap: 8px;
   }
 
   .statValue {
-    font-size: 18px;
+    font-size: 17px;
+    margin: 0;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .statLabel {
+    font-size: 0.82rem;
+  }
+
+  .statSubtitle {
+    grid-column: 1 / -1;
+    font-size: 0.8rem;
   }
 
   h2 {
@@ -733,6 +804,20 @@ tfoot td {
   .dataActions button {
     flex: 1 1 auto;
   }
+
+  .summaryGrid.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .forecastGrid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .compactTriplet {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 640px) {
@@ -752,8 +837,9 @@ tfoot td {
   }
 
   .listRow {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 4px;
+    align-items: center;
   }
 
   button,
@@ -787,5 +873,39 @@ tfoot td {
 
   .dataValue {
     text-align: left;
+  }
+
+  .summaryGrid.two,
+  .summaryGrid.three {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .summaryCell {
+    padding: 7px;
+  }
+
+  .compactTriplet {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name amount"
+      "date amount";
+    row-gap: 1px;
+  }
+
+  .compactTriplet > :nth-child(1) {
+    grid-area: name;
+  }
+
+  .compactTriplet > :nth-child(2) {
+    grid-area: date;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+  }
+
+  .compactTriplet > :nth-child(3) {
+    grid-area: amount;
+    justify-self: end;
+    align-self: center;
+    white-space: nowrap;
   }
 }

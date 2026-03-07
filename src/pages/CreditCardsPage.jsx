@@ -189,19 +189,24 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
         {rows.map((card) => (
           <article key={`mobile-${card.id}`} className="card section dataItem">
             <div className="dataItemHeader">
-              <h3 className="dataItemTitle">{card.name}</h3>
+              <div>
+                <h3 className="dataItemTitle">{card.name}</h3>
+                <div className="muted compactSubtext">{card.issuer || "No issuer"}</div>
+              </div>
               <span className={card.utilization > cfg.utilizationThreshold ? "pill danger" : "pill"}>
                 {formatPercent(card.utilization)}
               </span>
             </div>
-            <div className="dataGrid">
-              <div className="dataRow"><span className="dataLabel">Issuer</span><span className="dataValue">{card.issuer || "-"}</span></div>
-              <div className="dataRow"><span className="dataLabel">Limit</span><span className="dataValue">{formatCurrency(card.limit, cfg.currency)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Balance</span><span className="dataValue">{formatCurrency(card.balance, cfg.currency)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Available</span><span className="dataValue">{formatCurrency(card.available, cfg.currency)}</span></div>
-              <div className="dataRow"><span className="dataLabel">APR</span><span className="dataValue">{formatPercent(card.apr)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Minimum</span><span className="dataValue">{formatCurrency(card.minimumPayment, cfg.currency)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Recommended</span><span className="dataValue">{formatCurrency(card.recommendedPayment, cfg.currency)}</span></div>
+            <div className="summaryGrid three">
+              <div className="summaryCell"><span className="dataLabel">Limit</span><strong>{formatCurrency(card.limit, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Balance</span><strong>{formatCurrency(card.balance, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Available</span><strong>{formatCurrency(card.available, cfg.currency)}</strong></div>
+            </div>
+            <div className="summaryGrid two">
+              <div className="summaryCell"><span className="dataLabel">APR</span><strong>{formatPercent(card.apr)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Minimum</span><strong>{formatCurrency(card.minimumPayment, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Recommended</span><strong>{formatCurrency(card.recommendedPayment, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Utilization</span><strong>{formatPercent(card.utilization)}</strong></div>
             </div>
             <div className="row dataActions">
               <button type="button" onClick={() => startEdit(card)}>Edit</button>

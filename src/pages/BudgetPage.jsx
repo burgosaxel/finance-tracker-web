@@ -91,6 +91,9 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
         </label>
         <button type="button" className="primary" onClick={saveBudget}>Save Month Budget</button>
       </div>
+      <p className="muted pageIntro">
+        Plan your month by assigning dollars to categories and comparing assigned amounts against activity.
+      </p>
       <div className="row" style={{ marginBottom: 10 }}>
         <div className="card section"><strong>Month Income:</strong> {formatCurrency(monthIncome, cfg.currency)}</div>
         <div className="card section"><strong>Total Assigned:</strong> {formatCurrency(totals.totalAssigned, cfg.currency)}</div>

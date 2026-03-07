@@ -176,13 +176,13 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
               <h3 className="dataItemTitle">{loan.lender}</h3>
               <span className="pill">{loan.status || "active"}</span>
             </div>
-            <div className="dataGrid">
-              <div className="dataRow"><span className="dataLabel">Balance</span><span className="dataValue">{formatCurrency(loan.balance, cfg.currency)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Monthly Payment</span><span className="dataValue">{formatCurrency(loan.monthlyPayment, cfg.currency)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Interest Rate</span><span className="dataValue">{loan.interestRate === null ? "-" : formatPercent(loan.interestRate)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Due Day</span><span className="dataValue">{loan.dueDay || "-"}</span></div>
-              <div className="dataRow"><span className="dataLabel">Notes</span><span className="dataValue">{loan.notes || "-"}</span></div>
+            <div className="summaryGrid two">
+              <div className="summaryCell"><span className="dataLabel">Balance</span><strong>{formatCurrency(loan.balance, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Monthly Payment</span><strong>{formatCurrency(loan.monthlyPayment, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Interest Rate</span><strong>{loan.interestRate === null ? "-" : formatPercent(loan.interestRate)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Due Day</span><strong>{loan.dueDay || "-"}</strong></div>
             </div>
+            {loan.notes ? <div className="muted compactSubtext">{loan.notes}</div> : null}
             <div className="row dataActions">
               <button type="button" onClick={() => startEdit(loan)}>Edit</button>
               <button type="button" onClick={() => remove(loan.id)}>Delete</button>
@@ -190,6 +190,20 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
           </article>
         ))}
       </div>
+
+      <article className="card section dataItem">
+        <h3 className="dataItemTitle">Totals</h3>
+        <div className="summaryGrid two">
+          <div className="summaryCell">
+            <span className="dataLabel">Total Loan Balance</span>
+            <strong>{formatCurrency(totals.totalBalance, cfg.currency)}</strong>
+          </div>
+          <div className="summaryCell">
+            <span className="dataLabel">Total Monthly Payment</span>
+            <strong>{formatCurrency(totals.totalMonthlyPayment, cfg.currency)}</strong>
+          </div>
+        </div>
+      </article>
 
       <Modal title={editingId ? "Edit Loan" : "Add Loan"} open={open} onClose={() => setOpen(false)}>
         <div className="formGrid">

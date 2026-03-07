@@ -84,7 +84,7 @@ export default function DashboardPage({ data, settings, bills = [], incomes = []
           ) : (
             <ul className="cleanList">
               {summary.dueSoon.map((b) => (
-                <li key={b.id} className="listRow">
+                <li key={b.id} className="listRow compactTriplet">
                   <span>{b.merchant || b.name}</span>
                   <span>{new Date(b.nextDueDate).toLocaleDateString()}</span>
                   <strong>{formatCurrency(b.amount, cfg.currency)}</strong>
@@ -127,7 +127,7 @@ export default function DashboardPage({ data, settings, bills = [], incomes = []
           ) : (
             <ul className="cleanList">
               {summary.cashflow.events.map((e) => (
-                <li key={e.id} className="listRow">
+                <li key={e.id} className="listRow compactTriplet">
                   <span>{e.type === "income" ? `Paycheck: ${e.label}` : `Bill: ${e.label}`}</span>
                   <span>{e.date.toLocaleDateString()}</span>
                   <strong>{formatCurrency(e.amount, cfg.currency)}</strong>
@@ -141,7 +141,7 @@ export default function DashboardPage({ data, settings, bills = [], incomes = []
           ) : (
             <ul className="cleanList">
               {summary.overUtilized.map((c) => (
-                <li key={c.id} className="listRow">
+                <li key={c.id} className="listRow compactTriplet">
                   <span>{c.name}</span>
                   <span>{formatPercent(c.util)}</span>
                   <strong>{formatCurrency(c.balance, cfg.currency)}</strong>

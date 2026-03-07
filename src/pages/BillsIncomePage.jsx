@@ -393,7 +393,7 @@ export default function BillsIncomePage({
 
       <section className="card section">
         <h3>Cashflow Forecast</h3>
-        <div className="statsGrid" style={{ gridTemplateColumns: "repeat(3, minmax(160px, 1fr))" }}>
+        <div className="statsGrid forecastGrid">
           <div className="card section"><strong>Bills remaining:</strong> {formatCurrency(cashflow.totalBillsUnpaid, cfg.currency)}</div>
           <div className="card section"><strong>Due next 7 days:</strong> {dueSoon.length}</div>
           <div className="card section"><strong>Due later this month:</strong> {dueLater.length}</div>
@@ -472,11 +472,11 @@ export default function BillsIncomePage({
                   <h3 className="dataItemTitle">{b.merchant || b.name}</h3>
                   <span className="pill">{b.status || "unpaid"}</span>
                 </div>
-                <div className="dataGrid">
-                  <div className="dataRow"><span className="dataLabel">Amount</span><span className="dataValue">{formatCurrency(b.amount, cfg.currency)}</span></div>
-                  <div className="dataRow"><span className="dataLabel">Due Date</span><span className="dataValue">{(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()}</span></div>
-                  <div className="dataRow"><span className="dataLabel">Paid From</span><span className="dataValue">{b.paidFrom || b.accountId || "-"}</span></div>
-                  <div className="dataRow"><span className="dataLabel">Paid At</span><span className="dataValue">{b.paidAt?.toDate ? b.paidAt.toDate().toLocaleString() : "-"}</span></div>
+                <div className="summaryGrid two">
+                  <div className="summaryCell"><span className="dataLabel">Amount</span><strong>{formatCurrency(b.amount, cfg.currency)}</strong></div>
+                  <div className="summaryCell"><span className="dataLabel">Due Date</span><strong>{(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()}</strong></div>
+                  <div className="summaryCell"><span className="dataLabel">Paid From</span><strong>{b.paidFrom || b.accountId || "-"}</strong></div>
+                  <div className="summaryCell"><span className="dataLabel">Paid At</span><strong>{b.paidAt?.toDate ? b.paidAt.toDate().toLocaleString() : "-"}</strong></div>
                 </div>
                 <div className="row dataActions">
                   <button type="button" onClick={() => paid(b)}>
@@ -543,10 +543,10 @@ export default function BillsIncomePage({
                   <h3 className="dataItemTitle">{i.source || i.name}</h3>
                   <span className="pill">{i.status || "expected"}</span>
                 </div>
-                <div className="dataGrid">
-                  <div className="dataRow"><span className="dataLabel">Amount</span><span className="dataValue">{formatCurrency(i.amount ?? i.expectedAmount, cfg.currency)}</span></div>
-                  <div className="dataRow"><span className="dataLabel">Pay Date</span><span className="dataValue">{getIncomePayDate(i).toLocaleDateString()}</span></div>
-                  <div className="dataRow"><span className="dataLabel">Received At</span><span className="dataValue">{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</span></div>
+                <div className="summaryGrid two">
+                  <div className="summaryCell"><span className="dataLabel">Amount</span><strong>{formatCurrency(i.amount ?? i.expectedAmount, cfg.currency)}</strong></div>
+                  <div className="summaryCell"><span className="dataLabel">Pay Date</span><strong>{getIncomePayDate(i).toLocaleDateString()}</strong></div>
+                  <div className="summaryCell"><span className="dataLabel">Received At</span><strong>{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</strong></div>
                 </div>
                 <div className="row dataActions">
                   <button type="button" onClick={() => toggleReceived(i)}>

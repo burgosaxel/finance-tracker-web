@@ -101,6 +101,9 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
         </label>
         <button type="button" className="primary" onClick={startAdd}>Add Transaction</button>
       </div>
+      <p className="muted pageIntro">
+        Activity log for money in and out, with filters for month, account, and category.
+      </p>
 
       <div className="tableWrap card desktopDataTable">
         <table>
