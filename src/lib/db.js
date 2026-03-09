@@ -29,6 +29,10 @@ import { parseLegacySnapshot } from "./legacyImport";
  * /accounts/{accountId}
  * { id, name, type, balance, createdAt, updatedAt }
  *
+ * /linkedAccounts/{accountId}
+ * { accountId, plaidAccountId, itemId, institutionName, name, officialName, mask, type, subtype,
+ *   currentBalance, availableBalance, isoCurrencyCode, source: "plaid", lastBalanceSyncAt, createdAt, updatedAt }
+ *
  * /creditCards/{cardId}
  * { id, name, issuer, limit, balance, apr, minimumPayment, dueDay, createdAt, updatedAt }
  *
@@ -39,13 +43,25 @@ import { parseLegacySnapshot } from "./legacyImport";
  * { id, name, expectedAmount, paySchedule, nextPayDate, depositAccountId, createdAt, updatedAt }
  *
  * /transactions/{transactionId}
- * { id, date, payee, category, amount, accountId, notes, billId, createdAt, updatedAt }
+ * { id, date, payee, category, amount, accountId, notes, billId, source, plaidTransactionId,
+ *   merchantName, categoryPrimary, categoryDetailed, categorySource, personalFinanceCategory,
+ *   userCategoryOverride, recurringCandidate, removed, createdAt, updatedAt }
  *
  * /budgets/{monthId}
  * { id, month, categories: { [categoryName]: assignedNumber }, createdAt, updatedAt }
  *
+ * /plaidItems/{itemId}
+ * { itemId, institutionId, institutionName, plaidItemId, status, lastSyncAt, lastCursor, createdAt, updatedAt }
+ *
+ * /recurringPayments/{recurringId}
+ * { recurringId, merchantName, normalizedMerchant, averageAmount, cadenceGuess, nextExpectedDate,
+ *   confidence, category, active, sourceTransactionIds, createdAt, updatedAt }
+ *
  * /settings/preferences
  * { utilizationThreshold, currency, monthStartDay, recommendedPaymentRate, updatedAt }
+ *
+ * /syncState/plaid
+ * { lastGlobalSyncAt, syncStatus, lastError, itemCount, accountCount, transactionCount, updatedAt }
  */
 
 function userCollection(uid, name) {
@@ -104,6 +120,19 @@ export function subscribeSettings(uid, onData, onError) {
       const data = snapshot.exists() ? snapshot.data() : {};
       onData({ ...DEFAULT_SETTINGS, ...data });
     },
+    (error) => onError?.(error)
+  );
+}
+
+export function subscribeUserDoc(uid, collectionName, id, onData, onError) {
+  if (!uid) {
+    onData?.(null);
+    return () => {};
+  }
+  const ref = userDoc(uid, collectionName, id);
+  return onSnapshot(
+    ref,
+    (snapshot) => onData(snapshot.exists() ? snapshot.data() : null),
     (error) => onError?.(error)
   );
 }
@@ -191,7 +220,17 @@ export async function markBillPaid(uid, bill) {
 
 export async function exportAllUserData(uid) {
   requireUid(uid);
-  const collections = ["accounts", "creditCards", "bills", "income", "transactions", "budgets"];
+  const collections = [
+    "accounts",
+    "linkedAccounts",
+    "plaidItems",
+    "recurringPayments",
+    "creditCards",
+    "bills",
+    "income",
+    "transactions",
+    "budgets",
+  ];
   const payload = {
     exportedAt: new Date().toISOString(),
     version: 1,
@@ -211,7 +250,17 @@ export async function exportAllUserData(uid) {
 export async function importAllUserData(uid, payload) {
   requireUid(uid);
   const cols = payload?.collections || {};
-  const allowed = ["accounts", "creditCards", "bills", "income", "transactions", "budgets"];
+  const allowed = [
+    "accounts",
+    "linkedAccounts",
+    "plaidItems",
+    "recurringPayments",
+    "creditCards",
+    "bills",
+    "income",
+    "transactions",
+    "budgets",
+  ];
   for (const collectionName of allowed) {
     const entries = Array.isArray(cols[collectionName]) ? cols[collectionName] : [];
     for (const entry of entries) {

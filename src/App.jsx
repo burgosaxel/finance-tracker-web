@@ -17,6 +17,7 @@ import {
   subscribeSettings,
   subscribeStatementItems,
   subscribeTemplates,
+  subscribeUserDoc,
 } from "./lib/db";
 import { auth, googleProvider } from "./lib/firebase";
 import { DEFAULT_SETTINGS, monthKey } from "./lib/finance";
@@ -24,6 +25,9 @@ import { getRouteFromHash } from "./lib/hashRouter";
 
 const EMPTY_DATA = {
   accounts: [],
+  linkedAccounts: [],
+  plaidItems: [],
+  recurringPayments: [],
   creditCards: [],
   loans: [],
   bills: [],
@@ -36,6 +40,7 @@ const EMPTY_DATA = {
   currentStatementIncomes: [],
   billTemplates: [],
   incomeTemplates: [],
+  plaidSyncState: null,
 };
 
 export default function App() {
@@ -118,6 +123,9 @@ export default function App() {
     };
 
     bind("accounts", "accounts", "name");
+    bind("linkedAccounts", "linkedAccounts", "name");
+    bind("plaidItems", "plaidItems", "institutionName");
+    bind("recurringPayments", "recurringPayments", "merchantName");
     bind("creditCards", "creditCards", "name");
     bind("loans", "loans", "lender");
     bind("bills", "bills", "dueDay");
@@ -125,6 +133,15 @@ export default function App() {
     bind("transactions", "transactions", "date");
     bind("budgets", "budgets", "month");
     unsubs.push(subscribeSettings(user.uid, setSettings, onErr));
+    unsubs.push(
+      subscribeUserDoc(
+        user.uid,
+        "syncState",
+        "plaid",
+        (doc) => setData((prev) => ({ ...prev, plaidSyncState: doc })),
+        onErr
+      )
+    );
     unsubs.push(
       subscribeTemplates(
         user.uid,
@@ -276,6 +293,8 @@ export default function App() {
           settings={settings}
           bills={data.currentStatementBills}
           incomes={data.currentStatementIncomes}
+          transactions={data.transactions}
+          recurringPayments={data.recurringPayments}
           loadError={authError}
         />
       );
@@ -305,9 +324,24 @@ export default function App() {
         />
       );
     if (route === "transactions")
-      return <TransactionsPage {...shared} transactions={data.transactions} accounts={data.accounts} />;
+      return (
+        <TransactionsPage
+          {...shared}
+          transactions={data.transactions}
+          accounts={[...(data.accounts || []), ...(data.linkedAccounts || [])]}
+        />
+      );
     if (route === "settings")
-      return <SettingsPage {...shared} settings={settings} accounts={data.accounts} />;
+      return (
+        <SettingsPage
+          {...shared}
+          settings={settings}
+          accounts={data.accounts}
+          linkedAccounts={data.linkedAccounts}
+          plaidItems={data.plaidItems}
+          plaidSyncState={data.plaidSyncState}
+        />
+      );
     return <DashboardPage data={data} settings={settings} />;
   }, [data, route, selectedMonth, settings, user]);
 

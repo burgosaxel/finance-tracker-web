@@ -14,6 +14,24 @@ All user data lives under:
 - `createdAt: timestamp`
 - `updatedAt: timestamp`
 
+### `/users/{uid}/linkedAccounts/{accountId}`
+- `accountId: string`
+- `plaidAccountId: string`
+- `itemId: string`
+- `institutionName: string`
+- `name: string`
+- `officialName: string`
+- `mask: string`
+- `type: string`
+- `subtype: string`
+- `currentBalance: number`
+- `availableBalance: number | null`
+- `isoCurrencyCode: string`
+- `lastBalanceSyncAt: timestamp`
+- `source: "plaid"`
+- `createdAt: timestamp`
+- `updatedAt: timestamp`
+
 ### `/users/{uid}/creditCards/{cardId}`
 - `id: string`
 - `name: string`
@@ -58,6 +76,16 @@ All user data lives under:
 - `accountId: string`
 - `notes: string`
 - `billId: string` (optional linkage from mark-paid action)
+- `source: "manual" | "plaid"`
+- `plaidTransactionId: string`
+- `merchantName: string`
+- `categoryPrimary: string`
+- `categoryDetailed: string`
+- `categorySource: string`
+- `personalFinanceCategory: object | null`
+- `userCategoryOverride: string`
+- `recurringCandidate: boolean`
+- `removed: boolean`
 - `createdAt: timestamp`
 - `updatedAt: timestamp`
 
@@ -74,3 +102,47 @@ All user data lives under:
 - `monthStartDay: number` (default `1`)
 - `recommendedPaymentRate: number` (default `0.03`)
 - `updatedAt: timestamp`
+
+### `/users/{uid}/plaidItems/{itemId}`
+- `itemId: string`
+- `plaidItemId: string`
+- `institutionId: string`
+- `institutionName: string`
+- `status: string`
+- `lastSyncAt: string`
+- `lastCursor: string`
+- `createdAt: timestamp`
+- `updatedAt: timestamp`
+
+### `/users/{uid}/recurringPayments/{recurringId}`
+- `recurringId: string`
+- `sourceTransactionIds: string[]`
+- `merchantName: string`
+- `normalizedMerchant: string`
+- `averageAmount: number`
+- `cadenceGuess: string`
+- `nextExpectedDate: timestamp | null`
+- `confidence: number`
+- `category: string`
+- `active: boolean`
+- `createdAt: timestamp`
+- `updatedAt: timestamp`
+
+### `/users/{uid}/syncState/plaid`
+- `lastGlobalSyncAt: string`
+- `syncStatus: string`
+- `lastError: string`
+- `itemCount: number`
+- `accountCount: number`
+- `transactionCount: number`
+- `updatedAt: timestamp`
+
+## Backend-only storage
+
+Sensitive Plaid access tokens are **not** stored under `/users/{uid}/...`.
+
+They live in a server-only top-level collection:
+
+`/plaidPrivateItems/{uid}_{plaidItemId}`
+
+That collection is written and read only by Firebase Functions via the Admin SDK. The existing Firestore rules already deny client access outside `/users/{uid}/...`.

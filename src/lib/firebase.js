@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import { getFirestore } from "firebase/firestore";
 
 const requiredEnvVars = [
@@ -27,4 +28,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const functions = getFunctions(app, import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || "us-central1");
 export const googleProvider = new GoogleAuthProvider();
+
+if (import.meta.env.VITE_FUNCTIONS_EMULATOR_HOST) {
+  const [host, rawPort] = String(import.meta.env.VITE_FUNCTIONS_EMULATOR_HOST).split(":");
+  connectFunctionsEmulator(functions, host, Number(rawPort || 5001));
+}

@@ -243,3 +243,60 @@ export function computeMonthTotals(bills, incomes, options = {}) {
     events,
   };
 }
+
+export function getEffectiveTransactionCategory(transaction) {
+  return (
+    transaction?.userCategoryOverride ||
+    transaction?.categoryDetailed ||
+    transaction?.categoryPrimary ||
+    transaction?.category ||
+    transaction?.personalFinanceCategory?.detailed ||
+    transaction?.personalFinanceCategory?.primary ||
+    "Uncategorized"
+  );
+}
+
+export function getMonthTransactions(transactions, month = monthKey()) {
+  return (transactions || []).filter((transaction) => {
+    if (transaction?.removed) return false;
+    return monthKey(new Date(transaction.date || new Date())) === month;
+  });
+}
+
+export function summarizeCashFlowFromTransactions(transactions, month = monthKey()) {
+  const scoped = getMonthTransactions(transactions, month);
+  return scoped.reduce(
+    (summary, transaction) => {
+      const amount = safeNumber(transaction.amount, 0);
+      if (amount >= 0) {
+        summary.inflow += amount;
+      } else {
+        summary.outflow += Math.abs(amount);
+      }
+      return summary;
+    },
+    { inflow: 0, outflow: 0 }
+  );
+}
+
+export function summarizeSpendingByCategory(transactions, month = monthKey(), limit = 5) {
+  const totals = new Map();
+  for (const transaction of getMonthTransactions(transactions, month)) {
+    const amount = safeNumber(transaction.amount, 0);
+    if (amount >= 0) continue;
+    const key = getEffectiveTransactionCategory(transaction);
+    totals.set(key, (totals.get(key) || 0) + Math.abs(amount));
+  }
+
+  return [...totals.entries()]
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, limit);
+}
+
+export function getRecentSyncedTransactions(transactions, limit = 5) {
+  return [...(transactions || [])]
+    .filter((transaction) => transaction?.source === "plaid" && !transaction?.removed)
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+    .slice(0, limit);
+}

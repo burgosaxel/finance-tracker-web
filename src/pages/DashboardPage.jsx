@@ -5,21 +5,37 @@ import {
   DEFAULT_SETTINGS,
   formatCurrency,
   formatPercent,
+  getEffectiveTransactionCategory,
   getBillDueDate,
   getBillsDueLaterThisMonth,
   getBillsDueWithinDays,
   getIncomePayDate,
+  getRecentSyncedTransactions,
   monthKey,
   safeNumber,
+  summarizeCashFlowFromTransactions,
+  summarizeSpendingByCategory,
 } from "../lib/finance";
 
-export default function DashboardPage({ data, settings, bills = [], incomes = [], loadError }) {
+export default function DashboardPage({
+  data,
+  settings,
+  bills = [],
+  incomes = [],
+  transactions = [],
+  recurringPayments = [],
+  loadError,
+}) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const now = new Date();
   const currentMonth = monthKey(now);
 
   const summary = useMemo(() => {
-    const totalCash = (data.accounts || []).reduce((sum, a) => sum + safeNumber(a.balance, 0), 0);
+    const manualCash = (data.accounts || []).reduce((sum, a) => sum + safeNumber(a.balance, 0), 0);
+    const linkedCash = (data.linkedAccounts || [])
+      .filter((account) => account.type !== "credit")
+      .reduce((sum, account) => sum + safeNumber(account.currentBalance, 0), 0);
+    const totalCash = manualCash + linkedCash;
     const totalDebt = (data.creditCards || []).reduce((sum, c) => sum + Math.max(0, safeNumber(c.balance, 0)), 0);
     const totalLimit = (data.creditCards || []).reduce((sum, c) => sum + Math.max(0, safeNumber(c.limit, 0)), 0);
     const utilization = totalLimit > 0 ? (totalDebt / totalLimit) * 100 : 0;
@@ -33,6 +49,9 @@ export default function DashboardPage({ data, settings, bills = [], incomes = []
     const dueSoon = getBillsDueWithinDays(bills, 7, now);
     const dueLater = getBillsDueLaterThisMonth(bills, now, 7);
     const cashflow = computeMonthTotals(bills, incomes, { now });
+    const transactionCashFlow = summarizeCashFlowFromTransactions(transactions, currentMonth);
+    const topSpending = summarizeSpendingByCategory(transactions, currentMonth, 5);
+    const recentSyncedTransactions = getRecentSyncedTransactions(transactions, 5);
 
     const overUtilized = (data.creditCards || [])
       .map((c) => {
@@ -45,6 +64,8 @@ export default function DashboardPage({ data, settings, bills = [], incomes = []
 
     return {
       totalCash,
+      manualCash,
+      linkedCash,
       totalDebt,
       netWorth: totalCash - totalDebt,
       monthIncome,
@@ -53,15 +74,32 @@ export default function DashboardPage({ data, settings, bills = [], incomes = []
       dueSoon,
       dueLater,
       cashflow,
+      transactionCashFlow,
+      topSpending,
+      recentSyncedTransactions,
       overUtilized,
     };
-  }, [bills, cfg.utilizationThreshold, currentMonth, data.accounts, data.creditCards, incomes, now]);
+  }, [
+    bills,
+    cfg.utilizationThreshold,
+    currentMonth,
+    data.accounts,
+    data.creditCards,
+    data.linkedAccounts,
+    incomes,
+    now,
+    transactions,
+  ]);
 
   return (
     <div className="page">
       <h2>Dashboard</h2>
       <div className="statsGrid">
-        <StatCard label="Total Cash" value={formatCurrency(summary.totalCash, cfg.currency)} />
+        <StatCard
+          label="Total Cash"
+          value={formatCurrency(summary.totalCash, cfg.currency)}
+          subtitle={`Manual ${formatCurrency(summary.manualCash, cfg.currency)} | Linked ${formatCurrency(summary.linkedCash, cfg.currency)}`}
+        />
         <StatCard label="Total Debt" value={formatCurrency(summary.totalDebt, cfg.currency)} />
         <StatCard label="Net Worth" value={formatCurrency(summary.netWorth, cfg.currency)} />
         <StatCard label="This Month Income" value={formatCurrency(summary.monthIncome, cfg.currency)} />
@@ -69,9 +107,14 @@ export default function DashboardPage({ data, settings, bills = [], incomes = []
         <StatCard label="Credit Utilization" value={formatPercent(summary.utilization)} />
         <StatCard label="Bills Remaining" value={formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)} />
         <StatCard label="Income Received" value={formatCurrency(summary.cashflow.totalIncomeReceived, cfg.currency)} />
+        <StatCard label="Linked Cash" value={formatCurrency(summary.linkedCash, cfg.currency)} />
         <StatCard
           label="Projected Month End"
           value={formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}
+        />
+        <StatCard
+          label="This Month Outflow"
+          value={formatCurrency(summary.transactionCashFlow.outflow, cfg.currency)}
         />
       </div>
 
@@ -145,6 +188,59 @@ export default function DashboardPage({ data, settings, bills = [], incomes = []
                   <span>{c.name}</span>
                   <span>{formatPercent(c.util)}</span>
                   <strong>{formatCurrency(c.balance, cfg.currency)}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <div className="twoCol">
+        <section className="card section">
+          <h3>Recent synced activity</h3>
+          {summary.recentSyncedTransactions.length === 0 ? (
+            <div className="muted">Link an account to see recent bank activity here.</div>
+          ) : (
+            <ul className="cleanList">
+              {summary.recentSyncedTransactions.map((transaction) => (
+                <li key={transaction.id} className="listRow compactTriplet">
+                  <span>{transaction.merchantName || transaction.payee || transaction.name}</span>
+                  <span>{transaction.date || "-"}</span>
+                  <strong>{formatCurrency(transaction.amount, cfg.currency)}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="card section">
+          <h3>Spending and recurring</h3>
+          <div className="muted" style={{ marginBottom: 8 }}>
+            Category summary uses synced transaction data when available and respects manual category overrides.
+          </div>
+          {summary.topSpending.length === 0 ? (
+            <div className="muted">No synced spending categories for this month yet.</div>
+          ) : (
+            <ul className="cleanList">
+              {summary.topSpending.map((entry) => (
+                <li key={entry.category} className="listRow compactTriplet">
+                  <span>{entry.category}</span>
+                  <span>This month</span>
+                  <strong>{formatCurrency(entry.amount, cfg.currency)}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+          <h4 style={{ marginTop: 10 }}>Recurring payment candidates</h4>
+          {(recurringPayments || []).length === 0 ? (
+            <div className="muted">Recurring candidates will appear after Plaid transaction syncs.</div>
+          ) : (
+            <ul className="cleanList">
+              {recurringPayments.slice(0, 5).map((entry) => (
+                <li key={entry.recurringId || entry.id} className="listRow compactTriplet">
+                  <span>{entry.merchantName}</span>
+                  <span>{entry.cadenceGuess || getEffectiveTransactionCategory(entry)}</span>
+                  <strong>{formatCurrency(entry.averageAmount, cfg.currency)}</strong>
                 </li>
               ))}
             </ul>

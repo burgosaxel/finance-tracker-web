@@ -1,7 +1,13 @@
 import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
 import { deleteEntity, upsertEntity } from "../lib/db";
-import { DEFAULT_SETTINGS, formatCurrency, monthKey, safeNumber } from "../lib/finance";
+import {
+  DEFAULT_SETTINGS,
+  formatCurrency,
+  getEffectiveTransactionCategory,
+  monthKey,
+  safeNumber,
+} from "../lib/finance";
 
 const EMPTY_TX = {
   date: new Date().toISOString().slice(0, 10),
@@ -22,14 +28,14 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
   const [categoryFilter, setCategoryFilter] = useState("");
 
   const categories = useMemo(() => {
-    return [...new Set((transactions || []).map((t) => t.category).filter(Boolean))].sort();
+    return [...new Set((transactions || []).map((t) => getEffectiveTransactionCategory(t)).filter(Boolean))].sort();
   }, [transactions]);
 
   const rows = useMemo(() => {
     return (transactions || [])
       .filter((t) => monthKey(new Date(t.date || new Date())) === monthFilter)
       .filter((t) => !accountFilter || t.accountId === accountFilter)
-      .filter((t) => !categoryFilter || t.category === categoryFilter)
+      .filter((t) => !categoryFilter || getEffectiveTransactionCategory(t) === categoryFilter)
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [transactions, monthFilter, accountFilter, categoryFilter]);
 
@@ -55,6 +61,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
           ...form,
           payee: form.payee.trim(),
           amount: safeNumber(form.amount, 0),
+          source: form.source || "manual",
         },
         editingId || undefined
       );
@@ -126,7 +133,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
               <tr key={t.id}>
                 <td>{t.date || "-"}</td>
                 <td>{t.payee}</td>
-                <td>{t.category || "-"}</td>
+                <td>{getEffectiveTransactionCategory(t)}</td>
                 <td className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
                   {formatCurrency(t.amount, cfg.currency)}
                 </td>
@@ -154,8 +161,9 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
             </div>
             <div className="dataGrid">
               <div className="dataRow"><span className="dataLabel">Date</span><span className="dataValue">{t.date || "-"}</span></div>
-              <div className="dataRow"><span className="dataLabel">Category</span><span className="dataValue">{t.category || "-"}</span></div>
+              <div className="dataRow"><span className="dataLabel">Category</span><span className="dataValue">{getEffectiveTransactionCategory(t)}</span></div>
               <div className="dataRow"><span className="dataLabel">Account</span><span className="dataValue">{accounts.find((a) => a.id === t.accountId)?.name || "-"}</span></div>
+              <div className="dataRow"><span className="dataLabel">Source</span><span className="dataValue">{t.source || "manual"}</span></div>
               <div className="dataRow"><span className="dataLabel">Notes</span><span className="dataValue">{t.notes || "-"}</span></div>
             </div>
             <div className="row dataActions">
@@ -171,6 +179,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
           <label>Date<input type="date" value={form.date || ""} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
           <label>Payee<input value={form.payee} onChange={(e) => setForm({ ...form, payee: e.target.value })} /></label>
           <label>Category<input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></label>
+          <label>Category Override<input value={form.userCategoryOverride || ""} onChange={(e) => setForm({ ...form, userCategoryOverride: e.target.value })} /></label>
           <label>Amount<input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
           <label>
             Account

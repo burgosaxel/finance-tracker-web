@@ -1,3 +1,6 @@
 node_modules
 dist
 .env.local
+functions/node_modules
+functions/.env
+functions/.secret.local
