@@ -161,6 +161,19 @@ export function getBillsDueWithinDays(bills, days = 7, fromDate = new Date()) {
     .sort((a, b) => a.nextDueDate - b.nextDueDate);
 }
 
+export function getPastDueBills(bills, fromDate = new Date()) {
+  const today = startOfDay(fromDate);
+  return (bills || [])
+    .map((bill) => ({
+      ...bill,
+      nextDueDate: getBillDueDate(bill, fromDate),
+      status: billStatus(bill, fromDate),
+    }))
+    .filter((bill) => !isBillPaid(bill, fromDate))
+    .filter((bill) => startOfDay(bill.nextDueDate) < today)
+    .sort((a, b) => a.nextDueDate - b.nextDueDate);
+}
+
 export function getBillsDueLaterThisMonth(bills, fromDate = new Date(), withinDays = 7) {
   const start = startOfDay(fromDate);
   const cutoff = new Date(start);

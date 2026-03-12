@@ -59,6 +59,7 @@ export default function BillsIncomePage({
   income,
   billTemplates,
   incomeTemplates,
+  accounts,
   settings,
   onToast,
   onError,
@@ -78,6 +79,14 @@ export default function BillsIncomePage({
   const [incomeTemplateOpen, setIncomeTemplateOpen] = useState(false);
   const [incomeTemplateForm, setIncomeTemplateForm] = useState(EMPTY_INCOME_TEMPLATE);
   const [incomeTemplateEditingId, setIncomeTemplateEditingId] = useState(null);
+  const [paidBillsCollapsed, setPaidBillsCollapsed] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("ft_paid_bills_collapsed") !== "false";
+  });
+  const [receivedIncomeCollapsed, setReceivedIncomeCollapsed] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("ft_received_income_collapsed") !== "false";
+  });
   const [templatesCollapsed, setTemplatesCollapsed] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem("ft_templates_collapsed") !== "false";
@@ -88,6 +97,16 @@ export default function BillsIncomePage({
   const viewDate = monthFromMonthId(currentMonth) || now;
   const isCurrentMonth = currentMonth === monthKey(now);
   const isReadOnly = !isCurrentMonth;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("ft_paid_bills_collapsed", String(paidBillsCollapsed));
+  }, [paidBillsCollapsed]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("ft_received_income_collapsed", String(receivedIncomeCollapsed));
+  }, [receivedIncomeCollapsed]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -110,6 +129,35 @@ export default function BillsIncomePage({
     return [...(income || [])].sort((a, b) => getIncomePayDate(a).getTime() - getIncomePayDate(b).getTime());
   }, [income]);
 
+  const accountOptions = useMemo(
+    () => [...(accounts || [])].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))),
+    [accounts]
+  );
+
+  const accountNameById = useMemo(() => {
+    return accountOptions.reduce((map, account) => {
+      map[account.id] = account.name || account.institution || account.id;
+      return map;
+    }, {});
+  }, [accountOptions]);
+
+  const activeBills = useMemo(
+    () => billRows.filter((bill) => (bill.status || "unpaid") !== "paid"),
+    [billRows]
+  );
+  const paidBills = useMemo(
+    () => billRows.filter((bill) => bill.status === "paid"),
+    [billRows]
+  );
+  const expectedIncome = useMemo(
+    () => incomeRows.filter((item) => (item.status || "expected") !== "received"),
+    [incomeRows]
+  );
+  const receivedIncome = useMemo(
+    () => incomeRows.filter((item) => item.status === "received"),
+    [incomeRows]
+  );
+
   const monthIncomeTotal = useMemo(
     () => incomeRows.reduce((sum, i) => sum + safeNumber(i.amount ?? i.expectedAmount, 0), 0),
     [incomeRows]
@@ -130,21 +178,45 @@ export default function BillsIncomePage({
 
   function startBillAdd() {
     setBillEditingId(null);
-    setBillForm(EMPTY_BILL);
+    const defaultAccount = accountOptions[0] || null;
+    setBillForm({
+      ...EMPTY_BILL,
+      accountId: defaultAccount?.id || "",
+      paidFrom: defaultAccount?.name || "",
+    });
     setBillOpen(true);
   }
 
   function startBillEdit(bill) {
+    const resolvedAccountId = accountNameById[bill.accountId] ? bill.accountId : "";
+    const resolvedPaidFrom =
+      bill.paidFrom ||
+      accountNameById[bill.accountId] ||
+      bill.accountId ||
+      "";
     setBillEditingId(bill.id);
     setBillForm({
       merchant: bill.merchant || bill.name || "",
       amount: bill.amount || 0,
       dueDay: bill.dueDay || 1,
-      paidFrom: bill.paidFrom || bill.accountId || "",
-      accountId: bill.accountId || "",
+      paidFrom: resolvedPaidFrom,
+      accountId: resolvedAccountId,
       status: bill.status || "unpaid",
     });
     setBillOpen(true);
+  }
+
+  function resolveBillFromLabel(bill) {
+    return bill.paidFrom || accountNameById[bill.accountId] || bill.accountId || "-";
+  }
+
+  function setBillAccount(accountId) {
+    const selected = accountOptions.find((account) => account.id === accountId);
+    setBillForm((prev) => ({
+      ...prev,
+      accountId,
+      paidFrom: selected?.name || "",
+    }));
   }
 
   async function saveBill() {
@@ -162,8 +234,8 @@ export default function BillsIncomePage({
           amount: Math.abs(safeNumber(billForm.amount, 0)),
           dueDay: Math.max(1, Math.min(31, Number(billForm.dueDay) || 1)),
           dueDate: dueDateFromDay(billForm.dueDay),
-          paidFrom: billForm.paidFrom || "",
-          accountId: billForm.paidFrom || billForm.accountId || "",
+          paidFrom: accountNameById[billForm.accountId] || billForm.paidFrom || "",
+          accountId: billForm.accountId || "",
           status: billForm.status || "unpaid",
         },
         billEditingId || undefined
@@ -376,6 +448,145 @@ export default function BillsIncomePage({
     }
   }
 
+  function renderBillTable(rows, emptyMessage) {
+    return (
+      <div className="tableWrap desktopDataTable">
+        <table>
+          <thead>
+            <tr>
+              <th>Merchant</th>
+              <th>Amount</th>
+              <th>Due Date</th>
+              <th>From</th>
+              <th>Status</th>
+              <th>Paid At</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr><td colSpan={7} className="muted">{emptyMessage}</td></tr>
+            ) : null}
+            {rows.map((b) => (
+              <tr key={b.id}>
+                <td>{b.merchant || b.name}</td>
+                <td>{formatCurrency(b.amount, cfg.currency)}</td>
+                <td>{(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()}</td>
+                <td>{resolveBillFromLabel(b)}</td>
+                <td>{b.status || "unpaid"}</td>
+                <td>{b.paidAt?.toDate ? b.paidAt.toDate().toLocaleString() : "-"}</td>
+                <td className="row">
+                  <button type="button" onClick={() => paid(b)}>
+                    {b.status === "paid" ? "Mark unpaid" : "Mark paid"}
+                  </button>
+                  <button type="button" onClick={() => startBillEdit(b)} disabled={isReadOnly}>Edit</button>
+                  <button type="button" onClick={() => removeBill(b.id)} disabled={isReadOnly}>Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  function renderBillCards(rows, emptyMessage) {
+    return (
+      <div className="mobileDataList">
+        {rows.length === 0 ? <div className="card section muted">{emptyMessage}</div> : null}
+        {rows.map((b) => (
+          <article key={`mobile-bill-${b.id}`} className="card section dataItem">
+            <div className="dataItemHeader">
+              <h3 className="dataItemTitle">{b.merchant || b.name}</h3>
+              <span className="pill">{b.status || "unpaid"}</span>
+            </div>
+            <div className="summaryGrid two">
+              <div className="summaryCell"><span className="dataLabel">Amount</span><strong>{formatCurrency(b.amount, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Due Date</span><strong>{(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">From</span><strong>{resolveBillFromLabel(b)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Paid At</span><strong>{b.paidAt?.toDate ? b.paidAt.toDate().toLocaleString() : "-"}</strong></div>
+            </div>
+            <div className="row dataActions">
+              <button type="button" onClick={() => paid(b)}>
+                {b.status === "paid" ? "Mark unpaid" : "Mark paid"}
+              </button>
+              <button type="button" onClick={() => startBillEdit(b)} disabled={isReadOnly}>Edit</button>
+              <button type="button" onClick={() => removeBill(b.id)} disabled={isReadOnly}>Delete</button>
+            </div>
+          </article>
+        ))}
+      </div>
+    );
+  }
+
+  function renderIncomeTable(rows, emptyMessage) {
+    return (
+      <div className="tableWrap desktopDataTable">
+        <table>
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Amount</th>
+              <th>Pay Date</th>
+              <th>Status</th>
+              <th>Received At</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr><td colSpan={6} className="muted">{emptyMessage}</td></tr>
+            ) : null}
+            {rows.map((i) => (
+              <tr key={i.id}>
+                <td>{i.source || i.name}</td>
+                <td>{formatCurrency(i.amount ?? i.expectedAmount, cfg.currency)}</td>
+                <td>{getIncomePayDate(i).toLocaleDateString()}</td>
+                <td>{i.status || "expected"}</td>
+                <td>{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</td>
+                <td className="row">
+                  <button type="button" onClick={() => toggleReceived(i)}>
+                    {i.status === "received" ? "Mark expected" : "Mark received"}
+                  </button>
+                  <button type="button" onClick={() => startIncomeEdit(i)} disabled={isReadOnly}>Edit</button>
+                  <button type="button" onClick={() => removeIncome(i.id)} disabled={isReadOnly}>Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  function renderIncomeCards(rows, emptyMessage) {
+    return (
+      <div className="mobileDataList">
+        {rows.length === 0 ? <div className="card section muted">{emptyMessage}</div> : null}
+        {rows.map((i) => (
+          <article key={`mobile-income-${i.id}`} className="card section dataItem">
+            <div className="dataItemHeader">
+              <h3 className="dataItemTitle">{i.source || i.name}</h3>
+              <span className="pill">{i.status || "expected"}</span>
+            </div>
+            <div className="summaryGrid two">
+              <div className="summaryCell"><span className="dataLabel">Amount</span><strong>{formatCurrency(i.amount ?? i.expectedAmount, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Pay Date</span><strong>{getIncomePayDate(i).toLocaleDateString()}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Received At</span><strong>{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</strong></div>
+            </div>
+            <div className="row dataActions">
+              <button type="button" onClick={() => toggleReceived(i)}>
+                {i.status === "received" ? "Mark expected" : "Mark received"}
+              </button>
+              <button type="button" onClick={() => startIncomeEdit(i)} disabled={isReadOnly}>Edit</button>
+              <button type="button" onClick={() => removeIncome(i.id)} disabled={isReadOnly}>Delete</button>
+            </div>
+          </article>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <section className="card section">
@@ -426,68 +637,24 @@ export default function BillsIncomePage({
             ))}
           </ul>
 
-          <div className="tableWrap desktopDataTable">
-            <table>
-              <thead>
-                <tr>
-                  <th>Merchant</th>
-                  <th>Amount</th>
-                  <th>Due Date</th>
-                  <th>Paid From</th>
-                  <th>Status</th>
-                  <th>Paid At</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {billRows.length === 0 ? (
-                  <tr><td colSpan={7} className="muted">No bills this month.</td></tr>
-                ) : null}
-                {billRows.map((b) => (
-                  <tr key={b.id}>
-                    <td>{b.merchant || b.name}</td>
-                    <td>{formatCurrency(b.amount, cfg.currency)}</td>
-                    <td>{(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()}</td>
-                    <td>{b.paidFrom || b.accountId || "-"}</td>
-                    <td>{b.status || "unpaid"}</td>
-                    <td>{b.paidAt?.toDate ? b.paidAt.toDate().toLocaleString() : "-"}</td>
-                    <td className="row">
-                      <button type="button" onClick={() => paid(b)}>
-                        {b.status === "paid" ? "Mark unpaid" : "Mark paid"}
-                      </button>
-                      <button type="button" onClick={() => startBillEdit(b)} disabled={isReadOnly}>Edit</button>
-                      <button type="button" onClick={() => removeBill(b.id)} disabled={isReadOnly}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {renderBillTable(activeBills, "No unpaid bills this month.")}
+          {renderBillCards(activeBills, "No unpaid bills this month.")}
 
-          <div className="mobileDataList">
-            {billRows.length === 0 ? <div className="card section muted">No bills this month.</div> : null}
-            {billRows.map((b) => (
-              <article key={`mobile-bill-${b.id}`} className="card section dataItem">
-                <div className="dataItemHeader">
-                  <h3 className="dataItemTitle">{b.merchant || b.name}</h3>
-                  <span className="pill">{b.status || "unpaid"}</span>
-                </div>
-                <div className="summaryGrid two">
-                  <div className="summaryCell"><span className="dataLabel">Amount</span><strong>{formatCurrency(b.amount, cfg.currency)}</strong></div>
-                  <div className="summaryCell"><span className="dataLabel">Due Date</span><strong>{(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()}</strong></div>
-                  <div className="summaryCell"><span className="dataLabel">Paid From</span><strong>{b.paidFrom || b.accountId || "-"}</strong></div>
-                  <div className="summaryCell"><span className="dataLabel">Paid At</span><strong>{b.paidAt?.toDate ? b.paidAt.toDate().toLocaleString() : "-"}</strong></div>
-                </div>
-                <div className="row dataActions">
-                  <button type="button" onClick={() => paid(b)}>
-                    {b.status === "paid" ? "Mark unpaid" : "Mark paid"}
-                  </button>
-                  <button type="button" onClick={() => startBillEdit(b)} disabled={isReadOnly}>Edit</button>
-                  <button type="button" onClick={() => removeBill(b.id)} disabled={isReadOnly}>Delete</button>
-                </div>
-              </article>
-            ))}
-          </div>
+          <section className="subsection">
+            <div className="row">
+              <h4>Paid Bills ({paidBills.length})</h4>
+              <div className="spacer" />
+              <button type="button" onClick={() => setPaidBillsCollapsed((value) => !value)}>
+                {paidBillsCollapsed ? ">" : "v"}
+              </button>
+            </div>
+            {!paidBillsCollapsed ? (
+              <>
+                {renderBillTable(paidBills, "No paid bills for this month.")}
+                {renderBillCards(paidBills, "No paid bills for this month.")}
+              </>
+            ) : null}
+          </section>
         </section>
 
         <section className="card section">
@@ -499,65 +666,24 @@ export default function BillsIncomePage({
           <div className="muted" style={{ marginBottom: 10 }}>
             This month total: {formatCurrency(monthIncomeTotal, cfg.currency)}
           </div>
-          <div className="tableWrap desktopDataTable">
-            <table>
-              <thead>
-                <tr>
-                  <th>Source</th>
-                  <th>Amount</th>
-                  <th>Pay Date</th>
-                  <th>Status</th>
-                  <th>Received At</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {incomeRows.length === 0 ? (
-                  <tr><td colSpan={6} className="muted">No income entries this month.</td></tr>
-                ) : null}
-                {incomeRows.map((i) => (
-                  <tr key={i.id}>
-                    <td>{i.source || i.name}</td>
-                    <td>{formatCurrency(i.amount ?? i.expectedAmount, cfg.currency)}</td>
-                    <td>{getIncomePayDate(i).toLocaleDateString()}</td>
-                    <td>{i.status || "expected"}</td>
-                    <td>{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</td>
-                    <td className="row">
-                      <button type="button" onClick={() => toggleReceived(i)}>
-                        {i.status === "received" ? "Mark expected" : "Mark received"}
-                      </button>
-                      <button type="button" onClick={() => startIncomeEdit(i)} disabled={isReadOnly}>Edit</button>
-                      <button type="button" onClick={() => removeIncome(i.id)} disabled={isReadOnly}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {renderIncomeTable(expectedIncome, "No expected income entries this month.")}
+          {renderIncomeCards(expectedIncome, "No expected income entries this month.")}
 
-          <div className="mobileDataList">
-            {incomeRows.length === 0 ? <div className="card section muted">No income entries this month.</div> : null}
-            {incomeRows.map((i) => (
-              <article key={`mobile-income-${i.id}`} className="card section dataItem">
-                <div className="dataItemHeader">
-                  <h3 className="dataItemTitle">{i.source || i.name}</h3>
-                  <span className="pill">{i.status || "expected"}</span>
-                </div>
-                <div className="summaryGrid two">
-                  <div className="summaryCell"><span className="dataLabel">Amount</span><strong>{formatCurrency(i.amount ?? i.expectedAmount, cfg.currency)}</strong></div>
-                  <div className="summaryCell"><span className="dataLabel">Pay Date</span><strong>{getIncomePayDate(i).toLocaleDateString()}</strong></div>
-                  <div className="summaryCell"><span className="dataLabel">Received At</span><strong>{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</strong></div>
-                </div>
-                <div className="row dataActions">
-                  <button type="button" onClick={() => toggleReceived(i)}>
-                    {i.status === "received" ? "Mark expected" : "Mark received"}
-                  </button>
-                  <button type="button" onClick={() => startIncomeEdit(i)} disabled={isReadOnly}>Edit</button>
-                  <button type="button" onClick={() => removeIncome(i.id)} disabled={isReadOnly}>Delete</button>
-                </div>
-              </article>
-            ))}
-          </div>
+          <section className="subsection">
+            <div className="row">
+              <h4>Received Income ({receivedIncome.length})</h4>
+              <div className="spacer" />
+              <button type="button" onClick={() => setReceivedIncomeCollapsed((value) => !value)}>
+                {receivedIncomeCollapsed ? ">" : "v"}
+              </button>
+            </div>
+            {!receivedIncomeCollapsed ? (
+              <>
+                {renderIncomeTable(receivedIncome, "No received income for this month.")}
+                {renderIncomeCards(receivedIncome, "No received income for this month.")}
+              </>
+            ) : null}
+          </section>
         </section>
       </div>
 
@@ -566,7 +692,17 @@ export default function BillsIncomePage({
           <label>Merchant<input value={billForm.merchant} onChange={(e) => setBillForm({ ...billForm, merchant: e.target.value })} /></label>
           <label>Amount<input type="number" value={billForm.amount} onChange={(e) => setBillForm({ ...billForm, amount: e.target.value })} /></label>
           <label>Due Day<input type="number" min="1" max="31" value={billForm.dueDay} onChange={(e) => setBillForm({ ...billForm, dueDay: e.target.value })} /></label>
-          <label>Paid From<input value={billForm.paidFrom} onChange={(e) => setBillForm({ ...billForm, paidFrom: e.target.value })} /></label>
+          <label>
+            From Account
+            <select value={billForm.accountId} onChange={(e) => setBillAccount(e.target.value)}>
+              <option value="">Select account</option>
+              {accountOptions.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name || account.institution || account.id}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <div className="spacer" />

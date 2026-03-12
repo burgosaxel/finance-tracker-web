@@ -10,6 +10,7 @@ import {
   getBillsDueLaterThisMonth,
   getBillsDueWithinDays,
   getIncomePayDate,
+  getPastDueBills,
   getRecentSyncedTransactions,
   monthKey,
   safeNumber,
@@ -36,9 +37,17 @@ export default function DashboardPage({
       .filter((account) => account.type !== "credit")
       .reduce((sum, account) => sum + safeNumber(account.currentBalance, 0), 0);
     const totalCash = manualCash + linkedCash;
-    const totalDebt = (data.creditCards || []).reduce((sum, c) => sum + Math.max(0, safeNumber(c.balance, 0)), 0);
+    const creditCardDebt = (data.creditCards || []).reduce(
+      (sum, c) => sum + Math.max(0, safeNumber(c.balance, 0)),
+      0
+    );
+    const loanDebt = (data.loans || []).reduce(
+      (sum, loan) => sum + Math.max(0, safeNumber(loan.balance, 0)),
+      0
+    );
+    const totalDebt = creditCardDebt + loanDebt;
     const totalLimit = (data.creditCards || []).reduce((sum, c) => sum + Math.max(0, safeNumber(c.limit, 0)), 0);
-    const utilization = totalLimit > 0 ? (totalDebt / totalLimit) * 100 : 0;
+    const utilization = totalLimit > 0 ? (creditCardDebt / totalLimit) * 100 : 0;
     const monthIncome = (incomes || [])
       .filter((i) => monthKey(getIncomePayDate(i, now)) === currentMonth)
       .reduce((sum, i) => sum + safeNumber(i.amount ?? i.expectedAmount, 0), 0);
@@ -46,6 +55,7 @@ export default function DashboardPage({
       .filter((b) => monthKey(getBillDueDate(b, now)) === currentMonth)
       .reduce((sum, b) => sum + safeNumber(b.amount, 0), 0);
 
+    const pastDue = getPastDueBills(bills, now);
     const dueSoon = getBillsDueWithinDays(bills, 7, now);
     const dueLater = getBillsDueLaterThisMonth(bills, now, 7);
     const cashflow = computeMonthTotals(bills, incomes, { now });
@@ -71,6 +81,7 @@ export default function DashboardPage({
       monthIncome,
       monthBills,
       utilization,
+      pastDue,
       dueSoon,
       dueLater,
       cashflow,
@@ -86,6 +97,7 @@ export default function DashboardPage({
     data.accounts,
     data.creditCards,
     data.linkedAccounts,
+    data.loans,
     incomes,
     now,
     transactions,
@@ -120,13 +132,13 @@ export default function DashboardPage({
 
       <div className="twoCol">
         <section className="card section">
-          <h3>Bills due in next 7 days</h3>
+          <h3>Unpaid bills</h3>
           {loadError ? <div className="errorText">{loadError}</div> : null}
-          {summary.dueSoon.length === 0 ? (
-            <div className="muted">No bills due in the next week.</div>
-          ) : (
+          <h4 style={{ marginTop: 4 }}>Past Due</h4>
+          {summary.pastDue.length === 0 ? <div className="muted">No past-due unpaid bills.</div> : null}
+          {summary.pastDue.length > 0 ? (
             <ul className="cleanList">
-              {summary.dueSoon.map((b) => (
+              {summary.pastDue.map((b) => (
                 <li key={b.id} className="listRow compactTriplet">
                   <span>{b.merchant || b.name}</span>
                   <span>{new Date(b.nextDueDate).toLocaleDateString()}</span>
@@ -134,7 +146,20 @@ export default function DashboardPage({
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
+          <h4 style={{ marginTop: 10 }}>Due in next 7 days</h4>
+          {summary.dueSoon.length === 0 ? <div className="muted">No bills due in the next week.</div> : null}
+          {summary.dueSoon.length > 0 ? (
+            <ul className="cleanList">
+              {summary.dueSoon.map((b) => (
+                <li key={`soon-${b.id}`} className="listRow compactTriplet">
+                  <span>{b.merchant || b.name}</span>
+                  <span>{new Date(b.nextDueDate).toLocaleDateString()}</span>
+                  <strong>{formatCurrency(b.amount, cfg.currency)}</strong>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="muted" style={{ marginTop: 8 }}>
             Due later this month: {summary.dueLater.length}
           </div>

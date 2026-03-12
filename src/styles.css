@@ -361,6 +361,12 @@ textarea {
   padding: 12px;
 }
 
+.subsection {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
 .twoCol {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -634,9 +640,7 @@ tfoot td {
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px;
-    position: sticky;
-    top: 10px;
-    z-index: 30;
+    position: static;
   }
 
   .mobileHeader .sidebarTitle {
