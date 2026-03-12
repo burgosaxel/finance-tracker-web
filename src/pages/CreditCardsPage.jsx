@@ -126,7 +126,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
         <button type="button" className="primary" onClick={startAdd}>Add Card</button>
       </div>
 
-      <div className="tableWrap card">
+      <div className="tableWrap card desktopDataTable">
         <table>
           <thead>
             <tr>
@@ -182,6 +182,51 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
             </tr>
           </tfoot>
         </table>
+      </div>
+
+      <div className="mobileDataList">
+        {rows.length === 0 ? <div className="card section muted">No credit cards yet.</div> : null}
+        {rows.map((card) => (
+          <article key={`mobile-${card.id}`} className="card section dataItem">
+            <div className="dataItemHeader">
+              <div>
+                <h3 className="dataItemTitle">{card.name}</h3>
+                <div className="muted compactSubtext">{card.issuer || "No issuer"}</div>
+              </div>
+              <span className={card.utilization > cfg.utilizationThreshold ? "pill danger" : "pill"}>
+                {formatPercent(card.utilization)}
+              </span>
+            </div>
+            <div className="summaryGrid three">
+              <div className="summaryCell"><span className="dataLabel">Limit</span><strong>{formatCurrency(card.limit, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Balance</span><strong>{formatCurrency(card.balance, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Available</span><strong>{formatCurrency(card.available, cfg.currency)}</strong></div>
+            </div>
+            <div className="summaryGrid two">
+              <div className="summaryCell"><span className="dataLabel">APR</span><strong>{formatPercent(card.apr)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Minimum</span><strong>{formatCurrency(card.minimumPayment, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Recommended</span><strong>{formatCurrency(card.recommendedPayment, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Utilization</span><strong>{formatPercent(card.utilization)}</strong></div>
+            </div>
+            <div className="row dataActions">
+              <button type="button" onClick={() => startEdit(card)}>Edit</button>
+              <button type="button" onClick={() => remove(card.id)}>Delete</button>
+            </div>
+          </article>
+        ))}
+
+        {rows.length > 0 ? (
+          <article className="card section dataItem">
+            <h3 className="dataItemTitle">Totals</h3>
+            <div className="dataGrid">
+              <div className="dataRow"><span className="dataLabel">Total Limit</span><span className="dataValue">{formatCurrency(totals.totalLimit, cfg.currency)}</span></div>
+              <div className="dataRow"><span className="dataLabel">Total Balance</span><span className="dataValue">{formatCurrency(totals.totalBalance, cfg.currency)}</span></div>
+              <div className="dataRow"><span className="dataLabel">Available</span><span className="dataValue">{formatCurrency(totals.totalLimit - totals.totalBalance, cfg.currency)}</span></div>
+              <div className="dataRow"><span className="dataLabel">Avg Utilization</span><span className="dataValue">{formatPercent(totals.avgUtil)}</span></div>
+              <div className="dataRow"><span className="dataLabel">Total Minimum</span><span className="dataValue">{formatCurrency(totals.totalMin, cfg.currency)}</span></div>
+            </div>
+          </article>
+        ) : null}
       </div>
 
       <Modal title={editingId ? "Edit Card" : "Add Card"} open={open} onClose={() => setOpen(false)}>

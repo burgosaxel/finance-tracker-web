@@ -9,7 +9,14 @@ import {
   saveSettings,
   upsertEntity,
 } from "../lib/db";
-import { DEFAULT_SETTINGS, safeNumber } from "../lib/finance";
+import { DEFAULT_SETTINGS, formatCurrency, safeNumber } from "../lib/finance";
+import {
+  createPlaidLinkToken,
+  exchangePlaidPublicToken,
+  openPlaidLink,
+  syncPlaidAccounts,
+  syncPlaidTransactions,
+} from "../lib/plaid";
 
 const EMPTY_ACCOUNT = {
   name: "",
@@ -17,12 +24,24 @@ const EMPTY_ACCOUNT = {
   balance: 0,
 };
 
-export default function SettingsPage({ uid, settings, accounts, onToast, onError, selectedMonth }) {
+export default function SettingsPage({
+  uid,
+  settings,
+  accounts,
+  linkedAccounts = [],
+  plaidItems = [],
+  plaidSyncState = null,
+  onToast,
+  onError,
+  selectedMonth,
+}) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [localSettings, setLocalSettings] = useState(cfg);
   const [accountOpen, setAccountOpen] = useState(false);
   const [accountForm, setAccountForm] = useState(EMPTY_ACCOUNT);
   const [editingId, setEditingId] = useState(null);
+  const [plaidLoading, setPlaidLoading] = useState(false);
+  const [plaidMessage, setPlaidMessage] = useState("");
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -135,6 +154,44 @@ export default function SettingsPage({ uid, settings, accounts, onToast, onError
     }
   }
 
+  async function handleLinkAccount() {
+    setPlaidLoading(true);
+    setPlaidMessage("Creating secure Plaid link session...");
+    try {
+      const { linkToken } = await createPlaidLinkToken();
+      const { publicToken, metadata } = await openPlaidLink(linkToken);
+      setPlaidMessage("Exchanging token and running first sync...");
+      await exchangePlaidPublicToken(publicToken, metadata);
+      onToast("Bank account linked and initial sync completed.");
+      setPlaidMessage("Linked account successfully.");
+    } catch (error) {
+      setPlaidMessage("");
+      onError?.(error?.message || String(error));
+      onToast("Failed to link bank account.", "error");
+    } finally {
+      setPlaidLoading(false);
+    }
+  }
+
+  async function handleSyncAll() {
+    setPlaidLoading(true);
+    setPlaidMessage("Syncing linked accounts and transactions...");
+    try {
+      for (const item of plaidItems) {
+        await syncPlaidAccounts(item.plaidItemId || item.itemId);
+      }
+      await syncPlaidTransactions();
+      onToast("Plaid data synced.");
+      setPlaidMessage("Sync complete.");
+    } catch (error) {
+      setPlaidMessage("");
+      onError?.(error?.message || String(error));
+      onToast("Failed to sync Plaid data.", "error");
+    } finally {
+      setPlaidLoading(false);
+    }
+  }
+
   return (
     <div className="page">
       <h2>Settings</h2>
@@ -181,6 +238,73 @@ export default function SettingsPage({ uid, settings, accounts, onToast, onError
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <button type="button" className="primary" onClick={persistSettings}>Save Settings</button>
+        </div>
+      </section>
+
+      <section className="card section">
+        <div className="row">
+          <div>
+            <h3>Linked Bank Accounts</h3>
+            <div className="muted pageIntro">
+              Connect accounts with Plaid to sync balances, transactions, and recurring-payment candidates.
+            </div>
+          </div>
+          <div className="spacer" />
+          <button type="button" className="primary" onClick={handleLinkAccount} disabled={plaidLoading}>
+            Link Bank Account
+          </button>
+          <button type="button" onClick={handleSyncAll} disabled={plaidLoading || plaidItems.length === 0}>
+            Sync Linked Data
+          </button>
+        </div>
+        {plaidMessage ? <div className="muted">{plaidMessage}</div> : null}
+        {plaidSyncState ? (
+          <div className="row" style={{ marginTop: 8 }}>
+            <div className="card section">
+              <strong>Status:</strong> {plaidSyncState.syncStatus || "idle"}
+            </div>
+            <div className="card section">
+              <strong>Last sync:</strong> {plaidSyncState.lastGlobalSyncAt || "-"}
+            </div>
+            <div className="card section">
+              <strong>Transactions:</strong> {plaidSyncState.transactionCount || 0}
+            </div>
+          </div>
+        ) : null}
+        {plaidSyncState?.lastError ? <div className="errorText">{plaidSyncState.lastError}</div> : null}
+
+        <div className="twoCol">
+          <div className="card section">
+            <h4>Linked Institutions</h4>
+            {plaidItems.length === 0 ? <div className="muted">No Plaid items linked yet.</div> : null}
+            <ul className="cleanList">
+              {plaidItems.map((item) => (
+                <li key={item.plaidItemId || item.itemId} className="listRow compactTriplet">
+                  <span>{item.institutionName || "Linked institution"}</span>
+                  <span>{item.status || "linked"}</span>
+                  <strong>{item.lastSyncAt ? new Date(item.lastSyncAt).toLocaleDateString() : "-"}</strong>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="card section">
+            <h4>Synced Accounts</h4>
+            {linkedAccounts.length === 0 ? <div className="muted">Linked accounts will appear here after sync.</div> : null}
+            <ul className="cleanList">
+              {linkedAccounts.map((account) => (
+                <li key={account.accountId || account.id} className="listRow compactTriplet">
+                  <span>
+                    {account.institutionName ? `${account.institutionName}: ` : ""}
+                    {account.name}
+                    {account.mask ? ` •${account.mask}` : ""}
+                  </span>
+                  <span>{account.type || "-"}</span>
+                  <strong>{formatCurrency(account.currentBalance ?? account.availableBalance ?? 0, cfg.currency)}</strong>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 

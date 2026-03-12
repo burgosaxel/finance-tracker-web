@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
-import StatCard from "../components/StatCard";
 import { deleteEntity, upsertEntity } from "../lib/db";
 import { DEFAULT_SETTINGS, formatCurrency, formatPercent, safeNumber } from "../lib/finance";
 
@@ -115,15 +114,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         </button>
       </div>
 
-      <div className="statsGrid">
-        <StatCard label="Total Loan Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
-        <StatCard
-          label="Total Monthly Loan Payments"
-          value={formatCurrency(totals.totalMonthlyPayment, cfg.currency)}
-        />
-      </div>
-
-      <div className="tableWrap card">
+      <div className="tableWrap card desktopDataTable">
         <table>
           <thead>
             <tr>
@@ -167,6 +158,43 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
           </tbody>
         </table>
       </div>
+
+      <div className="mobileDataList">
+        {rows.length === 0 ? <div className="card section muted">No loans yet.</div> : null}
+        {rows.map((loan) => (
+          <article key={`mobile-${loan.id}`} className="card section dataItem">
+            <div className="dataItemHeader">
+              <h3 className="dataItemTitle">{loan.lender}</h3>
+              <span className="pill">{loan.status || "active"}</span>
+            </div>
+            <div className="summaryGrid two">
+              <div className="summaryCell"><span className="dataLabel">Balance</span><strong>{formatCurrency(loan.balance, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Monthly Payment</span><strong>{formatCurrency(loan.monthlyPayment, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Interest Rate</span><strong>{loan.interestRate === null ? "-" : formatPercent(loan.interestRate)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Due Day</span><strong>{loan.dueDay || "-"}</strong></div>
+            </div>
+            {loan.notes ? <div className="muted compactSubtext">{loan.notes}</div> : null}
+            <div className="row dataActions">
+              <button type="button" onClick={() => startEdit(loan)}>Edit</button>
+              <button type="button" onClick={() => remove(loan.id)}>Delete</button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <article className="card section dataItem">
+        <h3 className="dataItemTitle">Totals</h3>
+        <div className="summaryGrid two">
+          <div className="summaryCell">
+            <span className="dataLabel">Total Loan Balance</span>
+            <strong>{formatCurrency(totals.totalBalance, cfg.currency)}</strong>
+          </div>
+          <div className="summaryCell">
+            <span className="dataLabel">Total Monthly Payment</span>
+            <strong>{formatCurrency(totals.totalMonthlyPayment, cfg.currency)}</strong>
+          </div>
+        </div>
+      </article>
 
       <Modal title={editingId ? "Edit Loan" : "Add Loan"} open={open} onClose={() => setOpen(false)}>
         <div className="formGrid">
