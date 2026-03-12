@@ -79,6 +79,12 @@ export default function BillsIncomePage({
   const [incomeTemplateOpen, setIncomeTemplateOpen] = useState(false);
   const [incomeTemplateForm, setIncomeTemplateForm] = useState(EMPTY_INCOME_TEMPLATE);
   const [incomeTemplateEditingId, setIncomeTemplateEditingId] = useState(null);
+  const [forecastCollapsed, setForecastCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const saved = window.localStorage.getItem("ft_cashflow_collapsed");
+    if (saved !== null) return saved === "true";
+    return window.matchMedia("(max-width: 768px)").matches;
+  });
   const [paidBillsCollapsed, setPaidBillsCollapsed] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem("ft_paid_bills_collapsed") !== "false";
@@ -97,6 +103,11 @@ export default function BillsIncomePage({
   const viewDate = monthFromMonthId(currentMonth) || now;
   const isCurrentMonth = currentMonth === monthKey(now);
   const isReadOnly = !isCurrentMonth;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("ft_cashflow_collapsed", String(forecastCollapsed));
+  }, [forecastCollapsed]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -603,18 +614,28 @@ export default function BillsIncomePage({
       </section>
 
       <section className="card section">
-        <h3>Cashflow Forecast</h3>
-        <div className="statsGrid forecastGrid">
-          <div className="card section"><strong>Bills remaining:</strong> {formatCurrency(cashflow.totalBillsUnpaid, cfg.currency)}</div>
-          <div className="card section"><strong>Due next 7 days:</strong> {dueSoon.length}</div>
-          <div className="card section"><strong>Due later this month:</strong> {dueLater.length}</div>
-          <div className="card section"><strong>Income expected:</strong> {formatCurrency(cashflow.totalIncomeExpected, cfg.currency)}</div>
-          <div className="card section"><strong>Income received:</strong> {formatCurrency(cashflow.totalIncomeReceived, cfg.currency)}</div>
-          <div className="card section"><strong>Bills paid:</strong> {formatCurrency(cashflow.totalBillsPaid, cfg.currency)}</div>
-          <div className="card section"><strong>Remaining from received:</strong> {formatCurrency(cashflow.remainingFromReceived, cfg.currency)}</div>
-          <div className="card section"><strong>Projected month end:</strong> {formatCurrency(cashflow.projectedRemaining, cfg.currency)}</div>
-          <div className="card section"><strong>Total bills:</strong> {formatCurrency(cashflow.totalBills, cfg.currency)}</div>
-        </div>
+        <button
+          type="button"
+          className="collapseToggle"
+          onClick={() => setForecastCollapsed((value) => !value)}
+          aria-expanded={!forecastCollapsed}
+        >
+          <span>Cashflow Forecast</span>
+          <span className="muted">{forecastCollapsed ? ">" : "v"}</span>
+        </button>
+        {!forecastCollapsed ? (
+          <div className="statsGrid forecastGrid">
+            <div className="card section"><strong>Bills remaining:</strong> {formatCurrency(cashflow.totalBillsUnpaid, cfg.currency)}</div>
+            <div className="card section"><strong>Due next 7 days:</strong> {dueSoon.length}</div>
+            <div className="card section"><strong>Due later this month:</strong> {dueLater.length}</div>
+            <div className="card section"><strong>Income expected:</strong> {formatCurrency(cashflow.totalIncomeExpected, cfg.currency)}</div>
+            <div className="card section"><strong>Income received:</strong> {formatCurrency(cashflow.totalIncomeReceived, cfg.currency)}</div>
+            <div className="card section"><strong>Bills paid:</strong> {formatCurrency(cashflow.totalBillsPaid, cfg.currency)}</div>
+            <div className="card section"><strong>Remaining from received:</strong> {formatCurrency(cashflow.remainingFromReceived, cfg.currency)}</div>
+            <div className="card section"><strong>Projected month end:</strong> {formatCurrency(cashflow.projectedRemaining, cfg.currency)}</div>
+            <div className="card section"><strong>Total bills:</strong> {formatCurrency(cashflow.totalBills, cfg.currency)}</div>
+          </div>
+        ) : null}
       </section>
 
       <div className="twoCol">

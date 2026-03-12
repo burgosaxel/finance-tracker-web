@@ -367,6 +367,26 @@ textarea {
   border-top: 1px solid var(--border);
 }
 
+.collapseToggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.collapseToggle:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
 .twoCol {
   display: grid;
   grid-template-columns: 1fr 1fr;

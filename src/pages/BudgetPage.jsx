@@ -94,13 +94,13 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
       <p className="muted pageIntro">
         Plan your month by assigning dollars to categories and comparing assigned amounts against activity.
       </p>
-      <div className="row" style={{ marginBottom: 10 }}>
+      <div className="statsGrid" style={{ marginBottom: 10 }}>
         <div className="card section"><strong>Month Income:</strong> {formatCurrency(monthIncome, cfg.currency)}</div>
         <div className="card section"><strong>Total Assigned:</strong> {formatCurrency(totals.totalAssigned, cfg.currency)}</div>
         <div className="card section"><strong>To Be Budgeted:</strong> {formatCurrency(totals.toBeBudgeted, cfg.currency)}</div>
       </div>
 
-      <div className="tableWrap card">
+      <div className="tableWrap card desktopDataTable">
         <table>
           <thead>
             <tr>
@@ -130,6 +130,35 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mobileDataList">
+        {rows.length === 0 ? <div className="card section muted">No categories yet. Add bills/transactions first.</div> : null}
+        {rows.map((r) => (
+          <article key={`budget-${r.name}`} className="card section dataItem">
+            <div className="dataItemHeader">
+              <h3 className="dataItemTitle">{r.name}</h3>
+            </div>
+            <div className="summaryGrid two">
+              <label className="summaryCell">
+                <span className="dataLabel">Assigned</span>
+                <input
+                  type="number"
+                  value={r.assigned}
+                  onChange={(e) => setAssignedDraft({ ...assignedDraft, [r.name]: e.target.value })}
+                />
+              </label>
+              <div className="summaryCell">
+                <span className="dataLabel">Activity</span>
+                <strong>{formatCurrency(r.activity, cfg.currency)}</strong>
+              </div>
+              <div className="summaryCell">
+                <span className="dataLabel">Available</span>
+                <strong>{formatCurrency(r.available, cfg.currency)}</strong>
+              </div>
+            </div>
+          </article>
+        ))}
       </div>
     </div>
   );

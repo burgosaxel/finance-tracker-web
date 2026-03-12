@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
-import StatCard from "../components/StatCard";
 import { deleteEntity, upsertEntity } from "../lib/db";
 import { DEFAULT_SETTINGS, formatCurrency, formatPercent, safeNumber } from "../lib/finance";
 
@@ -113,14 +112,6 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         <button type="button" className="primary" onClick={startAdd}>
           Add Loan
         </button>
-      </div>
-
-      <div className="statsGrid">
-        <StatCard label="Total Loan Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
-        <StatCard
-          label="Total Monthly Loan Payments"
-          value={formatCurrency(totals.totalMonthlyPayment, cfg.currency)}
-        />
       </div>
 
       <div className="tableWrap card desktopDataTable">
