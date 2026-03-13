@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { logger } from "firebase-functions";
 import { defineSecret } from "firebase-functions/params";
 import { onCall, HttpsError, onRequest } from "firebase-functions/v2/https";
@@ -27,6 +28,11 @@ initializeApp();
 
 const PLAID_CLIENT_ID = defineSecret("PLAID_CLIENT_ID");
 const PLAID_SECRET = defineSecret("PLAID_SECRET");
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 function requireAuth(request) {
   const uid = request.auth?.uid;
@@ -34,6 +40,42 @@ function requireAuth(request) {
     throw new HttpsError("unauthenticated", "You must be signed in to use Plaid features.");
   }
   return uid;
+}
+
+async function requireHttpAuth(request) {
+  const authHeader = request.headers.authorization || "";
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    throw new HttpsError("unauthenticated", "Missing Firebase auth token.");
+  }
+  const decoded = await getAuth().verifyIdToken(match[1]);
+  if (!decoded?.uid) {
+    throw new HttpsError("unauthenticated", "Invalid Firebase auth token.");
+  }
+  return decoded.uid;
+}
+
+function sendHttpError(response, error) {
+  const status =
+    error?.code === "unauthenticated"
+      ? 401
+      : error?.code === "invalid-argument"
+        ? 400
+        : error?.code === "failed-precondition"
+          ? 412
+          : 500;
+  response.status(status).json({ error: error?.message || "Unexpected error." });
+}
+
+function applyCors(response) {
+  Object.entries(CORS_HEADERS).forEach(([key, value]) => response.set(key, value));
+}
+
+function parseBody(request) {
+  if (typeof request.body === "string") {
+    return request.body ? JSON.parse(request.body) : {};
+  }
+  return request.body || {};
 }
 
 async function getClient() {
@@ -226,6 +268,27 @@ async function exchangePublicTokenHandler(request) {
   };
 }
 
+export const createLinkTokenHttp = onRequest(
+  {
+    region: "us-central1",
+    secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
+  },
+  async (request, response) => {
+    applyCors(response);
+    if (request.method === "OPTIONS") {
+      response.status(204).send("");
+      return;
+    }
+    try {
+      const uid = await requireHttpAuth(request);
+      const result = await createLinkTokenHandler({ auth: { uid } });
+      response.status(200).json(result);
+    } catch (error) {
+      sendHttpError(response, error);
+    }
+  }
+);
+
 export const createLinkToken = onCall(
   {
     region: "us-central1",
@@ -242,6 +305,31 @@ export const createPlaidLinkToken = onCall(
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
   createLinkTokenHandler
+);
+
+export const exchangePublicTokenHttp = onRequest(
+  {
+    region: "us-central1",
+    secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
+  },
+  async (request, response) => {
+    applyCors(response);
+    if (request.method === "OPTIONS") {
+      response.status(204).send("");
+      return;
+    }
+    try {
+      const uid = await requireHttpAuth(request);
+      const data = parseBody(request);
+      const result = await exchangePublicTokenHandler({
+        auth: { uid },
+        data,
+      });
+      response.status(200).json(result);
+    } catch (error) {
+      sendHttpError(response, error);
+    }
+  }
 );
 
 export const exchangePublicToken = onCall(

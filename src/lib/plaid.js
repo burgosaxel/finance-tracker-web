@@ -1,5 +1,5 @@
 import { httpsCallable } from "firebase/functions";
-import { functions } from "./firebase";
+import { auth, functions } from "./firebase";
 
 let plaidLoader = null;
 
@@ -38,12 +38,49 @@ async function callFunction(name, payload = {}) {
   return response.data;
 }
 
+async function callHttpFunction(name, payload = {}) {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("You must be signed in to connect a bank account.");
+  }
+
+  const idToken = await currentUser.getIdToken();
+  const region = import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || "us-central1";
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+  const emulatorHost = import.meta.env.VITE_FUNCTIONS_EMULATOR_HOST;
+  const url = emulatorHost
+    ? `http://${emulatorHost}/${projectId}/${region}/${name}`
+    : `https://${region}-${projectId}.cloudfunctions.net/${name}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.error || `Request failed with status ${response.status}.`);
+  }
+
+  return data;
+}
+
 export function createLinkToken() {
-  return callFunction("createLinkToken");
+  return callHttpFunction("createLinkTokenHttp");
 }
 
 export function exchangePublicToken(publicToken, metadata) {
-  return callFunction("exchangePublicToken", { publicToken, metadata });
+  return callHttpFunction("exchangePublicTokenHttp", { publicToken, metadata });
 }
 
 export function syncPlaidAccounts(plaidItemId) {
