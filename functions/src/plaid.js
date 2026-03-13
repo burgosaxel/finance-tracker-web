@@ -15,8 +15,8 @@ function parseCsv(value, fallback = []) {
 }
 
 export function getPlaidEnvironment(envName) {
-  const key = String(envName || "sandbox").toLowerCase();
-  return PlaidEnvironments[key] || PlaidEnvironments.sandbox;
+  const key = String(envName || "production").toLowerCase();
+  return PlaidEnvironments[key] || PlaidEnvironments.production;
 }
 
 export function getPlaidProducts() {

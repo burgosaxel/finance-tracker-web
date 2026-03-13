@@ -59,7 +59,7 @@ Plaid secrets stay backend-only in Firebase Functions. This branch currently imp
 2. In `functions/.env`, set non-secret Plaid config values:
 
 ```bash
-PLAID_ENV=sandbox
+PLAID_ENV=production
 PLAID_PRODUCTS=transactions
 PLAID_COUNTRY_CODES=US
 PLAID_REDIRECT_URI=
