@@ -229,6 +229,7 @@ async function exchangePublicTokenHandler(request) {
 export const createLinkToken = onCall(
   {
     region: "us-central1",
+    cors: true,
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
   createLinkTokenHandler
@@ -237,6 +238,7 @@ export const createLinkToken = onCall(
 export const createPlaidLinkToken = onCall(
   {
     region: "us-central1",
+    cors: true,
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
   createLinkTokenHandler
@@ -245,6 +247,7 @@ export const createPlaidLinkToken = onCall(
 export const exchangePublicToken = onCall(
   {
     region: "us-central1",
+    cors: true,
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
   exchangePublicTokenHandler
@@ -253,6 +256,7 @@ export const exchangePublicToken = onCall(
 export const exchangePlaidPublicToken = onCall(
   {
     region: "us-central1",
+    cors: true,
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
   exchangePublicTokenHandler
@@ -261,6 +265,7 @@ export const exchangePlaidPublicToken = onCall(
 export const syncPlaidAccounts = onCall(
   {
     region: "us-central1",
+    cors: true,
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
   async (request) => {
@@ -294,6 +299,7 @@ export const syncPlaidAccounts = onCall(
 export const syncPlaidTransactions = onCall(
   {
     region: "us-central1",
+    cors: true,
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
   async (request) => {
