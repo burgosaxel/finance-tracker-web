@@ -1,5 +1,4 @@
-import { httpsCallable } from "firebase/functions";
-import { auth, functions } from "./firebase";
+import { auth } from "./firebase";
 
 let plaidLoader = null;
 
@@ -30,12 +29,6 @@ function loadPlaidScript() {
   });
 
   return plaidLoader;
-}
-
-async function callFunction(name, payload = {}) {
-  const callable = httpsCallable(functions, name);
-  const response = await callable(payload);
-  return response.data;
 }
 
 async function callHttpFunction(name, payload = {}) {
@@ -84,11 +77,11 @@ export function exchangePublicToken(publicToken, metadata) {
 }
 
 export function syncPlaidAccounts(plaidItemId) {
-  return callFunction("syncPlaidAccounts", { plaidItemId });
+  return callHttpFunction("syncPlaidAccountsHttp", { plaidItemId });
 }
 
 export function syncPlaidTransactions(plaidItemId) {
-  return callFunction("syncPlaidTransactions", plaidItemId ? { plaidItemId } : {});
+  return callHttpFunction("syncPlaidTransactionsHttp", plaidItemId ? { plaidItemId } : {});
 }
 
 export async function openPlaidLink(linkToken) {

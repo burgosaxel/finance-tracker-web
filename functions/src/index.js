@@ -28,10 +28,15 @@ initializeApp();
 
 const PLAID_CLIENT_ID = defineSecret("PLAID_CLIENT_ID");
 const PLAID_SECRET = defineSecret("PLAID_SECRET");
+const ALLOWED_ORIGINS = new Set([
+  "https://burgosaxel.github.io",
+  "http://localhost:5173",
+  "http://localhost:3000",
+]);
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  Vary: "Origin",
 };
 
 function requireAuth(request) {
@@ -78,7 +83,10 @@ function sendHttpError(response, error) {
   });
 }
 
-function applyCors(response) {
+function applyCors(request, response) {
+  const origin = request.headers.origin || "";
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://burgosaxel.github.io";
+  response.set("Access-Control-Allow-Origin", allowOrigin);
   Object.entries(CORS_HEADERS).forEach(([key, value]) => response.set(key, value));
 }
 
@@ -449,13 +457,23 @@ export const createLinkTokenHttp = onRequest(
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
   async (request, response) => {
-    applyCors(response);
+    applyCors(request, response);
+    logger.info("Plaid HTTP request received", {
+      handler: "createLinkTokenHttp",
+      origin: request.headers.origin || "",
+      method: request.method,
+    });
     if (request.method === "OPTIONS") {
       response.status(204).send("");
       return;
     }
     try {
       const uid = await requireHttpAuth(request);
+      logger.info("Plaid HTTP auth resolved", {
+        handler: "createLinkTokenHttp",
+        uid,
+        origin: request.headers.origin || "",
+      });
       const result = await createLinkTokenHandler({ auth: { uid } });
       response.status(200).json(result);
     } catch (error) {
@@ -488,15 +506,119 @@ export const exchangePublicTokenHttp = onRequest(
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
   async (request, response) => {
-    applyCors(response);
+    applyCors(request, response);
+    logger.info("Plaid HTTP request received", {
+      handler: "exchangePublicTokenHttp",
+      origin: request.headers.origin || "",
+      method: request.method,
+    });
     if (request.method === "OPTIONS") {
       response.status(204).send("");
       return;
     }
     try {
       const uid = await requireHttpAuth(request);
+      logger.info("Plaid HTTP auth resolved", {
+        handler: "exchangePublicTokenHttp",
+        uid,
+        origin: request.headers.origin || "",
+      });
       const data = parseBody(request);
       const result = await exchangePublicTokenHandler({
+        auth: { uid },
+        data,
+      });
+      response.status(200).json(result);
+    } catch (error) {
+      sendHttpError(response, error);
+    }
+  }
+);
+
+async function syncPlaidTransactionsHandler(request) {
+  const uid = requireAuth(request);
+  const plaidItemId = request.data?.plaidItemId;
+  const client = await getClient();
+
+  logger.info("Plaid sync handler started", {
+    uid,
+    plaidItemId: plaidItemId || "all",
+  });
+
+  try {
+    if (!plaidItemId) {
+      const summaries = await syncAllItemsForUser(uid);
+      logger.info("Plaid sync handler succeeded", {
+        uid,
+        plaidItemId: "all",
+        itemCount: summaries.length,
+      });
+      return { syncedAll: true, items: summaries };
+    }
+
+    const privateItem = await loadPrivateItem(uid, plaidItemId);
+    if (!privateItem?.accessToken) {
+      throw new HttpsError("not-found", "Linked Plaid item not found.");
+    }
+
+    const result = await syncPlaidTransactionsForItem({
+      uid,
+      plaidItemId,
+      accessToken: privateItem.accessToken,
+      client,
+    });
+    logger.info("Plaid sync handler succeeded", {
+      uid,
+      plaidItemId,
+      added: result.added || 0,
+      modified: result.modified || 0,
+      removed: result.removed || 0,
+    });
+    return { syncedAll: false, plaidItemId, ...result };
+  } catch (error) {
+    if (plaidItemId) {
+      await recordSyncFailure(uid, plaidItemId, error, "transactions");
+    } else {
+      await setPlaidSyncState(uid, {
+        syncStatus: "error",
+        lastError:
+          error?.response?.data?.error_message ||
+          error?.message ||
+          "Plaid sync failed.",
+        itemCount: (await getUserPrivateItems(uid)).length,
+        accountCount: await countUserCollection(uid, "linkedAccounts"),
+        transactionCount: await countUserCollection(uid, "transactions"),
+      });
+    }
+    throw error;
+  }
+}
+
+export const syncPlaidTransactionsHttp = onRequest(
+  {
+    region: "us-central1",
+    secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
+  },
+  async (request, response) => {
+    applyCors(request, response);
+    logger.info("Plaid HTTP request received", {
+      handler: "syncPlaidTransactionsHttp",
+      origin: request.headers.origin || "",
+      method: request.method,
+    });
+    if (request.method === "OPTIONS") {
+      response.status(204).send("");
+      return;
+    }
+    try {
+      const uid = await requireHttpAuth(request);
+      logger.info("Plaid HTTP auth resolved", {
+        handler: "syncPlaidTransactionsHttp",
+        uid,
+        origin: request.headers.origin || "",
+      });
+      const data = parseBody(request);
+      const result = await syncPlaidTransactionsHandler({
         auth: { uid },
         data,
       });
@@ -581,57 +703,83 @@ export const syncPlaidAccounts = onCall(
   }
 );
 
+export const syncPlaidAccountsHttp = onRequest(
+  {
+    region: "us-central1",
+    secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
+  },
+  async (request, response) => {
+    applyCors(request, response);
+    logger.info("Plaid HTTP request received", {
+      handler: "syncPlaidAccountsHttp",
+      origin: request.headers.origin || "",
+      method: request.method,
+    });
+    if (request.method === "OPTIONS") {
+      response.status(204).send("");
+      return;
+    }
+    try {
+      const uid = await requireHttpAuth(request);
+      logger.info("Plaid HTTP auth resolved", {
+        handler: "syncPlaidAccountsHttp",
+        uid,
+        origin: request.headers.origin || "",
+      });
+      const result = await (async () => {
+        const plaidItemId = parseBody(request)?.plaidItemId;
+        if (!plaidItemId) {
+          throw new HttpsError("invalid-argument", "Missing plaidItemId.");
+        }
+
+        const privateItem = await loadPrivateItem(uid, plaidItemId);
+        if (!privateItem?.accessToken) {
+          throw new HttpsError("not-found", "Linked Plaid item not found.");
+        }
+
+        const client = await getClient();
+        logger.info("Manual Plaid account sync requested", { uid, plaidItemId });
+        await setPlaidSyncState(uid, {
+          syncStatus: "syncing",
+          lastError: "",
+          itemCount: (await getUserPrivateItems(uid)).length,
+          accountCount: await countUserCollection(uid, "linkedAccounts"),
+          transactionCount: await countUserCollection(uid, "transactions"),
+        });
+        const summary = await syncPlaidAccountsForItem({
+          uid,
+          plaidItemId,
+          accessToken: privateItem.accessToken,
+          client,
+        });
+        await setPlaidSyncState(uid, {
+          lastGlobalSyncAt: new Date().toISOString(),
+          syncStatus: "synced",
+          lastError: "",
+          itemCount: (await getUserPrivateItems(uid)).length,
+          accountCount: await countUserCollection(uid, "linkedAccounts"),
+          transactionCount: await countUserCollection(uid, "transactions"),
+        });
+        return {
+          plaidItemId,
+          institutionName: summary.institutionName,
+          accountCount: summary.accountCount,
+        };
+      })();
+      response.status(200).json(result);
+    } catch (error) {
+      sendHttpError(response, error);
+    }
+  }
+);
+
 export const syncPlaidTransactions = onCall(
   {
     region: "us-central1",
     cors: true,
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
-  async (request) => {
-    const uid = requireAuth(request);
-    const plaidItemId = request.data?.plaidItemId;
-    const client = await getClient();
-
-    try {
-      logger.info("Manual Plaid transaction sync requested", {
-        uid,
-        plaidItemId: plaidItemId || "all",
-      });
-      if (!plaidItemId) {
-        const summaries = await syncAllItemsForUser(uid);
-        return { syncedAll: true, items: summaries };
-      }
-
-      const privateItem = await loadPrivateItem(uid, plaidItemId);
-      if (!privateItem?.accessToken) {
-        throw new HttpsError("not-found", "Linked Plaid item not found.");
-      }
-
-      const result = await syncPlaidTransactionsForItem({
-        uid,
-        plaidItemId,
-        accessToken: privateItem.accessToken,
-        client,
-      });
-      return { syncedAll: false, plaidItemId, ...result };
-    } catch (error) {
-      if (plaidItemId) {
-        await recordSyncFailure(uid, plaidItemId, error, "transactions");
-      } else {
-        await setPlaidSyncState(uid, {
-          syncStatus: "error",
-          lastError:
-            error?.response?.data?.error_message ||
-            error?.message ||
-            "Plaid sync failed.",
-          itemCount: (await getUserPrivateItems(uid)).length,
-          accountCount: await countUserCollection(uid, "linkedAccounts"),
-          transactionCount: await countUserCollection(uid, "transactions"),
-        });
-      }
-      throw error;
-    }
-  }
+  syncPlaidTransactionsHandler
 );
 
 export const plaidWebhook = onRequest(
