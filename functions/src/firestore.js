@@ -8,18 +8,20 @@ import {
   plaidAmountToSignedAmount,
 } from "./plaid.js";
 
-const db = getFirestore();
+function db() {
+  return getFirestore();
+}
 
 export function userDoc(uid, collectionName, id) {
-  return db.doc(`users/${uid}/${collectionName}/${id}`);
+  return db().doc(`users/${uid}/${collectionName}/${id}`);
 }
 
 export function userCollection(uid, collectionName) {
-  return db.collection(`users/${uid}/${collectionName}`);
+  return db().collection(`users/${uid}/${collectionName}`);
 }
 
 export function privateItemDoc(uid, plaidItemId) {
-  return db.doc(`plaidPrivateItems/${uid}_${plaidItemId}`);
+  return db().doc(`plaidPrivateItems/${uid}_${plaidItemId}`);
 }
 
 export async function writePlaidItemMetadata(uid, plaidItemId, payload) {
@@ -56,17 +58,17 @@ export async function loadPrivateItem(uid, plaidItemId) {
 }
 
 export async function getUserPrivateItems(uid) {
-  const snapshot = await db.collection("plaidPrivateItems").where("uid", "==", uid).get();
+  const snapshot = await db().collection("plaidPrivateItems").where("uid", "==", uid).get();
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 }
 
 export async function getAllPrivateItems() {
-  const snapshot = await db.collection("plaidPrivateItems").get();
+  const snapshot = await db().collection("plaidPrivateItems").get();
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 }
 
 export async function getPrivateItemByPlaidItemId(plaidItemId) {
-  const snapshot = await db
+  const snapshot = await db()
     .collection("plaidPrivateItems")
     .where("plaidItemId", "==", plaidItemId)
     .limit(1)
@@ -77,7 +79,7 @@ export async function getPrivateItemByPlaidItemId(plaidItemId) {
 }
 
 export async function syncLinkedAccounts(uid, plaidItemId, institution, accounts) {
-  const batch = db.batch();
+  const batch = db().batch();
   const now = FieldValue.serverTimestamp();
 
   for (const account of accounts) {
@@ -113,7 +115,7 @@ export async function syncLinkedAccounts(uid, plaidItemId, institution, accounts
 }
 
 export async function syncTransactionsPage(uid, plaidItemId, accountMap, page) {
-  const batch = db.batch();
+  const batch = db().batch();
   const now = FieldValue.serverTimestamp();
 
   for (const transaction of page.added || []) {
@@ -206,7 +208,7 @@ export async function refreshRecurringPayments(uid) {
     candidates.set(merchantKey, existing);
   }
 
-  const batch = db.batch();
+  const batch = db().batch();
   const now = FieldValue.serverTimestamp();
 
   for (const [merchantKey, entries] of candidates.entries()) {
