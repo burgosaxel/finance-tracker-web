@@ -38,12 +38,12 @@ async function callFunction(name, payload = {}) {
   return response.data;
 }
 
-export function createPlaidLinkToken() {
-  return callFunction("createPlaidLinkToken");
+export function createLinkToken() {
+  return callFunction("createLinkToken");
 }
 
-export function exchangePlaidPublicToken(publicToken, metadata) {
-  return callFunction("exchangePlaidPublicToken", { publicToken, metadata });
+export function exchangePublicToken(publicToken, metadata) {
+  return callFunction("exchangePublicToken", { publicToken, metadata });
 }
 
 export function syncPlaidAccounts(plaidItemId) {
@@ -80,3 +80,7 @@ export async function openPlaidLink(linkToken) {
     handler.open();
   });
 }
+
+// Backward-compatible aliases while the app transitions to the MVP naming.
+export const createPlaidLinkToken = createLinkToken;
+export const exchangePlaidPublicToken = exchangePublicToken;

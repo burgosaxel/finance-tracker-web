@@ -7,13 +7,13 @@ This app is a client-only React + Firestore finance tracker with:
 - Credit card tracking (limits, utilization, APR, min payment)
 - Bills & Income planning
 - Transactions register + filters
-- Plaid-linked accounts, balances, and transaction sync via Firebase Functions
+- Plaid bank-linking MVP via Firebase Functions
 - Settings, data export/import, and legacy spreadsheet import
 
 ## Tech
 - Vite + React
 - Firebase Auth + Firestore
-- Firebase Functions (for Plaid token exchange and sync)
+- Firebase Functions (for Plaid token exchange and secure server-side storage)
 - Hash-based navigation (`#/...`) for GitHub Pages compatibility
 
 ## Firestore Rules
@@ -53,7 +53,7 @@ npm run dev
 ```
 
 ## Plaid Setup
-Plaid secrets stay backend-only in Firebase Functions.
+Plaid secrets stay backend-only in Firebase Functions. This branch currently implements the first MVP step only: secure bank linking with Plaid Link.
 
 1. Create a Plaid account and an app in Sandbox/Development.
 2. In `functions/.env`, set non-secret Plaid config values:
@@ -100,12 +100,11 @@ firebase emulators:start --only functions
 npm run dev
 ```
 
-8. In the app, go to `Settings -> Linked Bank Accounts -> Link Bank Account`.
+8. In the app, go to `Settings -> Linked Bank Accounts -> Connect Bank Account`.
 9. Complete Plaid Link, then verify:
    - `plaidItems` docs appear under `/users/{uid}/plaidItems`
-   - `linkedAccounts` docs appear under `/users/{uid}/linkedAccounts`
-   - Plaid transactions appear under `/users/{uid}/transactions` with `source: "plaid"`
-   - `syncState/plaid` updates with counts and timestamps
+   - the item metadata is visible in the Settings UI
+   - access tokens are stored only in the backend-only collection `/plaidPrivateItems/{uid}_{plaidItemId}`
 
 ## Deploy (GitHub Pages)
 This repo uses GitHub Actions workflow: `.github/workflows/deploy-pages.yml`
@@ -144,7 +143,7 @@ Collections under `/users/{uid}/`:
 - `settings` (`preferences` document)
 
 Backend-only sensitive storage:
-- `/plaidPrivateItems/{uid}_{plaidItemId}` for Plaid access tokens and sync cursors
+- `/plaidPrivateItems/{uid}_{plaidItemId}` for Plaid access tokens and future sync cursors
 
 ## Legacy Spreadsheet Import
 Settings page includes `Import legacy snapshot`:
@@ -158,7 +157,7 @@ npm run build
 ```
 
 ## MVP Notes
-- Plaid sync writes into the existing `transactions` collection with `source: "plaid"` so manual workflows remain intact.
-- Category overrides are stored in `userCategoryOverride`.
-- Recurring payments are heuristic candidates generated from synced transactions; they do not overwrite manual recurring templates.
+- Current Plaid scope is limited to account linking only.
+- Access tokens never reach the frontend and are written only to `/plaidPrivateItems/{uid}_{plaidItemId}` by Cloud Functions.
+- Transaction, balance, and recurring-payment sync are intentionally deferred to a later step.
 - GitHub Pages deploys the frontend only. Plaid requires Firebase Functions to be deployed separately.

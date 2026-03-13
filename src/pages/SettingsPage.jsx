@@ -9,13 +9,11 @@ import {
   saveSettings,
   upsertEntity,
 } from "../lib/db";
-import { DEFAULT_SETTINGS, formatCurrency, safeNumber } from "../lib/finance";
+import { DEFAULT_SETTINGS, safeNumber } from "../lib/finance";
 import {
-  createPlaidLinkToken,
-  exchangePlaidPublicToken,
+  createLinkToken,
+  exchangePublicToken,
   openPlaidLink,
-  syncPlaidAccounts,
-  syncPlaidTransactions,
 } from "../lib/plaid";
 
 const EMPTY_ACCOUNT = {
@@ -158,35 +156,17 @@ export default function SettingsPage({
     setPlaidLoading(true);
     setPlaidMessage("Creating secure Plaid link session...");
     try {
-      const { linkToken } = await createPlaidLinkToken();
+      const { linkToken } = await createLinkToken();
       const { publicToken, metadata } = await openPlaidLink(linkToken);
-      setPlaidMessage("Exchanging token and running first sync...");
-      await exchangePlaidPublicToken(publicToken, metadata);
-      onToast("Bank account linked and initial sync completed.");
-      setPlaidMessage("Linked account successfully.");
+      setPlaidMessage("Exchanging token securely...");
+      const result = await exchangePublicToken(publicToken, metadata);
+      const institution = result?.institutionName || metadata?.institution?.name || "Bank account";
+      onToast("Bank account connected successfully.");
+      setPlaidMessage(`${institution} connected successfully.`);
     } catch (error) {
       setPlaidMessage("");
       onError?.(error?.message || String(error));
       onToast("Failed to link bank account.", "error");
-    } finally {
-      setPlaidLoading(false);
-    }
-  }
-
-  async function handleSyncAll() {
-    setPlaidLoading(true);
-    setPlaidMessage("Syncing linked accounts and transactions...");
-    try {
-      for (const item of plaidItems) {
-        await syncPlaidAccounts(item.plaidItemId || item.itemId);
-      }
-      await syncPlaidTransactions();
-      onToast("Plaid data synced.");
-      setPlaidMessage("Sync complete.");
-    } catch (error) {
-      setPlaidMessage("");
-      onError?.(error?.message || String(error));
-      onToast("Failed to sync Plaid data.", "error");
     } finally {
       setPlaidLoading(false);
     }
@@ -246,15 +226,12 @@ export default function SettingsPage({
           <div>
             <h3>Linked Bank Accounts</h3>
             <div className="muted pageIntro">
-              Connect accounts with Plaid to sync balances, transactions, and recurring-payment candidates.
+              Connect a bank account with Plaid. This MVP only completes the secure account-linking step.
             </div>
           </div>
           <div className="spacer" />
           <button type="button" className="primary" onClick={handleLinkAccount} disabled={plaidLoading}>
-            Link Bank Account
-          </button>
-          <button type="button" onClick={handleSyncAll} disabled={plaidLoading || plaidItems.length === 0}>
-            Sync Linked Data
+            Connect Bank Account
           </button>
         </div>
         {plaidMessage ? <div className="muted">{plaidMessage}</div> : null}
@@ -280,29 +257,30 @@ export default function SettingsPage({
             <ul className="cleanList">
               {plaidItems.map((item) => (
                 <li key={item.plaidItemId || item.itemId} className="listRow compactTriplet">
-                  <span>{item.institutionName || "Linked institution"}</span>
+                  <span>{item.institutionName || item.institution || "Linked institution"}</span>
                   <span>{item.status || "linked"}</span>
-                  <strong>{item.lastSyncAt ? new Date(item.lastSyncAt).toLocaleDateString() : "-"}</strong>
+                  <strong>{item.linkedAt ? new Date(item.linkedAt).toLocaleDateString() : "-"}</strong>
                 </li>
               ))}
             </ul>
           </div>
 
           <div className="card section">
-            <h4>Synced Accounts</h4>
-            {linkedAccounts.length === 0 ? <div className="muted">Linked accounts will appear here after sync.</div> : null}
+            <h4>MVP Status</h4>
+            <div className="muted" style={{ marginBottom: 8 }}>
+              Bank linking is active. Account, balance, and transaction syncing will be added in the next step.
+            </div>
             <ul className="cleanList">
-              {linkedAccounts.map((account) => (
-                <li key={account.accountId || account.id} className="listRow compactTriplet">
-                  <span>
-                    {account.institutionName ? `${account.institutionName}: ` : ""}
-                    {account.name}
-                    {account.mask ? ` •${account.mask}` : ""}
-                  </span>
-                  <span>{account.type || "-"}</span>
-                  <strong>{formatCurrency(account.currentBalance ?? account.availableBalance ?? 0, cfg.currency)}</strong>
-                </li>
-              ))}
+              <li className="listRow compactTriplet">
+                <span>Linked items</span>
+                <span>Ready</span>
+                <strong>{plaidItems.length}</strong>
+              </li>
+              <li className="listRow compactTriplet">
+                <span>Linked accounts synced</span>
+                <span>Pending</span>
+                <strong>{linkedAccounts.length}</strong>
+              </li>
             </ul>
           </div>
         </div>

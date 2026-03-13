@@ -164,29 +164,90 @@ async function syncAllItemsForUser(uid) {
   return summaries;
 }
 
+async function createLinkTokenHandler(request) {
+  const uid = requireAuth(request);
+  const client = await getClient();
+
+  const response = await client.linkTokenCreate({
+    user: {
+      client_user_id: uid,
+    },
+    client_name: "BudgetCommand",
+    language: "en",
+    products: getPlaidProducts(),
+    country_codes: getPlaidCountryCodes(),
+    redirect_uri: process.env.PLAID_REDIRECT_URI || undefined,
+    webhook: process.env.PLAID_WEBHOOK_URL || undefined,
+  });
+
+  return { linkToken: response.data.link_token, expiration: response.data.expiration };
+}
+
+async function exchangePublicTokenHandler(request) {
+  const uid = requireAuth(request);
+  const publicToken = request.data?.publicToken;
+  if (!publicToken) {
+    throw new HttpsError("invalid-argument", "Missing Plaid public token.");
+  }
+
+  const client = await getClient();
+  const exchange = await client.itemPublicTokenExchange({ public_token: publicToken });
+  const plaidItemId = exchange.data.item_id;
+  const accessToken = exchange.data.access_token;
+  const institutionName = request.data?.metadata?.institution?.name || null;
+  const linkedAt = new Date().toISOString();
+
+  // Access tokens stay in a backend-only collection outside /users/{uid}/...
+  // so the frontend can never read or leak them through Firestore rules.
+  await writePrivateItem(uid, plaidItemId, {
+    uid,
+    accessToken,
+    plaidItemId,
+    status: "linked",
+    institutionName,
+    lastSyncAt: null,
+  });
+  await writePlaidItemMetadata(uid, plaidItemId, {
+    itemId: plaidItemId,
+    plaidItemId,
+    institutionId: "",
+    institutionName,
+    institution: institutionName,
+    status: "linked",
+    lastCursor: "",
+    lastSyncAt: null,
+    linkedAt,
+  });
+
+  return {
+    plaidItemId,
+    institutionName,
+    connected: true,
+  };
+}
+
+export const createLinkToken = onCall(
+  {
+    region: "us-central1",
+    secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
+  },
+  createLinkTokenHandler
+);
+
 export const createPlaidLinkToken = onCall(
   {
     region: "us-central1",
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
-  async (request) => {
-    const uid = requireAuth(request);
-    const client = await getClient();
+  createLinkTokenHandler
+);
 
-    const response = await client.linkTokenCreate({
-      user: {
-        client_user_id: uid,
-      },
-      client_name: "BudgetCommand",
-      language: "en",
-      products: getPlaidProducts(),
-      country_codes: getPlaidCountryCodes(),
-      redirect_uri: process.env.PLAID_REDIRECT_URI || undefined,
-      webhook: process.env.PLAID_WEBHOOK_URL || undefined,
-    });
-
-    return { linkToken: response.data.link_token, expiration: response.data.expiration };
-  }
+export const exchangePublicToken = onCall(
+  {
+    region: "us-central1",
+    secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
+  },
+  exchangePublicTokenHandler
 );
 
 export const exchangePlaidPublicToken = onCall(
@@ -194,55 +255,7 @@ export const exchangePlaidPublicToken = onCall(
     region: "us-central1",
     secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
   },
-  async (request) => {
-    const uid = requireAuth(request);
-    const publicToken = request.data?.publicToken;
-    if (!publicToken) {
-      throw new HttpsError("invalid-argument", "Missing Plaid public token.");
-    }
-
-    const client = await getClient();
-    const exchange = await client.itemPublicTokenExchange({ public_token: publicToken });
-    const plaidItemId = exchange.data.item_id;
-    const accessToken = exchange.data.access_token;
-
-    // Access tokens stay in a backend-only collection outside /users/{uid}/...
-    // so the frontend can never read or leak them through Firestore rules.
-    await writePrivateItem(uid, plaidItemId, {
-      uid,
-      accessToken,
-      plaidItemId,
-      status: "linked",
-    });
-    await writePlaidItemMetadata(uid, plaidItemId, {
-      itemId: plaidItemId,
-      plaidItemId,
-      institutionId: "",
-      institutionName: request.data?.metadata?.institution?.name || "Linked institution",
-      status: "linking",
-      lastCursor: "",
-    });
-
-    const accounts = await syncPlaidAccountsForItem({
-      uid,
-      plaidItemId,
-      accessToken,
-      client,
-    });
-    const transactions = await syncPlaidTransactionsForItem({
-      uid,
-      plaidItemId,
-      accessToken,
-      client,
-    });
-
-    return {
-      plaidItemId,
-      institutionName: accounts.institutionName,
-      accountCount: accounts.accountCount,
-      transactionSync: transactions,
-    };
-  }
+  exchangePublicTokenHandler
 );
 
 export const syncPlaidAccounts = onCall(
