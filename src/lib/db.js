@@ -45,7 +45,7 @@ import { parseLegacySnapshot } from "./legacyImport";
  * /transactions/{transactionId}
  * { id, date, payee, category, amount, accountId, notes, billId, source, plaidTransactionId,
  *   merchantName, categoryPrimary, categoryDetailed, categorySource, personalFinanceCategory,
- *   userCategoryOverride, recurringCandidate, removed, createdAt, updatedAt }
+ *   userCategoryOverride, effectiveCategory, recurringCandidate, removed, createdAt, updatedAt }
  *
  * /budgets/{monthId}
  * { id, month, categories: { [categoryName]: assignedNumber }, createdAt, updatedAt }

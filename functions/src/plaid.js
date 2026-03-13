@@ -1,11 +1,3 @@
-import {
-  Configuration,
-  CountryCode,
-  PlaidApi,
-  PlaidEnvironments,
-  Products,
-} from "plaid";
-
 function parseCsv(value, fallback = []) {
   if (!value) return fallback;
   return String(value)
@@ -16,34 +8,29 @@ function parseCsv(value, fallback = []) {
 
 export function getPlaidEnvironment(envName) {
   const key = String(envName || "production").toLowerCase();
-  return PlaidEnvironments[key] || PlaidEnvironments.production;
+  return key === "sandbox" ? "sandbox" : "production";
 }
 
 export function getPlaidProducts() {
-  return parseCsv(process.env.PLAID_PRODUCTS, ["transactions"]).map((product) => {
-    const match = Object.entries(Products).find(
-      ([key, value]) =>
-        key.toLowerCase() === String(product).toLowerCase() ||
-        String(value).toLowerCase() === String(product).toLowerCase()
-    );
-    return match ? match[1] : String(product).toLowerCase();
-  });
+  return parseCsv(process.env.PLAID_PRODUCTS, ["transactions"]).map((product) =>
+    String(product).toLowerCase()
+  );
 }
 
 export function getPlaidCountryCodes() {
-  return parseCsv(process.env.PLAID_COUNTRY_CODES, ["US"]).map((code) => {
-    const match = Object.entries(CountryCode).find(
-      ([key, value]) =>
-        key.toLowerCase() === String(code).toLowerCase() ||
-        String(value).toLowerCase() === String(code).toLowerCase()
-    );
-    return match ? match[1] : String(code).toUpperCase();
-  });
+  return parseCsv(process.env.PLAID_COUNTRY_CODES, ["US"]).map((code) =>
+    String(code).toUpperCase()
+  );
 }
 
-export function getPlaidClient(clientId, secret) {
+export async function getPlaidClient(clientId, secret) {
+  // The Plaid SDK is imported lazily so Cloud Functions discovery stays below
+  // the deployment timeout threshold. Products and country codes are sent as
+  // standard API strings, so we only need the SDK when a function actually runs.
+  const { Configuration, PlaidApi, PlaidEnvironments } = await import("plaid");
+  const environment = getPlaidEnvironment(process.env.PLAID_ENV);
   const configuration = new Configuration({
-    basePath: getPlaidEnvironment(process.env.PLAID_ENV),
+    basePath: PlaidEnvironments[environment],
     baseOptions: {
       headers: {
         "PLAID-CLIENT-ID": clientId,

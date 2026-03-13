@@ -121,6 +121,15 @@ export async function syncTransactionsPage(uid, plaidItemId, accountMap, page) {
   for (const transaction of page.added || []) {
     const docRef = userDoc(uid, "transactions", transaction.transaction_id);
     const account = accountMap.get(transaction.account_id) || {};
+    const categoryFields = pickCategoryFields(transaction);
+    const effectiveCategory =
+      categoryFields.categoryDetailed ||
+      categoryFields.categoryPrimary ||
+      transaction.personal_finance_category?.detailed ||
+      transaction.personal_finance_category?.primary ||
+      transaction.category?.[transaction.category?.length - 1] ||
+      transaction.category?.[0] ||
+      "Uncategorized";
     batch.set(
       docRef,
       {
@@ -138,12 +147,13 @@ export async function syncTransactionsPage(uid, plaidItemId, accountMap, page) {
         pending: Boolean(transaction.pending),
         source: "plaid",
         userCategoryOverride: null,
+        effectiveCategory,
         notes: "",
         recurringCandidate: false,
         removed: false,
         createdAt: now,
         updatedAt: now,
-        ...pickCategoryFields(transaction),
+        ...categoryFields,
       },
       { merge: true }
     );
@@ -151,6 +161,15 @@ export async function syncTransactionsPage(uid, plaidItemId, accountMap, page) {
 
   for (const transaction of page.modified || []) {
     const docRef = userDoc(uid, "transactions", transaction.transaction_id);
+    const categoryFields = pickCategoryFields(transaction);
+    const effectiveCategory =
+      categoryFields.categoryDetailed ||
+      categoryFields.categoryPrimary ||
+      transaction.personal_finance_category?.detailed ||
+      transaction.personal_finance_category?.primary ||
+      transaction.category?.[transaction.category?.length - 1] ||
+      transaction.category?.[0] ||
+      "Uncategorized";
     batch.set(
       docRef,
       {
@@ -161,9 +180,10 @@ export async function syncTransactionsPage(uid, plaidItemId, accountMap, page) {
         amount: plaidAmountToSignedAmount(transaction),
         isoCurrencyCode: transaction.iso_currency_code || "USD",
         pending: Boolean(transaction.pending),
+        effectiveCategory,
         removed: false,
         updatedAt: now,
-        ...pickCategoryFields(transaction),
+        ...categoryFields,
       },
       { merge: true }
     );

@@ -26,6 +26,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
   const [monthFilter, setMonthFilter] = useState(monthKey());
   const [accountFilter, setAccountFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
 
   const categories = useMemo(() => {
     return [...new Set((transactions || []).map((t) => getEffectiveTransactionCategory(t)).filter(Boolean))].sort();
@@ -36,8 +37,9 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
       .filter((t) => monthKey(new Date(t.date || new Date())) === monthFilter)
       .filter((t) => !accountFilter || t.accountId === accountFilter)
       .filter((t) => !categoryFilter || getEffectiveTransactionCategory(t) === categoryFilter)
+      .filter((t) => !sourceFilter || (t.source || "manual") === sourceFilter)
       .sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [transactions, monthFilter, accountFilter, categoryFilter]);
+  }, [transactions, monthFilter, accountFilter, categoryFilter, sourceFilter]);
 
   function startAdd() {
     setEditingId(null);
@@ -106,6 +108,14 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
             {categories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
+        <label>
+          Source
+          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+            <option value="">All</option>
+            <option value="manual">Manual</option>
+            <option value="plaid">Plaid</option>
+          </select>
+        </label>
         <button type="button" className="primary" onClick={startAdd}>Add Transaction</button>
       </div>
       <p className="muted pageIntro">
@@ -121,23 +131,31 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
               <th>Category</th>
               <th>Amount</th>
               <th>Account</th>
+              <th>Source</th>
               <th>Notes</th>
               <th />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={7} className="muted">No transactions for this filter.</td></tr>
+              <tr><td colSpan={8} className="muted">No transactions for this filter.</td></tr>
             ) : null}
             {rows.map((t) => (
               <tr key={t.id}>
                 <td>{t.date || "-"}</td>
-                <td>{t.payee}</td>
+                <td>
+                  {t.merchantName || t.payee}
+                  {t.pending ? <div className="muted">Pending</div> : null}
+                </td>
                 <td>{getEffectiveTransactionCategory(t)}</td>
                 <td className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
                   {formatCurrency(t.amount, cfg.currency)}
                 </td>
-                <td>{accounts.find((a) => a.id === t.accountId)?.name || "-"}</td>
+                <td>
+                  {accounts.find((a) => a.id === t.accountId)?.name || "-"}
+                  {t.institutionName ? <div className="muted">{t.institutionName}</div> : null}
+                </td>
+                <td>{t.source || "manual"}</td>
                 <td>{t.notes || "-"}</td>
                 <td className="row">
                   <button type="button" onClick={() => startEdit(t)}>Edit</button>
@@ -163,7 +181,9 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
               <div className="dataRow"><span className="dataLabel">Date</span><span className="dataValue">{t.date || "-"}</span></div>
               <div className="dataRow"><span className="dataLabel">Category</span><span className="dataValue">{getEffectiveTransactionCategory(t)}</span></div>
               <div className="dataRow"><span className="dataLabel">Account</span><span className="dataValue">{accounts.find((a) => a.id === t.accountId)?.name || "-"}</span></div>
+              <div className="dataRow"><span className="dataLabel">Institution</span><span className="dataValue">{t.institutionName || "-"}</span></div>
               <div className="dataRow"><span className="dataLabel">Source</span><span className="dataValue">{t.source || "manual"}</span></div>
+              <div className="dataRow"><span className="dataLabel">Pending</span><span className="dataValue">{t.pending ? "Yes" : "No"}</span></div>
               <div className="dataRow"><span className="dataLabel">Notes</span><span className="dataValue">{t.notes || "-"}</span></div>
             </div>
             <div className="row dataActions">

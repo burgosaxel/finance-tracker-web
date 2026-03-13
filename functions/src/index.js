@@ -200,6 +200,39 @@ async function syncPlaidTransactionsForItem({ uid, plaidItemId, accessToken, cli
   return totals;
 }
 
+async function recordSyncFailure(uid, plaidItemId, error) {
+  const message =
+    error?.response?.data?.error_message ||
+    error?.message ||
+    "Plaid sync failed.";
+
+  await writePlaidItemMetadata(uid, plaidItemId, {
+    status: "sync_error",
+    lastError: message,
+    lastSyncAt: new Date().toISOString(),
+  });
+  await writePrivateItem(uid, plaidItemId, {
+    status: "sync_error",
+    lastError: message,
+    lastSyncAt: new Date().toISOString(),
+  });
+  await updateSyncState(uid, {
+    syncStatus: "error",
+    lastError: message,
+    itemCount: (await getUserPrivateItems(uid)).length,
+    accountCount: await countUserCollection(uid, "linkedAccounts"),
+    transactionCount: await countUserCollection(uid, "transactions"),
+  });
+  logger.error("Plaid sync failed", {
+    uid,
+    plaidItemId,
+    message,
+    code: error?.code || null,
+    plaidError: error?.response?.data || null,
+  });
+  return message;
+}
+
 async function syncAllItemsForUser(uid) {
   const client = await getClient();
   const items = await getUserPrivateItems(uid);
@@ -272,10 +305,31 @@ async function exchangePublicTokenHandler(request) {
     linkedAt,
   });
 
+  let syncSummary = null;
+  try {
+    syncSummary = await syncPlaidTransactionsForItem({
+      uid,
+      plaidItemId,
+      accessToken,
+      client,
+    });
+  } catch (error) {
+    const syncError = await recordSyncFailure(uid, plaidItemId, error);
+    return {
+      plaidItemId,
+      institutionName,
+      connected: true,
+      synced: false,
+      syncError,
+    };
+  }
+
   return {
     plaidItemId,
     institutionName,
     connected: true,
+    synced: true,
+    syncSummary,
   };
 }
 
@@ -406,23 +460,41 @@ export const syncPlaidTransactions = onCall(
     const plaidItemId = request.data?.plaidItemId;
     const client = await getClient();
 
-    if (!plaidItemId) {
-      const summaries = await syncAllItemsForUser(uid);
-      return { syncedAll: true, items: summaries };
-    }
+    try {
+      if (!plaidItemId) {
+        const summaries = await syncAllItemsForUser(uid);
+        return { syncedAll: true, items: summaries };
+      }
 
-    const privateItem = await loadPrivateItem(uid, plaidItemId);
-    if (!privateItem?.accessToken) {
-      throw new HttpsError("not-found", "Linked Plaid item not found.");
-    }
+      const privateItem = await loadPrivateItem(uid, plaidItemId);
+      if (!privateItem?.accessToken) {
+        throw new HttpsError("not-found", "Linked Plaid item not found.");
+      }
 
-    const result = await syncPlaidTransactionsForItem({
-      uid,
-      plaidItemId,
-      accessToken: privateItem.accessToken,
-      client,
-    });
-    return { syncedAll: false, plaidItemId, ...result };
+      const result = await syncPlaidTransactionsForItem({
+        uid,
+        plaidItemId,
+        accessToken: privateItem.accessToken,
+        client,
+      });
+      return { syncedAll: false, plaidItemId, ...result };
+    } catch (error) {
+      if (plaidItemId) {
+        await recordSyncFailure(uid, plaidItemId, error);
+      } else {
+        await updateSyncState(uid, {
+          syncStatus: "error",
+          lastError:
+            error?.response?.data?.error_message ||
+            error?.message ||
+            "Plaid sync failed.",
+          itemCount: (await getUserPrivateItems(uid)).length,
+          accountCount: await countUserCollection(uid, "linkedAccounts"),
+          transactionCount: await countUserCollection(uid, "transactions"),
+        });
+      }
+      throw error;
+    }
   }
 );
 

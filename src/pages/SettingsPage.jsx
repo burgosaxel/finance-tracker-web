@@ -9,11 +9,12 @@ import {
   saveSettings,
   upsertEntity,
 } from "../lib/db";
-import { DEFAULT_SETTINGS, safeNumber } from "../lib/finance";
+import { DEFAULT_SETTINGS, formatCurrency, safeNumber } from "../lib/finance";
 import {
   createLinkToken,
   exchangePublicToken,
   openPlaidLink,
+  syncPlaidTransactions,
 } from "../lib/plaid";
 
 const EMPTY_ACCOUNT = {
@@ -161,12 +162,43 @@ export default function SettingsPage({
       setPlaidMessage("Exchanging token securely...");
       const result = await exchangePublicToken(publicToken, metadata);
       const institution = result?.institutionName || metadata?.institution?.name || "Bank account";
-      onToast("Bank account connected successfully.");
-      setPlaidMessage(`${institution} connected successfully.`);
+      if (result?.synced === false) {
+        onToast("Bank account linked, but initial sync failed.", "error");
+        setPlaidMessage(`${institution} linked, but sync failed: ${result.syncError}`);
+      } else {
+        const added = result?.syncSummary?.added || 0;
+        onToast("Bank account connected successfully.");
+        setPlaidMessage(
+          `${institution} connected successfully. Initial sync complete with ${added} transaction${added === 1 ? "" : "s"}.`
+        );
+      }
     } catch (error) {
       setPlaidMessage("");
       onError?.(error?.message || String(error));
       onToast("Failed to link bank account.", "error");
+    } finally {
+      setPlaidLoading(false);
+    }
+  }
+
+  async function handleManualSync() {
+    setPlaidLoading(true);
+    setPlaidMessage("Syncing linked accounts and transactions...");
+    try {
+      const result = await syncPlaidTransactions();
+      const itemCount = result?.items?.length || 0;
+      const transactionCount = result?.items?.reduce(
+        (sum, item) => sum + Number(item.added || 0) + Number(item.modified || 0),
+        0
+      ) || 0;
+      onToast("Linked data synced.");
+      setPlaidMessage(
+        `Synced ${itemCount} linked item${itemCount === 1 ? "" : "s"} and processed ${transactionCount} transaction update${transactionCount === 1 ? "" : "s"}.`
+      );
+    } catch (error) {
+      setPlaidMessage("");
+      onError?.(error?.message || String(error));
+      onToast("Failed to sync linked data.", "error");
     } finally {
       setPlaidLoading(false);
     }
@@ -226,10 +258,17 @@ export default function SettingsPage({
           <div>
             <h3>Linked Bank Accounts</h3>
             <div className="muted pageIntro">
-              Connect a bank account with Plaid. This MVP only completes the secure account-linking step.
+              Connect a bank account with Plaid, sync balances and transactions, and review linked account health.
             </div>
           </div>
           <div className="spacer" />
+          <button
+            type="button"
+            onClick={handleManualSync}
+            disabled={plaidLoading || plaidItems.length === 0}
+          >
+            Sync Linked Accounts
+          </button>
           <button type="button" className="primary" onClick={handleLinkAccount} disabled={plaidLoading}>
             Connect Bank Account
           </button>
@@ -266,21 +305,24 @@ export default function SettingsPage({
           </div>
 
           <div className="card section">
-            <h4>MVP Status</h4>
-            <div className="muted" style={{ marginBottom: 8 }}>
-              Bank linking is active. Account, balance, and transaction syncing will be added in the next step.
-            </div>
+            <h4>Linked Accounts</h4>
+            {linkedAccounts.length === 0 ? <div className="muted">No synced linked accounts yet.</div> : null}
             <ul className="cleanList">
-              <li className="listRow compactTriplet">
-                <span>Linked items</span>
-                <span>Ready</span>
-                <strong>{plaidItems.length}</strong>
-              </li>
-              <li className="listRow compactTriplet">
-                <span>Linked accounts synced</span>
-                <span>Pending</span>
-                <strong>{linkedAccounts.length}</strong>
-              </li>
+              {linkedAccounts.map((account) => (
+                <li key={account.id || account.accountId} className="listRow compactTriplet">
+                  <span>
+                    {account.institutionName ? `${account.institutionName} · ` : ""}
+                    {account.name}
+                    {account.mask ? ` ••••${account.mask}` : ""}
+                  </span>
+                  <span>{account.subtype || account.type || "account"}</span>
+                  <strong>
+                    {account.availableBalance === null || account.availableBalance === undefined
+                      ? formatCurrency(account.currentBalance, localSettings.currency || "USD")
+                      : `${formatCurrency(account.availableBalance, localSettings.currency || "USD")} avail`}
+                  </strong>
+                </li>
+              ))}
             </ul>
           </div>
         </div>

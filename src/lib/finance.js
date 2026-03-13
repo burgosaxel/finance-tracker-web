@@ -260,6 +260,7 @@ export function computeMonthTotals(bills, incomes, options = {}) {
 export function getEffectiveTransactionCategory(transaction) {
   return (
     transaction?.userCategoryOverride ||
+    transaction?.effectiveCategory ||
     transaction?.categoryDetailed ||
     transaction?.categoryPrimary ||
     transaction?.category ||
