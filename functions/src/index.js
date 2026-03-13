@@ -56,6 +56,12 @@ async function requireHttpAuth(request) {
 }
 
 function sendHttpError(response, error) {
+  logger.error("Plaid HTTP function failed", {
+    message: error?.message || "Unexpected error.",
+    code: error?.code || null,
+    stack: error?.stack || null,
+    plaidError: error?.response?.data || null,
+  });
   const status =
     error?.code === "unauthenticated"
       ? 401
@@ -63,8 +69,13 @@ function sendHttpError(response, error) {
         ? 400
         : error?.code === "failed-precondition"
           ? 412
-          : 500;
-  response.status(status).json({ error: error?.message || "Unexpected error." });
+          : error?.response?.status || error?.statusCode || error?.status || 500;
+  response.status(status).json({
+    error:
+      error?.response?.data?.error_message ||
+      error?.message ||
+      "Unexpected error.",
+  });
 }
 
 function applyCors(response) {

@@ -21,15 +21,23 @@ export function getPlaidEnvironment(envName) {
 
 export function getPlaidProducts() {
   return parseCsv(process.env.PLAID_PRODUCTS, ["transactions"]).map((product) => {
-    const normalized = product.toUpperCase();
-    return Products[normalized] || product;
+    const match = Object.entries(Products).find(
+      ([key, value]) =>
+        key.toLowerCase() === String(product).toLowerCase() ||
+        String(value).toLowerCase() === String(product).toLowerCase()
+    );
+    return match ? match[1] : String(product).toLowerCase();
   });
 }
 
 export function getPlaidCountryCodes() {
   return parseCsv(process.env.PLAID_COUNTRY_CODES, ["US"]).map((code) => {
-    const normalized = code.toUpperCase();
-    return CountryCode[normalized] || normalized;
+    const match = Object.entries(CountryCode).find(
+      ([key, value]) =>
+        key.toLowerCase() === String(code).toLowerCase() ||
+        String(value).toLowerCase() === String(code).toLowerCase()
+    );
+    return match ? match[1] : String(code).toUpperCase();
   });
 }
 
