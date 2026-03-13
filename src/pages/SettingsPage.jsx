@@ -162,14 +162,19 @@ export default function SettingsPage({
       setPlaidMessage("Exchanging token securely...");
       const result = await exchangePublicToken(publicToken, metadata);
       const institution = result?.institutionName || metadata?.institution?.name || "Bank account";
-      if (result?.synced === false) {
-        onToast("Bank account linked, but initial sync failed.", "error");
-        setPlaidMessage(`${institution} linked, but sync failed: ${result.syncError}`);
+      const accountMessage = result?.accountSync?.success
+        ? `${result.accountSync.accountCount} account${result.accountSync.accountCount === 1 ? "" : "s"} synced`
+        : `account sync failed: ${result?.accountSync?.error || "unknown error"}`;
+      const transactionMessage = result?.transactionSync?.success
+        ? `${result.transactionSync.added} added, ${result.transactionSync.modified} modified, ${result.transactionSync.removed} removed`
+        : `transaction sync failed: ${result?.transactionSync?.error || "unknown error"}`;
+      if (!result?.accountSync?.success || !result?.transactionSync?.success) {
+        onToast("Bank account linked, but sync is incomplete.", "error");
+        setPlaidMessage(`${institution} linked. ${accountMessage}. ${transactionMessage}.`);
       } else {
-        const added = result?.syncSummary?.added || 0;
         onToast("Bank account connected successfully.");
         setPlaidMessage(
-          `${institution} connected successfully. Initial sync complete with ${added} transaction${added === 1 ? "" : "s"}.`
+          `${institution} connected successfully. ${accountMessage}. ${transactionMessage}.`
         );
       }
     } catch (error) {
@@ -191,9 +196,10 @@ export default function SettingsPage({
         (sum, item) => sum + Number(item.added || 0) + Number(item.modified || 0),
         0
       ) || 0;
+      const removalCount = result?.items?.reduce((sum, item) => sum + Number(item.removed || 0), 0) || 0;
       onToast("Linked data synced.");
       setPlaidMessage(
-        `Synced ${itemCount} linked item${itemCount === 1 ? "" : "s"} and processed ${transactionCount} transaction update${transactionCount === 1 ? "" : "s"}.`
+        `Synced ${itemCount} linked item${itemCount === 1 ? "" : "s"} and processed ${transactionCount} transaction update${transactionCount === 1 ? "" : "s"} (${removalCount} removed).`
       );
     } catch (error) {
       setPlaidMessage("");
@@ -283,6 +289,9 @@ export default function SettingsPage({
               <strong>Last sync:</strong> {plaidSyncState.lastGlobalSyncAt || "-"}
             </div>
             <div className="card section">
+              <strong>Accounts:</strong> {plaidSyncState.accountCount || 0}
+            </div>
+            <div className="card section">
               <strong>Transactions:</strong> {plaidSyncState.transactionCount || 0}
             </div>
           </div>
@@ -298,7 +307,7 @@ export default function SettingsPage({
                 <li key={item.plaidItemId || item.itemId} className="listRow compactTriplet">
                   <span>{item.institutionName || item.institution || "Linked institution"}</span>
                   <span>{item.status || "linked"}</span>
-                  <strong>{item.linkedAt ? new Date(item.linkedAt).toLocaleDateString() : "-"}</strong>
+                  <strong>{item.lastSyncAt ? new Date(item.lastSyncAt).toLocaleString() : item.linkedAt ? new Date(item.linkedAt).toLocaleDateString() : "-"}</strong>
                 </li>
               ))}
             </ul>

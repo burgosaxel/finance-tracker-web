@@ -101,6 +101,15 @@ async function getClient() {
   return getPlaidClient(clientId, secret);
 }
 
+async function setPlaidSyncState(uid, payload) {
+  await updateSyncState(uid, payload);
+  logger.info("Plaid syncState updated", {
+    uid,
+    syncStatePath: `users/${uid}/syncState/plaid`,
+    ...payload,
+  });
+}
+
 async function fetchInstitutionName(client, institutionId) {
   if (!institutionId) return "Linked institution";
   try {
@@ -116,6 +125,7 @@ async function fetchInstitutionName(client, institutionId) {
 }
 
 async function syncPlaidAccountsForItem({ uid, plaidItemId, accessToken, client }) {
+  logger.info("Plaid account fetch started", { uid, plaidItemId });
   const accountsResponse = await client.accountsGet({ access_token: accessToken });
   const itemResponse = await client.itemGet({ access_token: accessToken });
   const institutionName = await fetchInstitutionName(client, itemResponse.data.item.institution_id);
@@ -124,14 +134,21 @@ async function syncPlaidAccountsForItem({ uid, plaidItemId, accessToken, client 
   await writePlaidItemMetadata(uid, plaidItemId, {
     institutionId: itemResponse.data.item.institution_id || "",
     institutionName,
-    status: "linked",
+    status: "syncing",
     lastSyncAt: new Date().toISOString(),
   });
   await writePrivateItem(uid, plaidItemId, {
     institutionId: itemResponse.data.item.institution_id || "",
     institutionName,
-    status: "linked",
+    status: "syncing",
     lastSyncAt: new Date().toISOString(),
+  });
+  logger.info("Plaid account fetch succeeded", {
+    uid,
+    plaidItemId,
+    institutionName,
+    accountCount: accountsResponse.data.accounts.length,
+    firestorePath: `users/${uid}/linkedAccounts/{accountId}`,
   });
 
   return {
@@ -144,6 +161,7 @@ async function syncPlaidAccountsForItem({ uid, plaidItemId, accessToken, client 
 async function syncPlaidTransactionsForItem({ uid, plaidItemId, accessToken, client }) {
   // The transaction cursor is stored server-side and mirrored to public item metadata so
   // future syncs can stay incremental without exposing the Plaid access token to the client.
+  logger.info("Plaid transaction sync started", { uid, plaidItemId });
   const privateItem = await loadPrivateItem(uid, plaidItemId);
   const linkedAccountDocs = await syncPlaidAccountsForItem({ uid, plaidItemId, accessToken, client });
   const accountMap = new Map(
@@ -166,6 +184,15 @@ async function syncPlaidTransactionsForItem({ uid, plaidItemId, accessToken, cli
     });
     const page = response.data;
     await syncTransactionsPage(uid, plaidItemId, accountMap, page);
+    logger.info("Plaid transaction page synced", {
+      uid,
+      plaidItemId,
+      added: page.added?.length || 0,
+      modified: page.modified?.length || 0,
+      removed: page.removed?.length || 0,
+      nextCursor: page.next_cursor || "",
+      hasMore: Boolean(page.has_more),
+    });
 
     totals = {
       added: totals.added + (page.added?.length || 0),
@@ -177,46 +204,60 @@ async function syncPlaidTransactionsForItem({ uid, plaidItemId, accessToken, cli
   }
 
   await writePlaidItemMetadata(uid, plaidItemId, {
-    status: "linked",
+    status: "synced",
     lastCursor: cursor || "",
     lastSyncAt: new Date().toISOString(),
   });
   await writePrivateItem(uid, plaidItemId, {
     lastCursor: cursor || "",
     lastSyncAt: new Date().toISOString(),
-    status: "linked",
+    status: "synced",
   });
 
   await refreshRecurringPayments(uid);
-  await updateSyncState(uid, {
+  await setPlaidSyncState(uid, {
     lastGlobalSyncAt: new Date().toISOString(),
-    syncStatus: "ok",
+    syncStatus: "synced",
     lastError: "",
     itemCount: (await getUserPrivateItems(uid)).length,
     accountCount: await countUserCollection(uid, "linkedAccounts"),
     transactionCount: await countUserCollection(uid, "transactions"),
   });
+  logger.info("Plaid transaction sync succeeded", {
+    uid,
+    plaidItemId,
+    added: totals.added,
+    modified: totals.modified,
+    removed: totals.removed,
+    lastCursor: cursor || "",
+    transactionPath: `users/${uid}/transactions/{transactionId}`,
+    syncStatePath: `users/${uid}/syncState/plaid`,
+  });
 
-  return totals;
+  return {
+    institutionName: linkedAccountDocs.institutionName,
+    accountCount: linkedAccountDocs.accountCount,
+    ...totals,
+  };
 }
 
-async function recordSyncFailure(uid, plaidItemId, error) {
+async function recordSyncFailure(uid, plaidItemId, error, stage = "sync") {
   const message =
     error?.response?.data?.error_message ||
     error?.message ||
     "Plaid sync failed.";
 
   await writePlaidItemMetadata(uid, plaidItemId, {
-    status: "sync_error",
+    status: "error",
     lastError: message,
     lastSyncAt: new Date().toISOString(),
   });
   await writePrivateItem(uid, plaidItemId, {
-    status: "sync_error",
+    status: "error",
     lastError: message,
     lastSyncAt: new Date().toISOString(),
   });
-  await updateSyncState(uid, {
+  await setPlaidSyncState(uid, {
     syncStatus: "error",
     lastError: message,
     itemCount: (await getUserPrivateItems(uid)).length,
@@ -226,6 +267,7 @@ async function recordSyncFailure(uid, plaidItemId, error) {
   logger.error("Plaid sync failed", {
     uid,
     plaidItemId,
+    stage,
     message,
     code: error?.code || null,
     plaidError: error?.response?.data || null,
@@ -253,6 +295,7 @@ async function syncAllItemsForUser(uid) {
 async function createLinkTokenHandler(request) {
   const uid = requireAuth(request);
   const client = await getClient();
+  logger.info("Plaid link token create started", { uid });
 
   const response = await client.linkTokenCreate({
     user: {
@@ -265,6 +308,7 @@ async function createLinkTokenHandler(request) {
     redirect_uri: process.env.PLAID_REDIRECT_URI || undefined,
     webhook: process.env.PLAID_WEBHOOK_URL || undefined,
   });
+  logger.info("Plaid link token create succeeded", { uid, expiration: response.data.expiration });
 
   return { linkToken: response.data.link_token, expiration: response.data.expiration };
 }
@@ -276,12 +320,25 @@ async function exchangePublicTokenHandler(request) {
     throw new HttpsError("invalid-argument", "Missing Plaid public token.");
   }
 
+  logger.info("Plaid public token exchange started", { uid });
   const client = await getClient();
   const exchange = await client.itemPublicTokenExchange({ public_token: publicToken });
   const plaidItemId = exchange.data.item_id;
   const accessToken = exchange.data.access_token;
   const institutionName = request.data?.metadata?.institution?.name || null;
   const linkedAt = new Date().toISOString();
+  logger.info("Plaid public token exchange succeeded", {
+    uid,
+    plaidItemId,
+    institutionName,
+  });
+  await setPlaidSyncState(uid, {
+    syncStatus: "linking",
+    lastError: "",
+    itemCount: (await getUserPrivateItems(uid)).length,
+    accountCount: await countUserCollection(uid, "linkedAccounts"),
+    transactionCount: await countUserCollection(uid, "transactions"),
+  });
 
   // Access tokens stay in a backend-only collection outside /users/{uid}/...
   // so the frontend can never read or leak them through Firestore rules.
@@ -289,9 +346,14 @@ async function exchangePublicTokenHandler(request) {
     uid,
     accessToken,
     plaidItemId,
-    status: "linked",
+    status: "linking",
     institutionName,
     lastSyncAt: null,
+  });
+  logger.info("Plaid private item stored", {
+    uid,
+    plaidItemId,
+    firestorePath: `plaidPrivateItems/${uid}_${plaidItemId}`,
   });
   await writePlaidItemMetadata(uid, plaidItemId, {
     itemId: plaidItemId,
@@ -304,33 +366,81 @@ async function exchangePublicTokenHandler(request) {
     lastSyncAt: null,
     linkedAt,
   });
+  logger.info("Plaid public item stored", {
+    uid,
+    plaidItemId,
+    firestorePath: `users/${uid}/plaidItems/${plaidItemId}`,
+  });
+  await setPlaidSyncState(uid, {
+    syncStatus: "linked",
+    lastError: "",
+    itemCount: (await getUserPrivateItems(uid)).length,
+    accountCount: await countUserCollection(uid, "linkedAccounts"),
+    transactionCount: await countUserCollection(uid, "transactions"),
+  });
 
-  let syncSummary = null;
+  const result = {
+    plaidItemId,
+    institutionName,
+    connected: true,
+    accountSync: {
+      success: false,
+      accountCount: 0,
+      error: "",
+    },
+    transactionSync: {
+      success: false,
+      added: 0,
+      modified: 0,
+      removed: 0,
+      error: "",
+    },
+  };
+
   try {
-    syncSummary = await syncPlaidTransactionsForItem({
+    await setPlaidSyncState(uid, {
+      syncStatus: "syncing",
+      lastError: "",
+      itemCount: (await getUserPrivateItems(uid)).length,
+      accountCount: await countUserCollection(uid, "linkedAccounts"),
+      transactionCount: await countUserCollection(uid, "transactions"),
+    });
+    const accountSummary = await syncPlaidAccountsForItem({
       uid,
       plaidItemId,
       accessToken,
       client,
     });
-  } catch (error) {
-    const syncError = await recordSyncFailure(uid, plaidItemId, error);
-    return {
-      plaidItemId,
-      institutionName,
-      connected: true,
-      synced: false,
-      syncError,
+    result.accountSync = {
+      success: true,
+      accountCount: accountSummary.accountCount,
+      error: "",
     };
+  } catch (error) {
+    result.accountSync.error = await recordSyncFailure(uid, plaidItemId, error, "accounts");
+    return result;
   }
 
-  return {
-    plaidItemId,
-    institutionName,
-    connected: true,
-    synced: true,
-    syncSummary,
-  };
+  try {
+    const syncSummary = await syncPlaidTransactionsForItem({
+      uid,
+      plaidItemId,
+      accessToken,
+      client,
+    });
+    result.transactionSync = {
+      success: true,
+      added: syncSummary.added || 0,
+      modified: syncSummary.modified || 0,
+      removed: syncSummary.removed || 0,
+      error: "",
+    };
+  } catch (error) {
+    result.transactionSync.error = await recordSyncFailure(uid, plaidItemId, error, "transactions");
+    return result;
+  }
+
+  return result;
 }
 
 export const createLinkTokenHttp = onRequest(
@@ -434,18 +544,40 @@ export const syncPlaidAccounts = onCall(
     }
 
     const client = await getClient();
-    const result = await syncPlaidAccountsForItem({
-      uid,
-      plaidItemId,
-      accessToken: privateItem.accessToken,
-      client,
-    });
+    try {
+      logger.info("Manual Plaid account sync requested", { uid, plaidItemId });
+      await setPlaidSyncState(uid, {
+        syncStatus: "syncing",
+        lastError: "",
+        itemCount: (await getUserPrivateItems(uid)).length,
+        accountCount: await countUserCollection(uid, "linkedAccounts"),
+        transactionCount: await countUserCollection(uid, "transactions"),
+      });
+      const result = await syncPlaidAccountsForItem({
+        uid,
+        plaidItemId,
+        accessToken: privateItem.accessToken,
+        client,
+      });
 
-    return {
-      plaidItemId,
-      institutionName: result.institutionName,
-      accountCount: result.accountCount,
-    };
+      await setPlaidSyncState(uid, {
+        lastGlobalSyncAt: new Date().toISOString(),
+        syncStatus: "synced",
+        lastError: "",
+        itemCount: (await getUserPrivateItems(uid)).length,
+        accountCount: await countUserCollection(uid, "linkedAccounts"),
+        transactionCount: await countUserCollection(uid, "transactions"),
+      });
+
+      return {
+        plaidItemId,
+        institutionName: result.institutionName,
+        accountCount: result.accountCount,
+      };
+    } catch (error) {
+      await recordSyncFailure(uid, plaidItemId, error, "accounts");
+      throw error;
+    }
   }
 );
 
@@ -461,6 +593,10 @@ export const syncPlaidTransactions = onCall(
     const client = await getClient();
 
     try {
+      logger.info("Manual Plaid transaction sync requested", {
+        uid,
+        plaidItemId: plaidItemId || "all",
+      });
       if (!plaidItemId) {
         const summaries = await syncAllItemsForUser(uid);
         return { syncedAll: true, items: summaries };
@@ -480,9 +616,9 @@ export const syncPlaidTransactions = onCall(
       return { syncedAll: false, plaidItemId, ...result };
     } catch (error) {
       if (plaidItemId) {
-        await recordSyncFailure(uid, plaidItemId, error);
+        await recordSyncFailure(uid, plaidItemId, error, "transactions");
       } else {
-        await updateSyncState(uid, {
+        await setPlaidSyncState(uid, {
           syncStatus: "error",
           lastError:
             error?.response?.data?.error_message ||
