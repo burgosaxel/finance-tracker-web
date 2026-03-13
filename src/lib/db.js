@@ -1,5 +1,7 @@
 import {
   Timestamp,
+  arrayRemove,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -45,7 +47,12 @@ import { parseLegacySnapshot } from "./legacyImport";
  * /transactions/{transactionId}
  * { id, date, payee, category, amount, accountId, notes, billId, source, plaidTransactionId,
  *   merchantName, categoryPrimary, categoryDetailed, categorySource, personalFinanceCategory,
- *   userCategoryOverride, effectiveCategory, recurringCandidate, removed, createdAt, updatedAt }
+ *   userCategoryOverride, effectiveCategory, recurringCandidate, removed, linkedManualType,
+ *   linkedManualId, linkedManualMonthId, matchStatus, matchedAt, matchedBy, createdAt, updatedAt }
+ *
+ * /matchingRules/{ruleId}
+ * { id, ruleType, pattern, targetManualType, targetManualId, targetManualMonthId,
+ *   autoApply, createdAt, updatedAt }
  *
  * /budgets/{monthId}
  * { id, month, categories: { [categoryName]: assignedNumber }, createdAt, updatedAt }
@@ -223,6 +230,7 @@ export async function exportAllUserData(uid) {
   const collections = [
     "accounts",
     "linkedAccounts",
+    "matchingRules",
     "plaidItems",
     "recurringPayments",
     "creditCards",
@@ -253,6 +261,7 @@ export async function importAllUserData(uid, payload) {
   const allowed = [
     "accounts",
     "linkedAccounts",
+    "matchingRules",
     "plaidItems",
     "recurringPayments",
     "creditCards",
@@ -310,6 +319,11 @@ function templateCollection(uid, kind) {
   return collection(db, "users", uid, collectionName);
 }
 
+function matchingRuleCollection(uid) {
+  if (!uid) return null;
+  return collection(db, "users", uid, "matchingRules");
+}
+
 function statementDoc(uid, monthId) {
   if (!uid || !monthId) return null;
   return doc(db, "users", uid, "statements", monthId);
@@ -362,6 +376,210 @@ export function subscribeTemplates(uid, kind, onData, onError) {
     (snapshot) => onData(snapshot.docs.map(withId)),
     (error) => onError?.(error)
   );
+}
+
+export async function saveMatchingRule(uid, rule, id = rule?.id || crypto.randomUUID()) {
+  requireUid(uid);
+  emitMutation("start");
+  try {
+    const ref = doc(db, "users", uid, "matchingRules", id);
+    await setDoc(
+      ref,
+      {
+        ...rule,
+        id,
+        autoApply: Boolean(rule?.autoApply),
+        updatedAt: serverTimestamp(),
+        createdAt: rule?.createdAt || serverTimestamp(),
+      },
+      { merge: true }
+    );
+    emitMutation("success");
+    return id;
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+function manualMatchRef(uid, target) {
+  if (!target?.manualType || !target?.manualId) return null;
+  if (target.manualType === "bill" || target.manualType === "income") {
+    if (!target.monthId) throw new Error("A statement month is required for bill/income matches.");
+    return doc(
+      db,
+      "users",
+      uid,
+      "statements",
+      target.monthId,
+      target.manualType === "bill" ? "bills" : "incomes",
+      target.manualId
+    );
+  }
+  const collectionName =
+    target.manualType === "loan" ? "loans" : target.manualType === "creditCard" ? "creditCards" : null;
+  if (!collectionName) throw new Error(`Unsupported manual match type: ${target.manualType}`);
+  return userDoc(uid, collectionName, target.manualId);
+}
+
+async function updateMatchedManualItem(uid, target, transaction, remove = false) {
+  const ref = manualMatchRef(uid, target);
+  if (!ref) return;
+  const payload = remove
+    ? {
+        linkedTransactionIds: arrayRemove(transaction.id),
+        latestLinkedTransactionId:
+          transaction.id,
+        lastMatchedAt: null,
+        lastMatchedTransactionName: null,
+        lastMatchedTransactionAmount: null,
+        updatedAt: serverTimestamp(),
+      }
+    : {
+        linkedTransactionIds: arrayUnion(transaction.id),
+        latestLinkedTransactionId: transaction.id,
+        lastMatchedAt: serverTimestamp(),
+        lastMatchedTransactionName:
+          transaction.merchantName || transaction.payee || transaction.name || "",
+        lastMatchedTransactionAmount: safeNumber(transaction.amount, 0),
+        updatedAt: serverTimestamp(),
+      };
+  await setDoc(ref, payload, { merge: true });
+}
+
+export async function ignoreTransactionMatch(uid, transactionId) {
+  requireUid(uid);
+  emitMutation("start");
+  try {
+    const ref = userDoc(uid, "transactions", transactionId);
+    await setDoc(
+      ref,
+      {
+        linkedManualType: null,
+        linkedManualId: null,
+        linkedManualMonthId: null,
+        matchStatus: "ignored",
+        matchedAt: serverTimestamp(),
+        matchedBy: null,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+async function clearTransactionMatchInternal(uid, transaction) {
+  if (transaction?.linkedManualType && transaction?.linkedManualId) {
+    await updateMatchedManualItem(
+      uid,
+      {
+        manualType: transaction.linkedManualType,
+        manualId: transaction.linkedManualId,
+        monthId: transaction.linkedManualMonthId || null,
+      },
+      transaction,
+      true
+    );
+  }
+  await setDoc(
+    userDoc(uid, "transactions", transaction.id),
+    {
+      linkedManualType: null,
+      linkedManualId: null,
+      linkedManualMonthId: null,
+      matchStatus: "unmatched",
+      matchedAt: null,
+      matchedBy: null,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+export async function clearTransactionMatch(uid, transaction) {
+  requireUid(uid);
+  emitMutation("start");
+  try {
+    await clearTransactionMatchInternal(uid, transaction);
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function matchTransactionToManualItem(uid, transaction, target, options = {}) {
+  requireUid(uid);
+  emitMutation("start");
+  try {
+    if (!transaction?.id) throw new Error("Transaction is required.");
+    if (!target?.manualType || !target?.manualId) {
+      throw new Error("A manual item must be selected.");
+    }
+
+    if (transaction.linkedManualType && transaction.linkedManualId) {
+      await clearTransactionMatchInternal(uid, transaction);
+    }
+
+    const ref = userDoc(uid, "transactions", transaction.id);
+    await setDoc(
+      ref,
+      {
+        linkedManualType: target.manualType,
+        linkedManualId: target.manualId,
+        linkedManualMonthId: target.monthId || null,
+        linkedManualName: target.label || "",
+        matchStatus: "matched",
+        matchedAt: serverTimestamp(),
+        matchedBy: options.matchedBy || "manual",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    await updateMatchedManualItem(uid, target, transaction, false);
+
+    if (options.createRule && options.rule?.pattern) {
+      await saveMatchingRule(uid, {
+        ruleType: options.rule.ruleType || "merchant_contains",
+        pattern: options.rule.pattern,
+        targetManualType: target.manualType,
+        targetManualId: target.manualId,
+        targetManualMonthId: target.monthId || null,
+        autoApply: Boolean(options.rule.autoApply),
+      });
+    }
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function applyMatchingRules(uid, transactions, rules, resolver) {
+  requireUid(uid);
+  const results = [];
+  for (const transaction of transactions || []) {
+    if ((transaction?.source || "") !== "plaid") continue;
+    if (transaction?.matchStatus === "matched" || transaction?.matchStatus === "ignored") continue;
+    const rule = (rules || []).find((entry) => {
+      if (!entry?.autoApply || !entry?.pattern) return false;
+      const name = `${transaction.merchantName || ""} ${transaction.payee || ""} ${transaction.name || ""}`.toLowerCase();
+      const pattern = String(entry.pattern).toLowerCase();
+      if (entry.ruleType === "exact_name") return name.trim() === pattern.trim();
+      return name.includes(pattern);
+    });
+    if (!rule) continue;
+    const target = resolver?.(rule);
+    if (!target) continue;
+    await matchTransactionToManualItem(uid, transaction, target, { matchedBy: "rule" });
+    results.push({ transactionId: transaction.id, ruleId: rule.id });
+  }
+  return results;
 }
 
 export async function upsertTemplate(uid, kind, payload, id = payload?.id || crypto.randomUUID()) {

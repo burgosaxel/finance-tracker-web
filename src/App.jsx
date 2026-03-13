@@ -27,6 +27,7 @@ const EMPTY_DATA = {
   accounts: [],
   linkedAccounts: [],
   plaidItems: [],
+  matchingRules: [],
   recurringPayments: [],
   creditCards: [],
   loans: [],
@@ -125,6 +126,7 @@ export default function App() {
     bind("accounts", "accounts", "name");
     bind("linkedAccounts", "linkedAccounts", "name");
     bind("plaidItems", "plaidItems", "institutionName");
+    bind("matchingRules", "matchingRules", "createdAt");
     bind("recurringPayments", "recurringPayments", "merchantName");
     bind("creditCards", "creditCards", "name");
     bind("loans", "loans", "lender");
@@ -329,6 +331,11 @@ export default function App() {
           {...shared}
           transactions={data.transactions}
           accounts={[...(data.accounts || []), ...(data.linkedAccounts || [])]}
+          bills={data.statementBills}
+          income={data.statementIncomes}
+          loans={data.loans}
+          creditCards={data.creditCards}
+          matchingRules={data.matchingRules}
         />
       );
     if (route === "settings")

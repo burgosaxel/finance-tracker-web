@@ -1,10 +1,20 @@
 import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
-import { deleteEntity, upsertEntity } from "../lib/db";
+import {
+  applyMatchingRules,
+  clearTransactionMatch,
+  deleteEntity,
+  ignoreTransactionMatch,
+  matchTransactionToManualItem,
+  upsertEntity,
+} from "../lib/db";
 import {
   DEFAULT_SETTINGS,
   formatCurrency,
   getEffectiveTransactionCategory,
+  getManualMatchCandidates,
+  getMatchedManualLabel,
+  getTransactionMatchSuggestions,
   monthKey,
   safeNumber,
 } from "../lib/finance";
@@ -18,7 +28,31 @@ const EMPTY_TX = {
   notes: "",
 };
 
-export default function TransactionsPage({ uid, transactions, accounts, settings, onToast, onError }) {
+function encodeTarget(candidate) {
+  return [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
+}
+
+function matchStatusLabel(transaction) {
+  if ((transaction.source || "manual") !== "plaid") return "Manual";
+  if (transaction.matchStatus === "matched") return "Matched";
+  if (transaction.matchStatus === "ignored") return "Ignored";
+  return "Unmatched";
+}
+
+export default function TransactionsPage({
+  uid,
+  transactions,
+  accounts,
+  bills,
+  income,
+  loans,
+  creditCards,
+  matchingRules,
+  settings,
+  onToast,
+  onError,
+  selectedMonth,
+}) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -27,6 +61,32 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
   const [accountFilter, setAccountFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [matchOpen, setMatchOpen] = useState(false);
+  const [matchTx, setMatchTx] = useState(null);
+  const [selectedTargetKey, setSelectedTargetKey] = useState("");
+  const [createRule, setCreateRule] = useState(false);
+  const [ruleType, setRuleType] = useState("merchant_contains");
+  const [rulePattern, setRulePattern] = useState("");
+  const [ruleAutoApply, setRuleAutoApply] = useState(true);
+
+  const manualCandidates = useMemo(
+    () =>
+      getManualMatchCandidates({
+        bills,
+        income,
+        loans,
+        creditCards,
+        selectedMonth,
+      }),
+    [bills, income, loans, creditCards, selectedMonth]
+  );
+
+  const candidateByKey = useMemo(() => {
+    return manualCandidates.reduce((map, candidate) => {
+      map.set(encodeTarget(candidate), candidate);
+      return map;
+    }, new Map());
+  }, [manualCandidates]);
 
   const categories = useMemo(() => {
     return [...new Set((transactions || []).map((t) => getEffectiveTransactionCategory(t)).filter(Boolean))].sort();
@@ -51,6 +111,24 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
     setEditingId(tx.id);
     setForm({ ...EMPTY_TX, ...tx });
     setOpen(true);
+  }
+
+  function startMatch(transaction, candidate = null) {
+    setMatchTx(transaction);
+    setSelectedTargetKey(candidate ? encodeTarget(candidate) : "");
+    setCreateRule(false);
+    setRuleType("merchant_contains");
+    setRulePattern(transaction.merchantName || transaction.payee || transaction.name || "");
+    setRuleAutoApply(true);
+    setMatchOpen(true);
+  }
+
+  function closeMatch() {
+    setMatchOpen(false);
+    setMatchTx(null);
+    setSelectedTargetKey("");
+    setCreateRule(false);
+    setRulePattern("");
   }
 
   async function save() {
@@ -85,6 +163,74 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
     }
   }
 
+  async function saveMatch() {
+    const target = candidateByKey.get(selectedTargetKey);
+    if (!matchTx || !target) return;
+    try {
+      await matchTransactionToManualItem(uid, matchTx, target, {
+        matchedBy: "manual",
+        createRule,
+        rule: createRule
+          ? {
+              ruleType,
+              pattern: rulePattern.trim(),
+              autoApply: ruleAutoApply,
+            }
+          : null,
+      });
+      onToast("Transaction matched.");
+      closeMatch();
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to match transaction.", "error");
+    }
+  }
+
+  async function ignoreTransaction(transaction) {
+    try {
+      await ignoreTransactionMatch(uid, transaction.id);
+      onToast("Transaction ignored.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to ignore transaction.", "error");
+    }
+  }
+
+  async function unmatchTransaction(transaction) {
+    try {
+      await clearTransactionMatch(uid, transaction);
+      onToast("Transaction unmatched.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to unmatch transaction.", "error");
+    }
+  }
+
+  async function runRules() {
+    try {
+      const applied = await applyMatchingRules(
+        uid,
+        rows,
+        matchingRules,
+        (rule) =>
+          manualCandidates.find(
+            (candidate) =>
+              candidate.manualType === rule.targetManualType
+              && candidate.manualId === rule.targetManualId
+              && (candidate.monthId || "") === (rule.targetManualMonthId || "")
+          ) || null
+      );
+      onToast(
+        applied.length
+          ? `Applied ${applied.length} matching rule${applied.length === 1 ? "" : "s"}.`
+          : "No matching rules applied."
+      );
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to apply matching rules.", "error");
+    }
+  }
+
   return (
     <div className="page">
       <div className="row">
@@ -116,10 +262,11 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
             <option value="plaid">Plaid</option>
           </select>
         </label>
+        <button type="button" onClick={runRules}>Apply Rules</button>
         <button type="button" className="primary" onClick={startAdd}>Add Transaction</button>
       </div>
       <p className="muted pageIntro">
-        Activity log for money in and out, with filters for month, account, and category.
+        Activity log for money in and out, with filters for month, account, and category. Plaid transactions can be matched to your manual bills, income, loans, and credit cards without replacing the planner.
       </p>
 
       <div className="tableWrap card desktopDataTable">
@@ -131,7 +278,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
               <th>Category</th>
               <th>Amount</th>
               <th>Account</th>
-              <th>Source</th>
+              <th>Match</th>
               <th>Notes</th>
               <th />
             </tr>
@@ -140,58 +287,130 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
             {rows.length === 0 ? (
               <tr><td colSpan={8} className="muted">No transactions for this filter.</td></tr>
             ) : null}
-            {rows.map((t) => (
-              <tr key={t.id}>
-                <td>{t.date || "-"}</td>
-                <td>
-                  {t.merchantName || t.payee}
-                  {t.pending ? <div className="muted">Pending</div> : null}
-                </td>
-                <td>{getEffectiveTransactionCategory(t)}</td>
-                <td className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
-                  {formatCurrency(t.amount, cfg.currency)}
-                </td>
-                <td>
-                  {accounts.find((a) => a.id === t.accountId)?.name || "-"}
-                  {t.institutionName ? <div className="muted">{t.institutionName}</div> : null}
-                </td>
-                <td>{t.source || "manual"}</td>
-                <td>{t.notes || "-"}</td>
-                <td className="row">
-                  <button type="button" onClick={() => startEdit(t)}>Edit</button>
-                  <button type="button" onClick={() => remove(t.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
+            {rows.map((t) => {
+              const suggestions = (t.source || "") === "plaid"
+                ? getTransactionMatchSuggestions(t, manualCandidates, matchingRules, 3)
+                : [];
+              const matchedLabel = getMatchedManualLabel(t, manualCandidates);
+              return (
+                <tr key={t.id}>
+                  <td>{t.date || "-"}</td>
+                  <td>
+                    {t.merchantName || t.payee}
+                    {t.pending ? <div className="muted">Pending</div> : null}
+                    {suggestions.length ? (
+                      <div className="matchSuggestionList">
+                        {suggestions.map((candidate) => (
+                          <button
+                            type="button"
+                            key={`${t.id}-${encodeTarget(candidate)}`}
+                            className="suggestionButton"
+                            onClick={() => startMatch(t, candidate)}
+                          >
+                            {candidate.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td>{getEffectiveTransactionCategory(t)}</td>
+                  <td className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
+                    {formatCurrency(t.amount, cfg.currency)}
+                  </td>
+                  <td>
+                    {accounts.find((a) => a.id === t.accountId)?.name || "-"}
+                    {t.institutionName ? <div className="muted">{t.institutionName}</div> : null}
+                  </td>
+                  <td>
+                    <span className={`pill ${t.matchStatus === "matched" ? "" : t.matchStatus === "ignored" ? "warn" : ""}`}>
+                      {matchStatusLabel(t)}
+                    </span>
+                    {matchedLabel ? <div className="muted">{matchedLabel}</div> : null}
+                    {t.linkedManualType === "bill" ? <div className="muted">Suggested follow-up: mark bill paid</div> : null}
+                    {t.linkedManualType === "income" ? <div className="muted">Suggested follow-up: mark income received</div> : null}
+                  </td>
+                  <td>{t.notes || "-"}</td>
+                  <td className="row">
+                    {(t.source || "") === "plaid" && t.matchStatus !== "matched" ? (
+                      <button type="button" onClick={() => startMatch(t)}>Match</button>
+                    ) : null}
+                    {(t.source || "") === "plaid" && t.matchStatus !== "ignored" && t.matchStatus !== "matched" ? (
+                      <button type="button" onClick={() => ignoreTransaction(t)}>Ignore</button>
+                    ) : null}
+                    {(t.source || "") === "plaid" && t.matchStatus === "matched" ? (
+                      <button type="button" onClick={() => unmatchTransaction(t)}>Unmatch</button>
+                    ) : null}
+                    {(t.source || "") === "plaid" && t.matchStatus === "ignored" ? (
+                      <button type="button" onClick={() => unmatchTransaction(t)}>Restore</button>
+                    ) : null}
+                    <button type="button" onClick={() => startEdit(t)}>Edit</button>
+                    <button type="button" onClick={() => remove(t.id)}>Delete</button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       <div className="mobileDataList">
         {rows.length === 0 ? <div className="card section muted">No transactions for this filter.</div> : null}
-        {rows.map((t) => (
-          <article key={`mobile-${t.id}`} className="card section dataItem">
-            <div className="dataItemHeader">
-              <h3 className="dataItemTitle">{t.payee}</h3>
-              <span className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
-                {formatCurrency(t.amount, cfg.currency)}
-              </span>
-            </div>
-            <div className="dataGrid">
-              <div className="dataRow"><span className="dataLabel">Date</span><span className="dataValue">{t.date || "-"}</span></div>
-              <div className="dataRow"><span className="dataLabel">Category</span><span className="dataValue">{getEffectiveTransactionCategory(t)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Account</span><span className="dataValue">{accounts.find((a) => a.id === t.accountId)?.name || "-"}</span></div>
-              <div className="dataRow"><span className="dataLabel">Institution</span><span className="dataValue">{t.institutionName || "-"}</span></div>
-              <div className="dataRow"><span className="dataLabel">Source</span><span className="dataValue">{t.source || "manual"}</span></div>
-              <div className="dataRow"><span className="dataLabel">Pending</span><span className="dataValue">{t.pending ? "Yes" : "No"}</span></div>
-              <div className="dataRow"><span className="dataLabel">Notes</span><span className="dataValue">{t.notes || "-"}</span></div>
-            </div>
-            <div className="row dataActions">
-              <button type="button" onClick={() => startEdit(t)}>Edit</button>
-              <button type="button" onClick={() => remove(t.id)}>Delete</button>
-            </div>
-          </article>
-        ))}
+        {rows.map((t) => {
+          const suggestions = (t.source || "") === "plaid"
+            ? getTransactionMatchSuggestions(t, manualCandidates, matchingRules, 3)
+            : [];
+          const matchedLabel = getMatchedManualLabel(t, manualCandidates);
+          return (
+            <article key={`mobile-${t.id}`} className="card section dataItem">
+              <div className="dataItemHeader">
+                <h3 className="dataItemTitle">{t.merchantName || t.payee}</h3>
+                <span className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
+                  {formatCurrency(t.amount, cfg.currency)}
+                </span>
+              </div>
+              <div className="dataGrid">
+                <div className="dataRow"><span className="dataLabel">Date</span><span className="dataValue">{t.date || "-"}</span></div>
+                <div className="dataRow"><span className="dataLabel">Category</span><span className="dataValue">{getEffectiveTransactionCategory(t)}</span></div>
+                <div className="dataRow"><span className="dataLabel">Account</span><span className="dataValue">{accounts.find((a) => a.id === t.accountId)?.name || "-"}</span></div>
+                <div className="dataRow"><span className="dataLabel">Institution</span><span className="dataValue">{t.institutionName || "-"}</span></div>
+                <div className="dataRow"><span className="dataLabel">Source</span><span className="dataValue">{t.source || "manual"}</span></div>
+                <div className="dataRow"><span className="dataLabel">Status</span><span className="dataValue">{matchStatusLabel(t)}</span></div>
+                <div className="dataRow"><span className="dataLabel">Matched To</span><span className="dataValue">{matchedLabel || "-"}</span></div>
+                <div className="dataRow"><span className="dataLabel">Notes</span><span className="dataValue">{t.notes || "-"}</span></div>
+              </div>
+              {suggestions.length ? (
+                <div className="matchSuggestionList">
+                  {suggestions.map((candidate) => (
+                    <button
+                      type="button"
+                      key={`${t.id}-${encodeTarget(candidate)}`}
+                      className="suggestionButton"
+                      onClick={() => startMatch(t, candidate)}
+                    >
+                      Match {candidate.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <div className="row dataActions">
+                {(t.source || "") === "plaid" && t.matchStatus !== "matched" ? (
+                  <button type="button" onClick={() => startMatch(t)}>Match</button>
+                ) : null}
+                {(t.source || "") === "plaid" && t.matchStatus !== "ignored" && t.matchStatus !== "matched" ? (
+                  <button type="button" onClick={() => ignoreTransaction(t)}>Ignore</button>
+                ) : null}
+                {(t.source || "") === "plaid" && t.matchStatus === "matched" ? (
+                  <button type="button" onClick={() => unmatchTransaction(t)}>Unmatch</button>
+                ) : null}
+                {(t.source || "") === "plaid" && t.matchStatus === "ignored" ? (
+                  <button type="button" onClick={() => unmatchTransaction(t)}>Restore</button>
+                ) : null}
+                <button type="button" onClick={() => startEdit(t)}>Edit</button>
+                <button type="button" onClick={() => remove(t.id)}>Delete</button>
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       <Modal title={editingId ? "Edit Transaction" : "Add Transaction"} open={open} onClose={() => setOpen(false)}>
@@ -213,6 +432,87 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
         <div className="row" style={{ marginTop: 12 }}>
           <div className="spacer" />
           <button type="button" className="primary" onClick={save}>Save</button>
+        </div>
+      </Modal>
+
+      <Modal title="Match Transaction" open={matchOpen} onClose={closeMatch}>
+        <div className="formGrid">
+          <label>
+            Manual item
+            <select value={selectedTargetKey} onChange={(e) => setSelectedTargetKey(e.target.value)}>
+              <option value="">Select an item</option>
+              <optgroup label="Bills">
+                {manualCandidates.filter((candidate) => candidate.manualType === "bill").map((candidate) => (
+                  <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
+                    {candidate.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Income">
+                {manualCandidates.filter((candidate) => candidate.manualType === "income").map((candidate) => (
+                  <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
+                    {candidate.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Loans">
+                {manualCandidates.filter((candidate) => candidate.manualType === "loan").map((candidate) => (
+                  <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
+                    {candidate.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Credit Cards">
+                {manualCandidates.filter((candidate) => candidate.manualType === "creditCard").map((candidate) => (
+                  <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
+                    {candidate.label}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </label>
+          {matchTx ? (
+            <div className="card section">
+              <strong>{matchTx.merchantName || matchTx.payee}</strong>
+              <div className="muted">{formatCurrency(matchTx.amount, cfg.currency)} on {matchTx.date || "-"}</div>
+            </div>
+          ) : null}
+          <label className="checkboxRow">
+            <input
+              type="checkbox"
+              checked={createRule}
+              onChange={(e) => setCreateRule(e.target.checked)}
+            />
+            Save a reusable matching rule
+          </label>
+          {createRule ? (
+            <>
+              <label>
+                Rule type
+                <select value={ruleType} onChange={(e) => setRuleType(e.target.value)}>
+                  <option value="merchant_contains">Merchant contains</option>
+                  <option value="exact_name">Exact name</option>
+                  <option value="amount_and_name">Amount and name</option>
+                </select>
+              </label>
+              <label>
+                Pattern
+                <input value={rulePattern} onChange={(e) => setRulePattern(e.target.value)} />
+              </label>
+              <label className="checkboxRow">
+                <input
+                  type="checkbox"
+                  checked={ruleAutoApply}
+                  onChange={(e) => setRuleAutoApply(e.target.checked)}
+                />
+                Auto-apply this rule to future unmatched Plaid transactions
+              </label>
+            </>
+          ) : null}
+        </div>
+        <div className="row" style={{ marginTop: 12 }}>
+          <div className="spacer" />
+          <button type="button" className="primary" onClick={saveMatch}>Save Match</button>
         </div>
       </Modal>
     </div>

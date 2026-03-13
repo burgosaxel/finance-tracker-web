@@ -535,6 +535,20 @@ tfoot td {
   color: #fecaca;
 }
 
+.matchSuggestionList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.suggestionButton {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  background: var(--surface-alt);
+}
+
 .cleanList {
   list-style: none;
   padding: 0;
@@ -575,6 +589,17 @@ tfoot td {
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkboxRow input[type="checkbox"] {
+  width: auto;
+  margin: 0;
 }
 
 .modalBackdrop {

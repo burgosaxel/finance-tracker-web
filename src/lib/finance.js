@@ -314,3 +314,166 @@ export function getRecentSyncedTransactions(transactions, limit = 5) {
     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
     .slice(0, limit);
 }
+
+function normalizeMatchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\b(ach|pmt|payment|autopay|debit|credit|online|transfer|deposit|withdrawal)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenSet(value) {
+  return new Set(normalizeMatchText(value).split(" ").filter(Boolean));
+}
+
+function overlapScore(a, b) {
+  const left = tokenSet(a);
+  const right = tokenSet(b);
+  if (!left.size || !right.size) return 0;
+  let matches = 0;
+  left.forEach((token) => {
+    if (right.has(token)) matches += 1;
+  });
+  return matches / Math.max(left.size, right.size);
+}
+
+function dateDistanceScore(transactionDate, candidateDate) {
+  if (!transactionDate || !candidateDate) return 0;
+  const diff = Math.abs(daysBetween(new Date(transactionDate), new Date(candidateDate)));
+  if (diff === 0) return 1;
+  if (diff <= 3) return 0.7;
+  if (diff <= 7) return 0.45;
+  return 0;
+}
+
+function amountDistanceScore(transactionAmount, candidateAmount) {
+  const tx = Math.abs(safeNumber(transactionAmount, 0));
+  const target = Math.abs(safeNumber(candidateAmount, 0));
+  if (!tx || !target) return 0;
+  const diff = Math.abs(tx - target);
+  if (diff < 0.01) return 1;
+  if (diff <= Math.max(5, target * 0.05)) return 0.7;
+  if (diff <= Math.max(15, target * 0.12)) return 0.4;
+  return 0;
+}
+
+export function getManualMatchCandidates({
+  bills = [],
+  income = [],
+  loans = [],
+  creditCards = [],
+  selectedMonth = "",
+} = {}) {
+  const billCandidates = (bills || []).map((bill) => ({
+    manualType: "bill",
+    manualId: bill.id,
+    monthId: selectedMonth || "",
+    label: bill.merchant || bill.name || "Bill",
+    subtitle: `Bill${bill.dueDate || bill.dueDay ? ` · due ${getBillDueDate(bill).toLocaleDateString()}` : ""}`,
+    amount: safeNumber(bill.amount, 0),
+    date: getBillDueDate(bill),
+    searchText: `${bill.merchant || ""} ${bill.name || ""}`,
+  }));
+  const incomeCandidates = (income || []).map((item) => ({
+    manualType: "income",
+    manualId: item.id,
+    monthId: selectedMonth || "",
+    label: item.source || item.name || "Income",
+    subtitle: `Income${item.payDate || item.payDay ? ` · ${getIncomePayDate(item).toLocaleDateString()}` : ""}`,
+    amount: safeNumber(item.amount ?? item.expectedAmount, 0),
+    date: getIncomePayDate(item),
+    searchText: `${item.source || ""} ${item.name || ""}`,
+  }));
+  const loanCandidates = (loans || []).map((loan) => ({
+    manualType: "loan",
+    manualId: loan.id,
+    monthId: "",
+    label: loan.lender || loan.name || "Loan",
+    subtitle: "Loan payment",
+    amount: safeNumber(loan.monthlyPayment, 0),
+    date: null,
+    searchText: `${loan.lender || ""} ${loan.name || ""}`,
+  }));
+  const creditCardCandidates = (creditCards || []).map((card) => ({
+    manualType: "creditCard",
+    manualId: card.id,
+    monthId: "",
+    label: card.name || "Credit card",
+    subtitle: `${card.issuer || "Credit card"}${card.minimumPayment ? ` · min ${formatCurrency(card.minimumPayment)}` : ""}`,
+    amount: safeNumber(card.minimumPayment, 0),
+    date: null,
+    searchText: `${card.name || ""} ${card.issuer || ""}`,
+  }));
+  return [...billCandidates, ...incomeCandidates, ...loanCandidates, ...creditCardCandidates];
+}
+
+function getRuleMatchCandidate(transaction, rules, candidates) {
+  const haystack = normalizeMatchText(
+    `${transaction.merchantName || ""} ${transaction.payee || ""} ${transaction.name || ""}`
+  );
+  for (const rule of rules || []) {
+    if (!rule?.pattern) continue;
+    const pattern = normalizeMatchText(rule.pattern);
+    const exact = haystack === pattern;
+    const includes = haystack.includes(pattern);
+    const eligible =
+      rule.ruleType === "exact_name"
+        ? exact
+        : rule.ruleType === "amount_and_name"
+          ? includes
+            && candidates.some(
+              (candidate) =>
+                candidate.manualType === rule.targetManualType
+                && candidate.manualId === rule.targetManualId
+                && (!rule.targetManualMonthId || candidate.monthId === rule.targetManualMonthId)
+                && amountDistanceScore(transaction.amount, candidate.amount) > 0
+            )
+          : includes;
+    if (!eligible) continue;
+    return candidates.find(
+      (candidate) =>
+        candidate.manualType === rule.targetManualType
+        && candidate.manualId === rule.targetManualId
+        && (!rule.targetManualMonthId || candidate.monthId === rule.targetManualMonthId)
+    ) || null;
+  }
+  return null;
+}
+
+export function getTransactionMatchSuggestions(transaction, candidates, rules = [], limit = 3) {
+  const ruleCandidate = getRuleMatchCandidate(transaction, rules, candidates);
+  const scored = (candidates || [])
+    .map((candidate) => {
+      let score = overlapScore(
+        `${transaction.merchantName || ""} ${transaction.payee || ""} ${transaction.name || ""}`,
+        candidate.searchText
+      );
+      score += amountDistanceScore(transaction.amount, candidate.amount) * 0.35;
+      score += dateDistanceScore(transaction.date, candidate.date) * 0.2;
+      if (
+        ruleCandidate
+        && candidate.manualType === ruleCandidate.manualType
+        && candidate.manualId === ruleCandidate.manualId
+        && candidate.monthId === ruleCandidate.monthId
+      ) {
+        score += 1;
+      }
+      return { ...candidate, score };
+    })
+    .filter((candidate) => candidate.score > 0.15)
+    .sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit);
+}
+
+export function getMatchedManualLabel(transaction, candidates) {
+  if (!transaction?.linkedManualType || !transaction?.linkedManualId) return "";
+  const match = (candidates || []).find(
+    (candidate) =>
+      candidate.manualType === transaction.linkedManualType
+      && candidate.manualId === transaction.linkedManualId
+      && (candidate.monthId || "") === (transaction.linkedManualMonthId || "")
+  );
+  return match?.label || transaction.linkedManualName || "";
+}
