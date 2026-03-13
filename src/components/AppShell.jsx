@@ -25,7 +25,7 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
   return (
     <div className="appShell">
       <aside className="sidebar card desktopOnly">
-        <div className="sidebarTitle">Finance Tracker</div>
+        <div className="sidebarTitle">BudgetCommand</div>
         <nav className="sidebarNav">
           {NAV_ITEMS.map((item) => (
             <a
@@ -40,7 +40,7 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
       </aside>
       <div className="mainPanel">
         <header className="mobileHeader card">
-          <div className="sidebarTitle">Finance Tracker</div>
+          <div className="sidebarTitle">BudgetCommand</div>
           <button
             type="button"
             className="menuButton"

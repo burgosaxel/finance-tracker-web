@@ -349,7 +349,7 @@ export default function App() {
     return (
       <div className="container">
         <div className="card signInCard">
-          <h1>Finance Tracker</h1>
+          <h1>BudgetCommand</h1>
           <p className="muted">Private budgeting app with Firebase Auth + Firestore.</p>
           <button type="button" className="primary" onClick={handleLogin}>Sign in with Google</button>
           {authError ? <div className="errorText">{authError}</div> : null}

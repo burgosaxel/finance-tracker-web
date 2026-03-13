@@ -1,4 +1,4 @@
-# Finance Tracker (YNAB-style, Firebase + Plaid + GitHub Pages)
+# BudgetCommand (YNAB-style, Firebase + Plaid + GitHub Pages)
 
 This app is a client-only React + Firestore finance tracker with:
 - Google Auth (private access)

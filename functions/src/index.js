@@ -177,7 +177,7 @@ export const createPlaidLinkToken = onCall(
       user: {
         client_user_id: uid,
       },
-      client_name: "Finance Tracker",
+      client_name: "BudgetCommand",
       language: "en",
       products: getPlaidProducts(),
       country_codes: getPlaidCountryCodes(),

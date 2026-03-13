@@ -113,7 +113,7 @@ export default function SettingsPage({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `finance-tracker-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `budgetcommand-export-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
