@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import AppShell from "./components/AppShell";
 import Toast from "./components/Toast";
+import brandLogo from "../BudgetCommand Logo.png";
 import DashboardPage from "./pages/DashboardPage";
 import BudgetPage from "./pages/BudgetPage";
 import CreditCardsPage from "./pages/CreditCardsPage";
@@ -361,6 +362,7 @@ export default function App() {
     return (
       <div className="container">
         <div className="card signInCard">
+          <img className="signInLogo" src={brandLogo} alt="BudgetCommand" />
           <h1>BudgetCommand</h1>
           <p className="muted">Private budgeting app with Firebase Auth + Firestore.</p>
           <button type="button" className="primary" onClick={handleLogin}>Sign in with Google</button>

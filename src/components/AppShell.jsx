@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { routeHref } from "../lib/hashRouter";
 import { Home, Target, CreditCard, Building2, Receipt, ArrowLeftRight, Settings } from "lucide-react";
+import brandLogo from "../../BudgetCommand Logo.png";
 
 function NavIcon({ kind }) {
   const iconMap = {
@@ -49,11 +50,7 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
     <div className="appShell">
       <aside className="sidebar card desktopOnly">
         <div className="sidebarBrand">
-          <div className="brandMark" aria-hidden="true">
-            <span className="brandMarkOrb brandMarkOrbPrimary" />
-            <span className="brandMarkOrb brandMarkOrbSecondary" />
-            <span className="brandMarkGlyph">B</span>
-          </div>
+          <img className="brandLogo" src={brandLogo} alt="BudgetCommand" />
           <div>
             <div className="sidebarEyebrow">Premium finance workspace</div>
             <div className="sidebarTitle">BudgetCommand</div>
@@ -90,11 +87,7 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
       <div className="mainPanel">
         <header className="mobileHeader card">
           <div className="mobileBrandWrap">
-            <div className="brandMark compact" aria-hidden="true">
-              <span className="brandMarkOrb brandMarkOrbPrimary" />
-              <span className="brandMarkOrb brandMarkOrbSecondary" />
-              <span className="brandMarkGlyph">B</span>
-            </div>
+            <img className="brandLogo compact" src={brandLogo} alt="BudgetCommand" />
             <div className="mobileBrand">
               <div className="sidebarTitle">BudgetCommand</div>
               <div className="mobileBrandMeta">Personal finance command center</div>
