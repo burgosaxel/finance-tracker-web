@@ -121,11 +121,13 @@ export default function DashboardPage({
   return (
     <div className="page">
       <section className="dashboard-hero">
-        <div className="dashboard-kicker">Financial command center</div>
+        <div className="dashboard-hero-intro">
+          <div className="dashboard-kicker">Financial command center</div>
+          <p className="dashboard-subtitle">
+            A structured view of balance-sheet health, this month's obligations, and the operational signals that need attention.
+          </p>
+        </div>
         <h2 className="dashboard-title">Dashboard</h2>
-        <p className="dashboard-subtitle">
-          A structured view of balance-sheet health, this month's obligations, and the operational signals that need attention.
-        </p>
       </section>
 
       <section className="section-block dashboardSection dashboardBlock dashboardBlockOverview">
@@ -229,10 +231,7 @@ export default function DashboardPage({
                         {entry.linkedManualType ? ` | linked to ${entry.linkedManualType}` : ""}
                       </div>
                     </div>
-                    <div className="secondary">
-                      {entry.cadenceGuess || "unknown"}
-                      <div>{entry.typeGuess || "unknown"}</div>
-                    </div>
+                    <div className="secondary recurring-cadence-label">{`${entry.cadenceGuess || "unknown"} ${entry.typeGuess || "unknown"}`}</div>
                     <div className="amount">{formatCurrency(entry.averageAmount, cfg.currency)}</div>
                   </div>
                 ))}
@@ -321,7 +320,7 @@ export default function DashboardPage({
           </div>
         </div>
         <div className="twoCol">
-          <section className="data-panel">
+          <section className="data-panel cashflow-snapshot">
             <div className="panel-title">Cashflow Snapshot</div>
             <div className="row-list">
               <div className="row-list-item"><div className="primary">Income expected</div><div /><div className="amount positive">{formatCurrency(summary.cashflow.totalIncomeExpected, cfg.currency)}</div></div>
@@ -333,7 +332,7 @@ export default function DashboardPage({
             </div>
           </section>
 
-          <section className="data-panel">
+          <section className="data-panel signals-card">
             <div className="panel-title">Signals</div>
             <div className="section-block">
               <div>
@@ -393,5 +392,6 @@ export default function DashboardPage({
     </div>
   );
 }
+
 
 
