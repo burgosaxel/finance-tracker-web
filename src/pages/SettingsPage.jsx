@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "../components/Modal";
 import {
   deleteEntity,
@@ -6,11 +6,15 @@ import {
   importAllUserData,
   importExistingBillsAsRecurringTemplates,
   importLegacySnapshot,
+  linkRecurringPayment,
   saveSettings,
+  unlinkRecurringPayment,
+  updateRecurringPaymentStatus,
   upsertEntity,
 } from "../lib/db";
-import { DEFAULT_SETTINGS, formatCurrency, safeNumber } from "../lib/finance";
+import { DEFAULT_SETTINGS, formatCurrency, getManualMatchCandidates, safeNumber } from "../lib/finance";
 import {
+  analyzeRecurringPayments,
   createLinkToken,
   exchangePublicToken,
   openPlaidLink,
@@ -30,6 +34,11 @@ export default function SettingsPage({
   linkedAccounts = [],
   plaidItems = [],
   plaidSyncState = null,
+  recurringPayments = [],
+  bills = [],
+  income = [],
+  loans = [],
+  creditCards = [],
   onToast,
   onError,
   selectedMonth,
@@ -41,7 +50,29 @@ export default function SettingsPage({
   const [editingId, setEditingId] = useState(null);
   const [plaidLoading, setPlaidLoading] = useState(false);
   const [plaidMessage, setPlaidMessage] = useState("");
+  const [recurringLinkOpen, setRecurringLinkOpen] = useState(false);
+  const [selectedRecurring, setSelectedRecurring] = useState(null);
+  const [selectedRecurringTarget, setSelectedRecurringTarget] = useState("");
   const fileRef = useRef(null);
+
+  const recurringCandidates = useMemo(
+    () =>
+      getManualMatchCandidates({
+        bills,
+        income,
+        loans,
+        creditCards,
+        selectedMonth,
+      }),
+    [bills, income, loans, creditCards, selectedMonth]
+  );
+
+  const recurringCandidateByKey = useMemo(() => {
+    return recurringCandidates.reduce((map, candidate) => {
+      map.set([candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|"), candidate);
+      return map;
+    }, new Map());
+  }, [recurringCandidates]);
 
   useEffect(() => {
     setLocalSettings(cfg);
@@ -210,6 +241,95 @@ export default function SettingsPage({
     }
   }
 
+  async function handleRecurringAnalysis() {
+    setPlaidLoading(true);
+    setPlaidMessage("Analyzing recurring transaction patterns...");
+    try {
+      const result = await analyzeRecurringPayments();
+      onToast("Recurring analysis complete.");
+      setPlaidMessage(
+        `Detected ${result?.detectedCount || 0} recurring pattern${result?.detectedCount === 1 ? "" : "s"} across ${result?.recurringTransactionCount || 0} transaction${result?.recurringTransactionCount === 1 ? "" : "s"}.`
+      );
+    } catch (error) {
+      setPlaidMessage("");
+      onError?.(error?.message || String(error));
+      onToast("Failed to analyze recurring payments.", "error");
+    } finally {
+      setPlaidLoading(false);
+    }
+  }
+
+  function openRecurringLink(recurringItem) {
+    setSelectedRecurring(recurringItem);
+    setSelectedRecurringTarget(
+      recurringItem?.linkedManualType && recurringItem?.linkedManualId
+        ? [recurringItem.linkedManualType, recurringItem.linkedManualId, recurringItem.linkedManualMonthId || ""].join("|")
+        : ""
+    );
+    setRecurringLinkOpen(true);
+  }
+
+  function closeRecurringLink() {
+    setRecurringLinkOpen(false);
+    setSelectedRecurring(null);
+    setSelectedRecurringTarget("");
+  }
+
+  async function confirmRecurring(recurringItem) {
+    try {
+      await updateRecurringPaymentStatus(uid, recurringItem.id || recurringItem.recurringId, "confirmed");
+      onToast("Recurring item confirmed.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to confirm recurring item.", "error");
+    }
+  }
+
+  async function ignoreRecurring(recurringItem) {
+    try {
+      await updateRecurringPaymentStatus(uid, recurringItem.id || recurringItem.recurringId, "ignored");
+      onToast("Recurring item ignored.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to ignore recurring item.", "error");
+    }
+  }
+
+  async function saveRecurringLink() {
+    if (!selectedRecurring) return;
+    const target = recurringCandidateByKey.get(selectedRecurringTarget);
+    if (!target) return;
+    try {
+      await linkRecurringPayment(uid, selectedRecurring, target);
+      onToast("Recurring item linked.");
+      closeRecurringLink();
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to link recurring item.", "error");
+    }
+  }
+
+  async function removeRecurringLink(recurringItem) {
+    try {
+      await unlinkRecurringPayment(uid, recurringItem);
+      onToast("Recurring link removed.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to unlink recurring item.", "error");
+    }
+  }
+
+  function recurringManualLabel(item) {
+    if (!item?.linkedManualType || !item?.linkedManualId) return "";
+    const candidate = recurringCandidates.find(
+      (entry) =>
+        entry.manualType === item.linkedManualType
+        && entry.manualId === item.linkedManualId
+        && (entry.monthId || "") === (item.linkedManualMonthId || "")
+    );
+    return candidate?.label || "";
+  }
+
   return (
     <div className="page">
       <h2>Settings</h2>
@@ -275,6 +395,13 @@ export default function SettingsPage({
           >
             Sync Linked Accounts
           </button>
+          <button
+            type="button"
+            onClick={handleRecurringAnalysis}
+            disabled={plaidLoading || linkedAccounts.length === 0}
+          >
+            Analyze Recurring
+          </button>
           <button type="button" className="primary" onClick={handleLinkAccount} disabled={plaidLoading}>
             Connect Bank Account
           </button>
@@ -320,9 +447,9 @@ export default function SettingsPage({
               {linkedAccounts.map((account) => (
                 <li key={account.id || account.accountId} className="listRow compactTriplet">
                   <span>
-                    {account.institutionName ? `${account.institutionName} · ` : ""}
+                    {account.institutionName ? `${account.institutionName} - ` : ""}
                     {account.name}
-                    {account.mask ? ` ••••${account.mask}` : ""}
+                    {account.mask ? ` ****${account.mask}` : ""}
                   </span>
                   <span>{account.subtype || account.type || "account"}</span>
                   <strong>
@@ -334,6 +461,67 @@ export default function SettingsPage({
               ))}
             </ul>
           </div>
+        </div>
+      </section>
+
+      <section className="card section">
+        <div className="row">
+          <div>
+            <h3>Detected Recurring</h3>
+            <div className="muted pageIntro">
+              Repeated Plaid transactions are grouped into likely subscriptions, bills, payments, and income so you can confirm or link them to manual items.
+            </div>
+          </div>
+          <div className="spacer" />
+          <div className="card section">
+            <strong>Active:</strong> {(recurringPayments || []).filter((item) => item.status !== "ignored" && item.active !== false).length}
+          </div>
+        </div>
+        {recurringPayments.length === 0 ? <div className="muted">No recurring patterns detected yet.</div> : null}
+        <div className="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Cadence</th>
+                <th>Average</th>
+                <th>Next expected</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Linked</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {(recurringPayments || [])
+                .filter((item) => item.status !== "ignored")
+                .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+                .map((item) => (
+                  <tr key={item.id || item.recurringId}>
+                    <td>
+                      {item.displayName || item.merchantName || item.normalizedMerchant}
+                      <div className="muted">Confidence {Math.round((item.confidence || 0) * 100)}%</div>
+                    </td>
+                    <td>{item.cadenceGuess || "unknown"}</td>
+                    <td>{formatCurrency(item.averageAmount, localSettings.currency || "USD")}</td>
+                    <td>{item.nextExpectedDate?.toDate ? item.nextExpectedDate.toDate().toLocaleDateString() : "-"}</td>
+                    <td>{item.typeGuess || "unknown"}</td>
+                    <td>{item.status || "suggested"}</td>
+                    <td>{recurringManualLabel(item) || "-"}</td>
+                    <td className="row">
+                      <button type="button" onClick={() => confirmRecurring(item)}>Confirm</button>
+                      <button type="button" onClick={() => ignoreRecurring(item)}>Ignore</button>
+                      <button type="button" onClick={() => openRecurringLink(item)}>
+                        {item.linkedManualId ? "Change link" : "Link"}
+                      </button>
+                      {item.linkedManualId ? (
+                        <button type="button" onClick={() => removeRecurringLink(item)}>Unlink</button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -415,6 +603,54 @@ export default function SettingsPage({
           <button type="button" className="primary" onClick={saveAccount}>Save</button>
         </div>
       </Modal>
+
+      <Modal title="Link Recurring Item" open={recurringLinkOpen} onClose={closeRecurringLink}>
+        <div className="formGrid">
+          <label>
+            Manual item
+            <select value={selectedRecurringTarget} onChange={(e) => setSelectedRecurringTarget(e.target.value)}>
+              <option value="">Select an item</option>
+              <optgroup label="Bills">
+                {recurringCandidates.filter((candidate) => candidate.manualType === "bill").map((candidate) => {
+                  const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
+                  return <option key={key} value={key}>{candidate.label}</option>;
+                })}
+              </optgroup>
+              <optgroup label="Income">
+                {recurringCandidates.filter((candidate) => candidate.manualType === "income").map((candidate) => {
+                  const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
+                  return <option key={key} value={key}>{candidate.label}</option>;
+                })}
+              </optgroup>
+              <optgroup label="Loans">
+                {recurringCandidates.filter((candidate) => candidate.manualType === "loan").map((candidate) => {
+                  const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
+                  return <option key={key} value={key}>{candidate.label}</option>;
+                })}
+              </optgroup>
+              <optgroup label="Credit Cards">
+                {recurringCandidates.filter((candidate) => candidate.manualType === "creditCard").map((candidate) => {
+                  const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
+                  return <option key={key} value={key}>{candidate.label}</option>;
+                })}
+              </optgroup>
+            </select>
+          </label>
+          {selectedRecurring ? (
+            <div className="card section">
+              <strong>{selectedRecurring.displayName || selectedRecurring.merchantName || selectedRecurring.normalizedMerchant}</strong>
+              <div className="muted">
+                {selectedRecurring.cadenceGuess || "unknown"} - {formatCurrency(selectedRecurring.averageAmount, localSettings.currency || "USD")}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className="row" style={{ marginTop: 12 }}>
+          <div className="spacer" />
+          <button type="button" className="primary" onClick={saveRecurringLink}>Save Link</button>
+        </div>
+      </Modal>
     </div>
   );
 }
+

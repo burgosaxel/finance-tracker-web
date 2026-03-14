@@ -582,6 +582,69 @@ export async function applyMatchingRules(uid, transactions, rules, resolver) {
   return results;
 }
 
+export async function updateRecurringPaymentStatus(uid, recurringId, status) {
+  requireUid(uid);
+  emitMutation("start");
+  try {
+    await setDoc(
+      userDoc(uid, "recurringPayments", recurringId),
+      {
+        status,
+        active: status !== "ignored",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function linkRecurringPayment(uid, recurringItem, target) {
+  requireUid(uid);
+  emitMutation("start");
+  try {
+    await setDoc(
+      userDoc(uid, "recurringPayments", recurringItem.id || recurringItem.recurringId),
+      {
+        linkedManualType: target.manualType,
+        linkedManualId: target.manualId,
+        linkedManualMonthId: target.monthId || null,
+        status: recurringItem.status === "ignored" ? "suggested" : recurringItem.status || "suggested",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function unlinkRecurringPayment(uid, recurringItem) {
+  requireUid(uid);
+  emitMutation("start");
+  try {
+    await setDoc(
+      userDoc(uid, "recurringPayments", recurringItem.id || recurringItem.recurringId),
+      {
+        linkedManualType: null,
+        linkedManualId: null,
+        linkedManualMonthId: null,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
 export async function upsertTemplate(uid, kind, payload, id = payload?.id || crypto.randomUUID()) {
   requireUid(uid);
   emitMutation("start");

@@ -90,9 +90,9 @@ export function pickCategoryFields(transaction) {
 
 export function guessCadence(daysApart) {
   if (!Number.isFinite(daysApart)) return "unknown";
-  if (daysApart >= 26 && daysApart <= 33) return "monthly";
-  if (daysApart >= 12 && daysApart <= 17) return "semi-monthly";
-  if (daysApart >= 6 && daysApart <= 9) return "weekly";
+  if (daysApart >= 6 && daysApart <= 8) return "weekly";
   if (daysApart >= 13 && daysApart <= 15) return "biweekly";
-  return "irregular";
+  if (daysApart >= 15 && daysApart <= 17) return "semi-monthly";
+  if (daysApart >= 25 && daysApart <= 35) return "monthly";
+  return "unknown";
 }

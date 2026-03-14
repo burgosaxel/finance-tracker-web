@@ -629,6 +629,54 @@ export const syncPlaidTransactionsHttp = onRequest(
   }
 );
 
+async function analyzeRecurringPaymentsHandler(request) {
+  const uid = requireAuth(request);
+  logger.info("Recurring analysis requested", { uid });
+  const result = await refreshRecurringPayments(uid);
+  logger.info("Recurring analysis completed", { uid, ...result });
+  return result;
+}
+
+export const analyzeRecurringPaymentsHttp = onRequest(
+  {
+    region: "us-central1",
+    secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
+  },
+  async (request, response) => {
+    applyCors(request, response);
+    logger.info("Plaid HTTP request received", {
+      handler: "analyzeRecurringPaymentsHttp",
+      origin: request.headers.origin || "",
+      method: request.method,
+    });
+    if (request.method === "OPTIONS") {
+      response.status(204).send("");
+      return;
+    }
+    try {
+      const uid = await requireHttpAuth(request);
+      logger.info("Plaid HTTP auth resolved", {
+        handler: "analyzeRecurringPaymentsHttp",
+        uid,
+        origin: request.headers.origin || "",
+      });
+      const result = await analyzeRecurringPaymentsHandler({ auth: { uid } });
+      response.status(200).json(result);
+    } catch (error) {
+      sendHttpError(response, error);
+    }
+  }
+);
+
+export const analyzeRecurringPayments = onCall(
+  {
+    region: "us-central1",
+    cors: true,
+    secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
+  },
+  analyzeRecurringPaymentsHandler
+);
+
 export const exchangePublicToken = onCall(
   {
     region: "us-central1",

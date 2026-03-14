@@ -84,6 +84,10 @@ export function syncPlaidTransactions(plaidItemId) {
   return callHttpFunction("syncPlaidTransactionsHttp", plaidItemId ? { plaidItemId } : {});
 }
 
+export function analyzeRecurringPayments() {
+  return callHttpFunction("analyzeRecurringPaymentsHttp");
+}
+
 export async function openPlaidLink(linkToken) {
   // Plaid Link is loaded on demand so the rest of the app stays client-only until
   // the user explicitly chooses to connect an institution.

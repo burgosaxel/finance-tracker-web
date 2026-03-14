@@ -347,6 +347,11 @@ export default function App() {
           linkedAccounts={data.linkedAccounts}
           plaidItems={data.plaidItems}
           plaidSyncState={data.plaidSyncState}
+          recurringPayments={data.recurringPayments}
+          bills={data.statementBills}
+          income={data.statementIncomes}
+          loans={data.loans}
+          creditCards={data.creditCards}
         />
       );
     return <DashboardPage data={data} settings={settings} />;
