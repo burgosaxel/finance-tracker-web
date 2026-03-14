@@ -84,7 +84,7 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
 
   return (
     <div className="page">
-      <section className="card section pageHero heroPlan">
+      <section className="dashboard-hero pageHero heroPlan">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Monthly planning</div>
@@ -102,13 +102,13 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
           </div>
         </div>
         <div className="statsGrid compactStats">
-          <StatCard icon={PiggyBank} label="Month Income" value={formatCurrency(monthIncome, cfg.currency)} />
-          <StatCard icon={DollarSign} label="Total Assigned" value={formatCurrency(totals.totalAssigned, cfg.currency)} />
-          <StatCard icon={TrendingUp} label="To Be Budgeted" value={formatCurrency(totals.toBeBudgeted, cfg.currency)} />
+          <StatCard icon={PiggyBank} className="metric-card green-accent" label="Month Income" value={formatCurrency(monthIncome, cfg.currency)} />
+          <StatCard icon={DollarSign} className="metric-card" label="Total Assigned" value={formatCurrency(totals.totalAssigned, cfg.currency)} />
+          <StatCard icon={TrendingUp} className="metric-card green-accent" label="To Be Budgeted" value={formatCurrency(totals.toBeBudgeted, cfg.currency)} />
         </div>
       </section>
 
-      <section className="card section modulePlan">
+      <section className="data-panel section modulePlan">
         <div className="sectionHeader">
           <div>
             <h3>Budget Categories</h3>
@@ -116,21 +116,21 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
           </div>
         </div>
         <div className="statsGrid compactStats summaryStrip">
-          <div className="card section inlineMetric">
+          <div className="data-panel inlineMetric">
             <span className="dataLabel">Month Income</span>
             <strong>{formatCurrency(monthIncome, cfg.currency)}</strong>
           </div>
-          <div className="card section inlineMetric">
+          <div className="data-panel inlineMetric">
             <span className="dataLabel">Assigned</span>
             <strong>{formatCurrency(totals.totalAssigned, cfg.currency)}</strong>
           </div>
-          <div className="card section inlineMetric">
+          <div className="data-panel inlineMetric">
             <span className="dataLabel">Available to Assign</span>
             <strong>{formatCurrency(totals.toBeBudgeted, cfg.currency)}</strong>
           </div>
         </div>
 
-        <div className="tableWrap card desktopDataTable">
+        <div className="tableWrap card desktopDataTable premiumTableWrap">
           <table>
             <thead>
               <tr>
@@ -164,9 +164,9 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
       </section>
 
       <div className="mobileDataList">
-        {rows.length === 0 ? <div className="card section muted">No categories yet. Add bills/transactions first.</div> : null}
+        {rows.length === 0 ? <div className="data-panel muted">No categories yet. Add bills/transactions first.</div> : null}
         {rows.map((r) => (
-          <article key={`budget-${r.name}`} className="card section dataItem">
+          <article key={`budget-${r.name}`} className="data-panel dataItem">
             <div className="dataItemHeader">
               <h3 className="dataItemTitle">{r.name}</h3>
             </div>

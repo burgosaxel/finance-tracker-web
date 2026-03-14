@@ -113,7 +113,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
 
   return (
     <div className="page">
-      <section className="card section pageHero heroDebt">
+      <section className="dashboard-hero pageHero heroDebt">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Debt overview</div>
@@ -135,21 +135,21 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
           </div>
         </div>
         <div className="statsGrid compactStats">
-          <StatCard label="Total Limit" value={formatCurrency(totals.totalLimit, cfg.currency)} />
-          <StatCard label="Total Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
-          <StatCard label="Weighted Utilization" value={formatPercent(totals.avgUtil)} />
-          <StatCard label="Total Minimums" value={formatCurrency(totals.totalMin, cfg.currency)} />
+          <StatCard className="metric-card" label="Total Limit" value={formatCurrency(totals.totalLimit, cfg.currency)} />
+          <StatCard className="metric-card red-accent" label="Total Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
+          <StatCard className="metric-card" label="Weighted Utilization" value={formatPercent(totals.avgUtil)} />
+          <StatCard className="metric-card red-accent" label="Total Minimums" value={formatCurrency(totals.totalMin, cfg.currency)} />
         </div>
       </section>
 
-      <section className="card section moduleAccounts">
+      <section className="data-panel section moduleAccounts">
         <div className="sectionHeader">
           <div>
             <h3>Card portfolio</h3>
             <div className="muted compactSubtext">Sort by utilization, balance, or APR to prioritize what needs attention.</div>
           </div>
         </div>
-        <div className="tableWrap card desktopDataTable">
+        <div className="tableWrap card desktopDataTable premiumTableWrap">
         <table>
           <thead>
             <tr>
@@ -209,9 +209,9 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
       </section>
 
       <div className="mobileDataList">
-        {rows.length === 0 ? <div className="card section muted">No credit cards yet.</div> : null}
+        {rows.length === 0 ? <div className="data-panel muted">No credit cards yet.</div> : null}
         {rows.map((card) => (
-          <article key={`mobile-${card.id}`} className="card section dataItem">
+          <article key={`mobile-${card.id}`} className="data-panel dataItem">
             <div className="dataItemHeader">
               <div>
                 <h3 className="dataItemTitle">{card.name}</h3>
@@ -240,7 +240,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
         ))}
 
         {rows.length > 0 ? (
-          <article className="card section dataItem">
+          <article className="data-panel dataItem">
             <h3 className="dataItemTitle">Totals</h3>
             <div className="dataGrid">
               <div className="dataRow"><span className="dataLabel">Total Limit</span><span className="dataValue">{formatCurrency(totals.totalLimit, cfg.currency)}</span></div>

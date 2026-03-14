@@ -241,7 +241,7 @@ export default function TransactionsPage({
 
   return (
     <div className="page">
-      <section className="card section pageHero heroActivity">
+      <section className="dashboard-hero pageHero heroActivity">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Activity review</div>
@@ -285,7 +285,7 @@ export default function TransactionsPage({
         </div>
       </section>
 
-      <div className="tableWrap card desktopDataTable moduleActivity">
+      <div className="tableWrap card desktopDataTable premiumTableWrap moduleActivity data-panel">
         <table>
           <thead>
             <tr>
@@ -376,7 +376,7 @@ export default function TransactionsPage({
       </div>
 
       <div className="mobileDataList">
-        {rows.length === 0 ? <div className="card section muted">No transactions for this filter.</div> : null}
+        {rows.length === 0 ? <div className="data-panel muted">No transactions for this filter.</div> : null}
         {rows.map((t) => {
           const suggestions = (t.source || "") === "plaid" && t.matchStatus !== "matched"
             ? getTransactionMatchSuggestions(t, manualCandidates, matchingRules, 3)
@@ -384,7 +384,7 @@ export default function TransactionsPage({
           const matchedLabel = getMatchedManualLabel(t, manualCandidates);
           const matchedByLabel = matchSourceLabel(t);
           return (
-            <article key={`mobile-${t.id}`} className="card section dataItem">
+            <article key={`mobile-${t.id}`} className="data-panel dataItem">
               <div className="dataItemHeader">
                 <h3 className="dataItemTitle">{t.merchantName || t.payee}</h3>
                 <span className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
@@ -496,7 +496,7 @@ export default function TransactionsPage({
             </select>
           </label>
           {matchTx ? (
-            <div className="card section">
+            <div className="data-panel">
               <strong>{matchTx.merchantName || matchTx.payee}</strong>
               <div className="muted">{formatCurrency(matchTx.amount, cfg.currency)} on {matchTx.date || "-"}</div>
             </div>

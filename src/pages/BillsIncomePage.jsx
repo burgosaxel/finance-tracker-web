@@ -461,7 +461,7 @@ export default function BillsIncomePage({
 
   function renderBillTable(rows, emptyMessage) {
     return (
-      <div className="tableWrap desktopDataTable">
+      <div className="tableWrap desktopDataTable premiumTableWrap">
         <table>
           <thead>
             <tr>
@@ -504,9 +504,9 @@ export default function BillsIncomePage({
   function renderBillCards(rows, emptyMessage) {
     return (
       <div className="mobileDataList">
-        {rows.length === 0 ? <div className="card section muted">{emptyMessage}</div> : null}
+        {rows.length === 0 ? <div className="data-panel muted">{emptyMessage}</div> : null}
         {rows.map((b) => (
-          <article key={`mobile-bill-${b.id}`} className="card section dataItem">
+          <article key={`mobile-bill-${b.id}`} className="data-panel dataItem">
             <div className="dataItemHeader">
               <h3 className="dataItemTitle">{b.merchant || b.name}</h3>
               <span className="pill">{b.status || "unpaid"}</span>
@@ -532,7 +532,7 @@ export default function BillsIncomePage({
 
   function renderIncomeTable(rows, emptyMessage) {
     return (
-      <div className="tableWrap desktopDataTable">
+      <div className="tableWrap desktopDataTable premiumTableWrap">
         <table>
           <thead>
             <tr>
@@ -573,9 +573,9 @@ export default function BillsIncomePage({
   function renderIncomeCards(rows, emptyMessage) {
     return (
       <div className="mobileDataList">
-        {rows.length === 0 ? <div className="card section muted">{emptyMessage}</div> : null}
+        {rows.length === 0 ? <div className="data-panel muted">{emptyMessage}</div> : null}
         {rows.map((i) => (
-          <article key={`mobile-income-${i.id}`} className="card section dataItem">
+          <article key={`mobile-income-${i.id}`} className="data-panel dataItem">
             <div className="dataItemHeader">
               <h3 className="dataItemTitle">{i.source || i.name}</h3>
               <span className="pill">{i.status || "expected"}</span>
@@ -600,7 +600,7 @@ export default function BillsIncomePage({
 
   return (
     <div className="page">
-      <section className="card section pageHero heroOperations">
+      <section className="dashboard-hero pageHero heroOperations">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Monthly operations</div>
@@ -625,7 +625,7 @@ export default function BillsIncomePage({
         <div className="muted">Recurring sync runs automatically. Use "Sync now" only if needed.</div>
       </section>
 
-      <section className="card section moduleForecast">
+      <section className="data-panel section moduleForecast">
         <button
           type="button"
           className="collapseToggle"
@@ -637,21 +637,21 @@ export default function BillsIncomePage({
         </button>
         {!forecastCollapsed ? (
           <div className="statsGrid forecastGrid">
-            <div className="card section"><strong>Bills remaining:</strong> {formatCurrency(cashflow.totalBillsUnpaid, cfg.currency)}</div>
-            <div className="card section"><strong>Due next 7 days:</strong> {dueSoon.length}</div>
-            <div className="card section"><strong>Due later this month:</strong> {dueLater.length}</div>
-            <div className="card section"><strong>Income expected:</strong> {formatCurrency(cashflow.totalIncomeExpected, cfg.currency)}</div>
-            <div className="card section"><strong>Income received:</strong> {formatCurrency(cashflow.totalIncomeReceived, cfg.currency)}</div>
-            <div className="card section"><strong>Bills paid:</strong> {formatCurrency(cashflow.totalBillsPaid, cfg.currency)}</div>
-            <div className="card section"><strong>Remaining from received:</strong> {formatCurrency(cashflow.remainingFromReceived, cfg.currency)}</div>
-            <div className="card section"><strong>Projected month end:</strong> {formatCurrency(cashflow.projectedRemaining, cfg.currency)}</div>
-            <div className="card section"><strong>Total bills:</strong> {formatCurrency(cashflow.totalBills, cfg.currency)}</div>
+            <div className="data-panel inlineMetric"><strong>Bills remaining:</strong> {formatCurrency(cashflow.totalBillsUnpaid, cfg.currency)}</div>
+            <div className="data-panel inlineMetric"><strong>Due next 7 days:</strong> {dueSoon.length}</div>
+            <div className="data-panel inlineMetric"><strong>Due later this month:</strong> {dueLater.length}</div>
+            <div className="data-panel inlineMetric"><strong>Income expected:</strong> {formatCurrency(cashflow.totalIncomeExpected, cfg.currency)}</div>
+            <div className="data-panel inlineMetric"><strong>Income received:</strong> {formatCurrency(cashflow.totalIncomeReceived, cfg.currency)}</div>
+            <div className="data-panel inlineMetric"><strong>Bills paid:</strong> {formatCurrency(cashflow.totalBillsPaid, cfg.currency)}</div>
+            <div className="data-panel inlineMetric"><strong>Remaining from received:</strong> {formatCurrency(cashflow.remainingFromReceived, cfg.currency)}</div>
+            <div className="data-panel inlineMetric"><strong>Projected month end:</strong> {formatCurrency(cashflow.projectedRemaining, cfg.currency)}</div>
+            <div className="data-panel inlineMetric"><strong>Total bills:</strong> {formatCurrency(cashflow.totalBills, cfg.currency)}</div>
           </div>
         ) : null}
       </section>
 
       <div className="twoCol">
-        <section className="card section moduleBills">
+        <section className="data-panel section moduleBills">
           <div className="row">
             <h2>Bills</h2>
             <div className="spacer" />
@@ -691,7 +691,7 @@ export default function BillsIncomePage({
           </section>
         </section>
 
-        <section className="card section moduleIncome">
+        <section className="data-panel section moduleIncome">
           <div className="row">
             <h2>Income</h2>
             <div className="spacer" />
@@ -757,7 +757,7 @@ export default function BillsIncomePage({
         </div>
       </Modal>
 
-      <section className="card section moduleTemplates">
+      <section className="data-panel section moduleTemplates">
         <div className="row">
           <h3>Recurring Templates</h3>
           <div className="spacer" />

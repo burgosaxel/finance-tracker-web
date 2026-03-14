@@ -107,7 +107,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
 
   return (
     <div className="page">
-      <section className="card section pageHero heroDebt">
+      <section className="dashboard-hero pageHero heroDebt">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Long-term debt tracking</div>
@@ -123,19 +123,19 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
           </div>
         </div>
         <div className="statsGrid compactStats">
-          <StatCard label="Loan Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
-          <StatCard label="Monthly Payments" value={formatCurrency(totals.totalMonthlyPayment, cfg.currency)} />
+          <StatCard className="metric-card red-accent" label="Loan Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
+          <StatCard className="metric-card" label="Monthly Payments" value={formatCurrency(totals.totalMonthlyPayment, cfg.currency)} />
         </div>
       </section>
 
-      <section className="card section moduleAccounts">
+      <section className="data-panel section moduleAccounts">
         <div className="sectionHeader">
           <div>
             <h3>Loan accounts</h3>
             <div className="muted compactSubtext">A clear ledger of lender balances, due-day timing, and status.</div>
           </div>
         </div>
-        <div className="tableWrap card desktopDataTable">
+        <div className="tableWrap card desktopDataTable premiumTableWrap">
         <table>
           <thead>
             <tr>
@@ -182,9 +182,9 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
       </section>
 
       <div className="mobileDataList">
-        {rows.length === 0 ? <div className="card section muted">No loans yet.</div> : null}
+        {rows.length === 0 ? <div className="data-panel muted">No loans yet.</div> : null}
         {rows.map((loan) => (
-          <article key={`mobile-${loan.id}`} className="card section dataItem">
+          <article key={`mobile-${loan.id}`} className="data-panel dataItem">
             <div className="dataItemHeader">
               <h3 className="dataItemTitle">{loan.lender}</h3>
               <span className="pill">{loan.status || "active"}</span>
@@ -204,7 +204,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         ))}
       </div>
 
-      <article className="card section dataItem moduleTotals">
+      <article className="data-panel dataItem moduleTotals">
         <h3 className="dataItemTitle">Totals</h3>
         <div className="summaryGrid two">
           <div className="summaryCell">

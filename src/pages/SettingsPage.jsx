@@ -332,7 +332,7 @@ export default function SettingsPage({
 
   return (
     <div className="page">
-      <section className="card section pageHero heroSettings">
+      <section className="dashboard-hero pageHero heroSettings">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Preferences and integrations</div>
@@ -344,7 +344,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section moduleSettings">
+      <section className="data-panel section moduleSettings">
         <h3>App Preferences</h3>
         <div className="formGrid">
           <label>
@@ -389,7 +389,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section moduleConnections">
+      <section className="data-panel section moduleConnections">
         <div className="row">
           <div>
             <h3>Linked Bank Accounts</h3>
@@ -419,19 +419,19 @@ export default function SettingsPage({
         {plaidMessage ? <div className="muted">{plaidMessage}</div> : null}
         {plaidSyncState ? (
           <div className="statsGrid compactStats summaryStrip" style={{ marginTop: 8 }}>
-            <div className="card section inlineMetric">
+            <div className="data-panel inlineMetric">
               <span className="dataLabel">Status</span>
               <strong>{plaidSyncState.syncStatus || "idle"}</strong>
             </div>
-            <div className="card section inlineMetric">
+            <div className="data-panel inlineMetric">
               <span className="dataLabel">Last sync</span>
               <strong>{plaidSyncState.lastGlobalSyncAt || "-"}</strong>
             </div>
-            <div className="card section inlineMetric">
+            <div className="data-panel inlineMetric">
               <span className="dataLabel">Accounts</span>
               <strong>{plaidSyncState.accountCount || 0}</strong>
             </div>
-            <div className="card section inlineMetric">
+            <div className="data-panel inlineMetric">
               <span className="dataLabel">Transactions</span>
               <strong>{plaidSyncState.transactionCount || 0}</strong>
             </div>
@@ -440,7 +440,7 @@ export default function SettingsPage({
         {plaidSyncState?.lastError ? <div className="errorText">{plaidSyncState.lastError}</div> : null}
 
         <div className="twoCol">
-          <div className="card section">
+          <div className="data-panel">
             <h4>Linked Institutions</h4>
             {plaidItems.length === 0 ? <div className="muted">No Plaid items linked yet.</div> : null}
             <ul className="cleanList">
@@ -454,7 +454,7 @@ export default function SettingsPage({
             </ul>
           </div>
 
-          <div className="card section">
+          <div className="data-panel">
             <h4>Linked Accounts</h4>
             {linkedAccounts.length === 0 ? <div className="muted">No synced linked accounts yet.</div> : null}
             <ul className="cleanList">
@@ -478,7 +478,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section moduleRecurring">
+      <section className="data-panel section moduleRecurring">
         <div className="row">
           <div>
             <h3>Detected Recurring</h3>
@@ -487,12 +487,12 @@ export default function SettingsPage({
             </div>
           </div>
           <div className="spacer" />
-          <div className="card section">
+          <div className="data-panel">
             <strong>Active:</strong> {(recurringPayments || []).filter((item) => item.status !== "ignored" && item.active !== false).length}
           </div>
         </div>
         {recurringPayments.length === 0 ? <div className="muted">No recurring patterns detected yet.</div> : null}
-        <div className="tableWrap">
+        <div className="tableWrap premiumTableWrap">
           <table>
             <thead>
               <tr>
@@ -539,13 +539,13 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section moduleAccounts">
+      <section className="data-panel section moduleAccounts">
         <div className="row">
           <h3>Accounts</h3>
           <div className="spacer" />
           <button type="button" className="primary" onClick={startAddAccount}>Add Account</button>
         </div>
-        <div className="tableWrap">
+        <div className="tableWrap premiumTableWrap">
           <table>
             <thead>
               <tr>
@@ -575,7 +575,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section moduleTools">
+      <section className="data-panel section moduleTools">
         <h3>Data Tools</h3>
         <div className="row">
           <button type="button" onClick={runRecurringMigration}>Import existing bills as recurring templates</button>
@@ -651,7 +651,7 @@ export default function SettingsPage({
             </select>
           </label>
           {selectedRecurring ? (
-            <div className="card section">
+            <div className="data-panel">
               <strong>{selectedRecurring.displayName || selectedRecurring.merchantName || selectedRecurring.normalizedMerchant}</strong>
               <div className="muted">
                 {selectedRecurring.cadenceGuess || "unknown"} - {formatCurrency(selectedRecurring.averageAmount, localSettings.currency || "USD")}
