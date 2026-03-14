@@ -229,8 +229,9 @@ export default function DashboardPage({
                         {entry.linkedManualType ? ` | linked to ${entry.linkedManualType}` : ""}
                       </div>
                     </div>
-                    <div className="secondary dashboardRecurringMeta dashboardMetaCell">
-                      {(entry.cadenceGuess || "unknown") + " " + (entry.typeGuess || "unknown")}
+                    <div className="secondary">
+                      {entry.cadenceGuess || "unknown"}
+                      <div>{entry.typeGuess || "unknown"}</div>
                     </div>
                     <div className="amount">{formatCurrency(entry.averageAmount, cfg.currency)}</div>
                   </div>

@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
 import ActionMenu from "../components/ActionMenu";
-import PagedListFooter from "../components/PagedListFooter";
 import {
   applyMatchingRules,
   clearAllMatchingRules,
@@ -82,7 +81,6 @@ export default function TransactionsPage({
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [visibleCount, setVisibleCount] = useState("20");
-  const [currentPage, setCurrentPage] = useState(1);
   const [matchOpen, setMatchOpen] = useState(false);
   const [matchTx, setMatchTx] = useState(null);
   const [selectedTargetKey, setSelectedTargetKey] = useState("");
@@ -125,22 +123,10 @@ export default function TransactionsPage({
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [transactions, monthFilter, accountFilter, categoryFilter, sourceFilter]);
 
-  const pageSize = visibleCount === "all" ? rows.length : Number(visibleCount);
-
-  const totalPages = useMemo(() => {
-    if (visibleCount === "all") return 1;
-    return Math.max(1, Math.ceil(rows.length / Math.max(1, pageSize)));
-  }, [pageSize, rows.length, visibleCount]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [rows, visibleCount]);
-
-  const pagedRows = useMemo(() => {
+  const visibleRows = useMemo(() => {
     if (visibleCount === "all") return rows;
-    const start = (currentPage - 1) * pageSize;
-    return rows.slice(start, start + pageSize);
-  }, [currentPage, pageSize, rows, visibleCount]);
+    return rows.slice(0, Number(visibleCount));
+  }, [rows, visibleCount]);
 
   function startAdd() {
     setEditingId(null);
@@ -374,10 +360,10 @@ export default function TransactionsPage({
             </tr>
           </thead>
           <tbody>
-            {pagedRows.length === 0 ? (
+            {visibleRows.length === 0 ? (
               <tr><td colSpan={8} className="muted">No transactions for this filter.</td></tr>
             ) : null}
-            {pagedRows.map((t) => {
+            {visibleRows.map((t) => {
               const suggestions = (t.source || "") === "plaid" && t.matchStatus !== "matched"
                 ? getTransactionMatchSuggestions(t, manualCandidates, matchingRules, 3)
                 : [];
@@ -452,22 +438,23 @@ export default function TransactionsPage({
             })}
           </tbody>
         </table>
-        <PagedListFooter
-          className="transactionListFooter desktopOnly"
-          showingCount={pagedRows.length}
-          totalCount={rows.length}
-          itemLabel="transactions"
-          page={currentPage}
-          pageCount={totalPages}
-          pageSize={visibleCount}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setVisibleCount}
-        />
+        <div className="listFooter cardSectionFooter transactionListFooter desktopOnly">
+          <div className="muted">Showing {visibleRows.length} of {rows.length} transactions</div>
+          <label className="fieldGroup compactField inlineSelector">
+            <span>Show</span>
+            <select value={visibleCount} onChange={(e) => setVisibleCount(e.target.value)}>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="all">All</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="mobileDataList">
-        {pagedRows.length === 0 ? <div className="data-panel muted">No transactions for this filter.</div> : null}
-        {pagedRows.map((t) => {
+        {visibleRows.length === 0 ? <div className="data-panel muted">No transactions for this filter.</div> : null}
+        {visibleRows.map((t) => {
           const suggestions = (t.source || "") === "plaid" && t.matchStatus !== "matched"
             ? getTransactionMatchSuggestions(t, manualCandidates, matchingRules, 3)
             : [];
@@ -534,18 +521,18 @@ export default function TransactionsPage({
         })}
       </div>
 
-      <PagedListFooter
-        className="transactionListFooter transactionMobileFooter mobileOnly data-panel"
-        showingCount={pagedRows.length}
-        totalCount={rows.length}
-        itemLabel="transactions"
-        page={currentPage}
-        pageCount={totalPages}
-        pageSize={visibleCount}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setVisibleCount}
-      />
-
+      <div className="listFooter cardSectionFooter mobileOnly transactionListFooter">
+        <div className="muted">Showing {visibleRows.length} of {rows.length} transactions</div>
+        <label className="fieldGroup compactField inlineSelector">
+          <span>Show</span>
+          <select value={visibleCount} onChange={(e) => setVisibleCount(e.target.value)}>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">All</option>
+          </select>
+        </label>
+      </div>
 
       <Modal title={editingId ? "Edit Transaction" : "Add Transaction"} open={open} onClose={() => setOpen(false)}>
         <div className="formGrid">
@@ -690,5 +677,3 @@ export default function TransactionsPage({
     </div>
   );
 }
-
-

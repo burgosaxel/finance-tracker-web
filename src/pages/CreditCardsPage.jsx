@@ -26,7 +26,7 @@ const SORT_DEFAULTS = {
 
 function SortHeader({ label, column, sortBy, sortDirection, onSort }) {
   const active = sortBy === column;
-  const arrow = !active ? "" : sortDirection === "asc" ? "?" : "?";
+  const arrow = !active ? "" : sortDirection === "asc" ? "^" : "v";
   return (
     <button type="button" className="sortableHeaderButton" onClick={() => onSort(column)}>
       <span>{label}</span>
@@ -310,4 +310,6 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
     </div>
   );
 }
+
+
 
