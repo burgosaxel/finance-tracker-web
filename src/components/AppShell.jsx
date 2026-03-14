@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { routeHref } from "../lib/hashRouter";
 import { Home, Target, CreditCard, Building2, Receipt, ArrowLeftRight, Settings } from "lucide-react";
-import brandLogo from "../../BudgetCommand Logo.png";
+import brandLogo from "../../BudgetCommand Logo v2.png";
 
 function NavIcon({ kind }) {
   const iconMap = {
