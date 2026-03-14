@@ -38,6 +38,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
       };
     });
     const sorted = [...mapped];
+    if (sortBy === "name") sorted.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
     if (sortBy === "utilization") sorted.sort((a, b) => b.utilization - a.utilization);
     if (sortBy === "balance") sorted.sort((a, b) => b.balance - a.balance);
     if (sortBy === "apr") sorted.sort((a, b) => b.apr - a.apr);
@@ -126,6 +127,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
             <label className="fieldGroup compactField">
               <span>Sort</span>
               <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="name">Name</option>
                 <option value="utilization">Utilization</option>
                 <option value="balance">Balance</option>
                 <option value="apr">APR</option>

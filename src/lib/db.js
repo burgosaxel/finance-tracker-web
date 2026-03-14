@@ -958,3 +958,103 @@ export async function importExistingBillsAsRecurringTemplates(uid, monthId = mon
     { merge: true }
   );
 }
+
+export async function clearAllMatchingRules(uid) {
+  requireUid(uid);
+  emitMutation("start");
+  try {
+    const snap = await getDocs(matchingRuleCollection(uid));
+    for (const ruleDoc of snap.docs) {
+      await deleteDoc(ruleDoc.ref);
+    }
+    emitMutation("success");
+    return snap.size;
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function createManualItem(uid, payload) {
+  requireUid(uid);
+  const type = payload?.manualType;
+  if (!type) throw new Error("Manual item type is required.");
+
+  if (type === "bill") {
+    if (!payload.monthId) throw new Error("Month is required for bills.");
+    const monthDate = monthFromMonthId(payload.monthId) || new Date();
+    const dueDay = Math.max(1, Math.min(31, Number(payload.dueDay) || monthDate.getDate()));
+    const dueDate = Timestamp.fromDate(new Date(monthDate.getFullYear(), monthDate.getMonth(), dueDay));
+    const id = await upsertStatementItem(uid, payload.monthId, "bills", {
+      merchant: payload.name?.trim() || "New Bill",
+      name: payload.name?.trim() || "New Bill",
+      amount: Math.abs(safeNumber(payload.amount, 0)),
+      dueDay,
+      dueDate,
+      paidFrom: payload.paidFrom || "",
+      accountId: payload.accountId || "",
+      status: "unpaid",
+      paidAt: null,
+    });
+    return { manualType: "bill", manualId: id, monthId: payload.monthId, label: payload.name?.trim() || "New Bill" };
+  }
+
+  if (type === "income") {
+    if (!payload.monthId) throw new Error("Month is required for income.");
+    const monthDate = monthFromMonthId(payload.monthId) || new Date();
+    const payDay = Math.max(1, Math.min(31, Number(payload.payDay) || monthDate.getDate()));
+    const payDate = Timestamp.fromDate(new Date(monthDate.getFullYear(), monthDate.getMonth(), payDay));
+    const id = await upsertStatementItem(uid, payload.monthId, "incomes", {
+      source: payload.name?.trim() || "New Income",
+      name: payload.name?.trim() || "New Income",
+      amount: Math.abs(safeNumber(payload.amount, 0)),
+      expectedAmount: Math.abs(safeNumber(payload.amount, 0)),
+      payDay,
+      payDate,
+      status: "expected",
+      receivedAt: null,
+    });
+    return { manualType: "income", manualId: id, monthId: payload.monthId, label: payload.name?.trim() || "New Income" };
+  }
+
+  if (type === "loan") {
+    const name = payload.name?.trim() || "New Loan";
+    const id = await upsertEntity(uid, "loans", {
+      lender: name,
+      balance: Math.abs(safeNumber(payload.balance, payload.amount)),
+      monthlyPayment: Math.abs(safeNumber(payload.amount, 0)),
+      interestRate: payload.interestRate ?? null,
+      dueDay: payload.dueDay ? Number(payload.dueDay) : null,
+      status: "active",
+      notes: payload.notes || "",
+    });
+    return { manualType: "loan", manualId: id, monthId: "", label: name };
+  }
+
+  if (type === "creditCard") {
+    const name = payload.name?.trim() || "New Credit Card";
+    const id = await upsertEntity(uid, "creditCards", {
+      name,
+      issuer: payload.issuer || "",
+      limit: Math.abs(safeNumber(payload.limit, 0)),
+      balance: Math.abs(safeNumber(payload.balance, 0)),
+      minimumPayment: Math.abs(safeNumber(payload.amount, 0)),
+      dueDay: payload.dueDay ? Number(payload.dueDay) : null,
+      apr: payload.apr ?? 0,
+    });
+    return { manualType: "creditCard", manualId: id, monthId: "", label: name };
+  }
+
+  if (type === "account") {
+    const name = payload.name?.trim() || "New Account";
+    const id = await upsertEntity(uid, "accounts", {
+      name,
+      type: payload.accountType || "checking",
+      balance: safeNumber(payload.balance, 0),
+      plaidAccountId: payload.plaidAccountId || "",
+    });
+    return { manualType: "account", manualId: id, monthId: "", label: name };
+  }
+
+  throw new Error(`Unsupported manual item type: ${type}`);
+}

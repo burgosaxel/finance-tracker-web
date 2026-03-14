@@ -1,8 +1,11 @@
-import React, { useMemo, useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
+import ActionMenu from "../components/ActionMenu";
 import {
   applyMatchingRules,
+  clearAllMatchingRules,
   clearTransactionMatch,
+  createManualItem,
   deleteEntity,
   ignoreTransactionMatch,
   matchTransactionToManualItem,
@@ -28,6 +31,14 @@ const EMPTY_TX = {
   amount: 0,
   accountId: "",
   notes: "",
+};
+
+const EMPTY_CREATE_ITEM = {
+  manualType: "bill",
+  name: "",
+  amount: 0,
+  dueDay: 1,
+  payDay: 1,
 };
 
 function encodeTarget(candidate) {
@@ -69,6 +80,7 @@ export default function TransactionsPage({
   const [accountFilter, setAccountFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [visibleCount, setVisibleCount] = useState("20");
   const [matchOpen, setMatchOpen] = useState(false);
   const [matchTx, setMatchTx] = useState(null);
   const [selectedTargetKey, setSelectedTargetKey] = useState("");
@@ -76,6 +88,8 @@ export default function TransactionsPage({
   const [ruleType, setRuleType] = useState("merchant_contains");
   const [rulePattern, setRulePattern] = useState("");
   const [ruleAutoApply, setRuleAutoApply] = useState(true);
+  const [createItemMode, setCreateItemMode] = useState(false);
+  const [createItemForm, setCreateItemForm] = useState(EMPTY_CREATE_ITEM);
 
   const manualCandidates = useMemo(
     () =>
@@ -109,6 +123,11 @@ export default function TransactionsPage({
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [transactions, monthFilter, accountFilter, categoryFilter, sourceFilter]);
 
+  const visibleRows = useMemo(() => {
+    if (visibleCount === "all") return rows;
+    return rows.slice(0, Number(visibleCount));
+  }, [rows, visibleCount]);
+
   function startAdd() {
     setEditingId(null);
     setForm(EMPTY_TX);
@@ -128,6 +147,14 @@ export default function TransactionsPage({
     setRuleType("merchant_contains");
     setRulePattern(transaction.merchantName || transaction.payee || transaction.name || "");
     setRuleAutoApply(true);
+    setCreateItemMode(false);
+    setCreateItemForm({
+      manualType: "bill",
+      name: transaction.merchantName || transaction.payee || transaction.name || "",
+      amount: Math.abs(safeNumber(transaction.amount, 0)),
+      dueDay: new Date(transaction.date || new Date()).getDate(),
+      payDay: new Date(transaction.date || new Date()).getDate(),
+    });
     setMatchOpen(true);
   }
 
@@ -137,6 +164,7 @@ export default function TransactionsPage({
     setSelectedTargetKey("");
     setCreateRule(false);
     setRulePattern("");
+    setCreateItemMode(false);
   }
 
   async function save() {
@@ -172,20 +200,40 @@ export default function TransactionsPage({
   }
 
   async function saveMatch() {
-    const target = candidateByKey.get(selectedTargetKey);
-    if (!matchTx || !target) return;
+    if (!matchTx) return;
     try {
-      await matchTransactionToManualItem(uid, matchTx, target, {
-        matchedBy: "manual",
-        createRule,
-        rule: createRule
-          ? {
-              ruleType,
-              pattern: rulePattern.trim(),
-              autoApply: ruleAutoApply,
-            }
-          : null,
-      });
+      if (createItemMode) {
+        const created = await createManualItem(uid, {
+          ...createItemForm,
+          monthId: selectedMonth,
+          amount: Math.abs(safeNumber(createItemForm.amount, 0)),
+        });
+        await matchTransactionToManualItem(uid, matchTx, created, {
+          matchedBy: "manual",
+          createRule,
+          rule: createRule
+            ? {
+                ruleType,
+                pattern: rulePattern.trim(),
+                autoApply: ruleAutoApply,
+              }
+            : null,
+        });
+      } else {
+        const target = candidateByKey.get(selectedTargetKey);
+        if (!target) return;
+        await matchTransactionToManualItem(uid, matchTx, target, {
+          matchedBy: "manual",
+          createRule,
+          rule: createRule
+            ? {
+                ruleType,
+                pattern: rulePattern.trim(),
+                autoApply: ruleAutoApply,
+              }
+            : null,
+        });
+      }
       onToast("Transaction matched.");
       closeMatch();
     } catch (error) {
@@ -239,6 +287,17 @@ export default function TransactionsPage({
     }
   }
 
+  async function clearRules() {
+    if (!window.confirm("Clear all matching rules? This will not delete transactions.")) return;
+    try {
+      const count = await clearAllMatchingRules(uid);
+      onToast(count ? `Cleared ${count} matching rule${count === 1 ? "" : "s"}.` : "No matching rules to clear.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to clear matching rules.", "error");
+    }
+  }
+
   return (
     <div className="page">
       <section className="dashboard-hero pageHero heroActivity">
@@ -252,6 +311,7 @@ export default function TransactionsPage({
           </div>
           <div className="pageActions">
             <button type="button" onClick={runRules}><Settings size={16} /> Apply Rules</button>
+            <button type="button" onClick={clearRules}>Clear Rules</button>
             <button type="button" className="primary" onClick={startAdd}><Plus size={16} /> Add Transaction</button>
           </div>
         </div>
@@ -300,10 +360,10 @@ export default function TransactionsPage({
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {visibleRows.length === 0 ? (
               <tr><td colSpan={8} className="muted">No transactions for this filter.</td></tr>
             ) : null}
-            {rows.map((t) => {
+            {visibleRows.map((t) => {
               const suggestions = (t.source || "") === "plaid" && t.matchStatus !== "matched"
                 ? getTransactionMatchSuggestions(t, manualCandidates, matchingRules, 3)
                 : [];
@@ -331,7 +391,7 @@ export default function TransactionsPage({
                     ) : null}
                   </td>
                   <td>{formatCategoryLabel(getEffectiveTransactionCategory(t))}</td>
-                  <td className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
+                  <td className={safeNumber(t.amount, 0) < 0 ? "value-negative" : "value-positive"}>
                     {formatCurrency(t.amount, cfg.currency)}
                   </td>
                   <td>
@@ -339,7 +399,7 @@ export default function TransactionsPage({
                     {t.institutionName ? <div className="muted">{t.institutionName}</div> : null}
                   </td>
                   <td>
-                    <span className={`pill ${t.matchStatus === "matched" ? "" : t.matchStatus === "ignored" ? "warn" : ""}`}>
+                    <span className={`status-pill ${t.matchStatus === "matched" ? "status-success" : t.matchStatus === "ignored" ? "status-warning" : ""}`}>
                       {matchStatusLabel(t)}
                     </span>
                     {matchedLabel ? (
@@ -348,25 +408,30 @@ export default function TransactionsPage({
                         {matchedByLabel ? <div className="muted">{matchedByLabel}</div> : null}
                       </div>
                     ) : null}
-                    {t.linkedManualType === "bill" ? <div className="muted">Suggested follow-up: mark bill paid</div> : null}
-                    {t.linkedManualType === "income" ? <div className="muted">Suggested follow-up: mark income received</div> : null}
                   </td>
                   <td>{t.notes || "-"}</td>
-                  <td className="row">
-                    {(t.source || "") === "plaid" && t.matchStatus !== "matched" ? (
-                      <button type="button" onClick={() => startMatch(t)}>Match</button>
-                    ) : null}
-                    {(t.source || "") === "plaid" && t.matchStatus !== "ignored" && t.matchStatus !== "matched" ? (
-                      <button type="button" onClick={() => ignoreTransaction(t)}>Ignore</button>
-                    ) : null}
-                    {(t.source || "") === "plaid" && t.matchStatus === "matched" ? (
-                      <button type="button" onClick={() => unmatchTransaction(t)}>Unmatch</button>
-                    ) : null}
-                    {(t.source || "") === "plaid" && t.matchStatus === "ignored" ? (
-                      <button type="button" onClick={() => unmatchTransaction(t)}>Restore</button>
-                    ) : null}
-                    <button type="button" onClick={() => startEdit(t)}>Edit</button>
-                    <button type="button" onClick={() => remove(t.id)}>Delete</button>
+                  <td>
+                    <ActionMenu
+                      items={[
+                        {
+                          label: "Match",
+                          hidden: (t.source || "") !== "plaid" || t.matchStatus === "matched",
+                          onClick: () => startMatch(t),
+                        },
+                        {
+                          label: "Ignore",
+                          hidden: (t.source || "") !== "plaid" || t.matchStatus === "ignored" || t.matchStatus === "matched",
+                          onClick: () => ignoreTransaction(t),
+                        },
+                        {
+                          label: t.matchStatus === "matched" ? "Unmatch" : "Restore",
+                          hidden: (t.source || "") !== "plaid" || (t.matchStatus !== "matched" && t.matchStatus !== "ignored"),
+                          onClick: () => unmatchTransaction(t),
+                        },
+                        { label: "Edit", onClick: () => startEdit(t) },
+                        { label: "Delete", tone: "danger", onClick: () => remove(t.id) },
+                      ]}
+                    />
                   </td>
                 </tr>
               );
@@ -376,8 +441,8 @@ export default function TransactionsPage({
       </div>
 
       <div className="mobileDataList">
-        {rows.length === 0 ? <div className="data-panel muted">No transactions for this filter.</div> : null}
-        {rows.map((t) => {
+        {visibleRows.length === 0 ? <div className="data-panel muted">No transactions for this filter.</div> : null}
+        {visibleRows.map((t) => {
           const suggestions = (t.source || "") === "plaid" && t.matchStatus !== "matched"
             ? getTransactionMatchSuggestions(t, manualCandidates, matchingRules, 3)
             : [];
@@ -387,7 +452,7 @@ export default function TransactionsPage({
             <article key={`mobile-${t.id}`} className="data-panel dataItem">
               <div className="dataItemHeader">
                 <h3 className="dataItemTitle">{t.merchantName || t.payee}</h3>
-                <span className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
+                <span className={safeNumber(t.amount, 0) < 0 ? "value-negative" : "value-positive"}>
                   {formatCurrency(t.amount, cfg.currency)}
                 </span>
               </div>
@@ -417,24 +482,44 @@ export default function TransactionsPage({
                 </div>
               ) : null}
               <div className="row dataActions">
-                {(t.source || "") === "plaid" && t.matchStatus !== "matched" ? (
-                  <button type="button" onClick={() => startMatch(t)}>Match</button>
-                ) : null}
-                {(t.source || "") === "plaid" && t.matchStatus !== "ignored" && t.matchStatus !== "matched" ? (
-                  <button type="button" onClick={() => ignoreTransaction(t)}>Ignore</button>
-                ) : null}
-                {(t.source || "") === "plaid" && t.matchStatus === "matched" ? (
-                  <button type="button" onClick={() => unmatchTransaction(t)}>Unmatch</button>
-                ) : null}
-                {(t.source || "") === "plaid" && t.matchStatus === "ignored" ? (
-                  <button type="button" onClick={() => unmatchTransaction(t)}>Restore</button>
-                ) : null}
-                <button type="button" onClick={() => startEdit(t)}>Edit</button>
-                <button type="button" onClick={() => remove(t.id)}>Delete</button>
+                <ActionMenu
+                  items={[
+                    {
+                      label: "Match",
+                      hidden: (t.source || "") !== "plaid" || t.matchStatus === "matched",
+                      onClick: () => startMatch(t),
+                    },
+                    {
+                      label: "Ignore",
+                      hidden: (t.source || "") !== "plaid" || t.matchStatus === "ignored" || t.matchStatus === "matched",
+                      onClick: () => ignoreTransaction(t),
+                    },
+                    {
+                      label: t.matchStatus === "matched" ? "Unmatch" : "Restore",
+                      hidden: (t.source || "") !== "plaid" || (t.matchStatus !== "matched" && t.matchStatus !== "ignored"),
+                      onClick: () => unmatchTransaction(t),
+                    },
+                    { label: "Edit", onClick: () => startEdit(t) },
+                    { label: "Delete", tone: "danger", onClick: () => remove(t.id) },
+                  ]}
+                />
               </div>
             </article>
           );
         })}
+      </div>
+
+      <div className="listFooter">
+        <div className="muted">Showing {visibleRows.length} of {rows.length} transactions</div>
+        <label className="fieldGroup compactField inlineSelector">
+          <span>Show</span>
+          <select value={visibleCount} onChange={(e) => setVisibleCount(e.target.value)}>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">All</option>
+          </select>
+        </label>
       </div>
 
       <Modal title={editingId ? "Edit Transaction" : "Add Transaction"} open={open} onClose={() => setOpen(false)}>
@@ -461,40 +546,78 @@ export default function TransactionsPage({
 
       <Modal title="Match Transaction" open={matchOpen} onClose={closeMatch}>
         <div className="formGrid">
-          <label>
-            Manual item
-            <select value={selectedTargetKey} onChange={(e) => setSelectedTargetKey(e.target.value)}>
-              <option value="">Select an item</option>
-              <optgroup label="Bills">
-                {manualCandidates.filter((candidate) => candidate.manualType === "bill").map((candidate) => (
-                  <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
-                    {candidate.label}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Income">
-                {manualCandidates.filter((candidate) => candidate.manualType === "income").map((candidate) => (
-                  <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
-                    {candidate.label}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Loans">
-                {manualCandidates.filter((candidate) => candidate.manualType === "loan").map((candidate) => (
-                  <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
-                    {candidate.label}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Credit Cards">
-                {manualCandidates.filter((candidate) => candidate.manualType === "creditCard").map((candidate) => (
-                  <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
-                    {candidate.label}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={createItemMode} onChange={(e) => setCreateItemMode(e.target.checked)} />
+            Create new item instead of linking to an existing one
           </label>
+          {!createItemMode ? (
+            <label>
+              Manual item
+              <select value={selectedTargetKey} onChange={(e) => setSelectedTargetKey(e.target.value)}>
+                <option value="">Select an item</option>
+                <optgroup label="Bills">
+                  {manualCandidates.filter((candidate) => candidate.manualType === "bill").map((candidate) => (
+                    <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
+                      {candidate.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Income">
+                  {manualCandidates.filter((candidate) => candidate.manualType === "income").map((candidate) => (
+                    <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
+                      {candidate.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Loans">
+                  {manualCandidates.filter((candidate) => candidate.manualType === "loan").map((candidate) => (
+                    <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
+                      {candidate.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Credit Cards">
+                  {manualCandidates.filter((candidate) => candidate.manualType === "creditCard").map((candidate) => (
+                    <option key={encodeTarget(candidate)} value={encodeTarget(candidate)}>
+                      {candidate.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+          ) : (
+            <>
+              <label>
+                New item type
+                <select value={createItemForm.manualType} onChange={(e) => setCreateItemForm((prev) => ({ ...prev, manualType: e.target.value }))}>
+                  <option value="bill">Bill</option>
+                  <option value="income">Income</option>
+                  <option value="loan">Loan</option>
+                  <option value="creditCard">Credit Card</option>
+                </select>
+              </label>
+              <label>
+                Name
+                <input value={createItemForm.name} onChange={(e) => setCreateItemForm((prev) => ({ ...prev, name: e.target.value }))} />
+              </label>
+              <label>
+                Amount
+                <input type="number" value={createItemForm.amount} onChange={(e) => setCreateItemForm((prev) => ({ ...prev, amount: e.target.value }))} />
+              </label>
+              {createItemForm.manualType === "bill" ? (
+                <label>
+                  Due Day
+                  <input type="number" min="1" max="31" value={createItemForm.dueDay} onChange={(e) => setCreateItemForm((prev) => ({ ...prev, dueDay: e.target.value }))} />
+                </label>
+              ) : null}
+              {createItemForm.manualType === "income" ? (
+                <label>
+                  Pay Day
+                  <input type="number" min="1" max="31" value={createItemForm.payDay} onChange={(e) => setCreateItemForm((prev) => ({ ...prev, payDay: e.target.value }))} />
+                </label>
+              ) : null}
+            </>
+          )}
           {matchTx ? (
             <div className="data-panel">
               <strong>{matchTx.merchantName || matchTx.payee}</strong>

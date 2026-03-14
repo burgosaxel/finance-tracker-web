@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import Modal from "../components/Modal";
+import ActionMenu from "../components/ActionMenu";
 import {
   deleteStatementItem,
   deleteTemplate,
@@ -461,42 +462,46 @@ export default function BillsIncomePage({
 
   function renderBillTable(rows, emptyMessage) {
     return (
-      <div className="tableWrap desktopDataTable premiumTableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Merchant</th>
-              <th>Amount</th>
-              <th>Due Date</th>
-              <th>From</th>
-              <th>Status</th>
-              <th>Paid At</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={7} className="muted">{emptyMessage}</td></tr>
-            ) : null}
+      <div className="data-panel billListPanel">
+        {rows.length === 0 ? <div className="muted">{emptyMessage}</div> : null}
+        {rows.length > 0 ? (
+          <div className="row-list">
             {rows.map((b) => (
-              <tr key={b.id}>
-                <td>{b.merchant || b.name}</td>
-                <td>{formatCurrency(b.amount, cfg.currency)}</td>
-                <td>{(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()}</td>
-                <td>{resolveBillFromLabel(b)}</td>
-                <td>{b.status || "unpaid"}</td>
-                <td>{b.paidAt?.toDate ? b.paidAt.toDate().toLocaleString() : "-"}</td>
-                <td className="row">
-                  <button type="button" onClick={() => paid(b)}>
-                    {b.status === "paid" ? "Mark unpaid" : "Mark paid"}
-                  </button>
-                  <button type="button" onClick={() => startBillEdit(b)} disabled={isReadOnly}>Edit</button>
-                  <button type="button" onClick={() => removeBill(b.id)} disabled={isReadOnly}>Delete</button>
-                </td>
-              </tr>
+              <div key={b.id} className="row-list-item billListRow">
+                <div>
+                  <div className="primary">{b.merchant || b.name}</div>
+                  <div className="secondary">
+                    Due {(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()} | From {resolveBillFromLabel(b)}
+                  </div>
+                  <div className="secondary">
+                    Status: <span className={b.status === "paid" ? "value-neutral" : "value-negative"}>{b.status || "unpaid"}</span>
+                    {b.paidAt?.toDate ? ` | Paid ${b.paidAt.toDate().toLocaleString()}` : ""}
+                  </div>
+                </div>
+                <div className={`amount ${b.status === "paid" ? "" : "negative"}`}>{formatCurrency(b.amount, cfg.currency)}</div>
+                <ActionMenu
+                  items={[
+                    {
+                      label: b.status === "paid" ? "Mark unpaid" : "Mark paid",
+                      onClick: () => paid(b),
+                    },
+                    {
+                      label: "Edit",
+                      disabled: isReadOnly,
+                      onClick: () => startBillEdit(b),
+                    },
+                    {
+                      label: "Delete",
+                      tone: "danger",
+                      disabled: isReadOnly,
+                      onClick: () => removeBill(b.id),
+                    },
+                  ]}
+                />
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : null}
       </div>
     );
   }

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "../components/Modal";
+import ActionMenu from "../components/ActionMenu";
 import {
+  createManualItem,
   deleteEntity,
   exportAllUserData,
   importAllUserData,
@@ -45,6 +47,7 @@ export default function SettingsPage({
 }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [localSettings, setLocalSettings] = useState(cfg);
+  const [preferencesCollapsed, setPreferencesCollapsed] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
   const [accountForm, setAccountForm] = useState(EMPTY_ACCOUNT);
   const [editingId, setEditingId] = useState(null);
@@ -53,6 +56,12 @@ export default function SettingsPage({
   const [recurringLinkOpen, setRecurringLinkOpen] = useState(false);
   const [selectedRecurring, setSelectedRecurring] = useState(null);
   const [selectedRecurringTarget, setSelectedRecurringTarget] = useState("");
+  const [recurringVisibleCount, setRecurringVisibleCount] = useState("20");
+  const [createRecurringItemMode, setCreateRecurringItemMode] = useState(false);
+  const [createRecurringItemForm, setCreateRecurringItemForm] = useState(EMPTY_CREATE_ITEM);
+  const [accountPlaidLinkOpen, setAccountPlaidLinkOpen] = useState(false);
+  const [selectedManualAccount, setSelectedManualAccount] = useState(null);
+  const [selectedPlaidAccountId, setSelectedPlaidAccountId] = useState("");
   const fileRef = useRef(null);
 
   const recurringCandidates = useMemo(
@@ -126,6 +135,27 @@ export default function SettingsPage({
     }
   }
 
+  async function saveManualAccountPlaidLink() {
+    if (!selectedManualAccount) return;
+    try {
+      await upsertEntity(
+        uid,
+        "accounts",
+        {
+          ...selectedManualAccount,
+          plaidAccountId: selectedPlaidAccountId || "",
+        },
+        selectedManualAccount.id
+      );
+      onToast(selectedPlaidAccountId ? "Plaid account linked." : "Plaid account link removed.");
+      setAccountPlaidLinkOpen(false);
+      setSelectedManualAccount(null);
+      setSelectedPlaidAccountId("");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to update Plaid account link.", "error");
+    }
+  }
   async function removeAccount(id) {
     try {
       await deleteEntity(uid, "accounts", id);
@@ -259,6 +289,19 @@ export default function SettingsPage({
     }
   }
 
+  const visibleRecurringPayments = useMemo(() => {
+    const scoped = (recurringPayments || [])
+      .filter((item) => item.status !== "ignored")
+      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+    if (recurringVisibleCount === "all") return scoped;
+    return scoped.slice(0, Number(recurringVisibleCount));
+  }, [recurringPayments, recurringVisibleCount]);
+
+  function openAccountPlaidLink(account) {
+    setSelectedManualAccount(account);
+    setSelectedPlaidAccountId(account.plaidAccountId || "");
+    setAccountPlaidLinkOpen(true);
+  }
   function openRecurringLink(recurringItem) {
     setSelectedRecurring(recurringItem);
     setSelectedRecurringTarget(
@@ -266,6 +309,14 @@ export default function SettingsPage({
         ? [recurringItem.linkedManualType, recurringItem.linkedManualId, recurringItem.linkedManualMonthId || ""].join("|")
         : ""
     );
+    setCreateRecurringItemMode(false);
+    setCreateRecurringItemForm({
+      manualType: recurringItem?.typeGuess === "income" ? "income" : "bill",
+      name: recurringItem?.displayName || recurringItem?.merchantName || recurringItem?.normalizedMerchant || "",
+      amount: Math.abs(safeNumber(recurringItem?.averageAmount, 0)),
+      dueDay: 1,
+      payDay: 1,
+    });
     setRecurringLinkOpen(true);
   }
 
@@ -273,6 +324,7 @@ export default function SettingsPage({
     setRecurringLinkOpen(false);
     setSelectedRecurring(null);
     setSelectedRecurringTarget("");
+    setCreateRecurringItemMode(false);
   }
 
   async function confirmRecurring(recurringItem) {
@@ -345,50 +397,56 @@ export default function SettingsPage({
       </section>
 
       <section className="data-panel section moduleSettings">
-        <h3>App Preferences</h3>
-        <div className="formGrid">
-          <label>
-            Utilization Threshold (%)
-            <input
-              type="number"
-              value={localSettings.utilizationThreshold}
-              onChange={(e) => setLocalSettings({ ...localSettings, utilizationThreshold: e.target.value })}
-            />
-          </label>
-          <label>
-            Currency
-            <select
-              value={localSettings.currency}
-              onChange={(e) => setLocalSettings({ ...localSettings, currency: e.target.value })}
-            >
-              <option value="USD">USD</option>
-            </select>
-          </label>
-          <label>
-            Month Start Day
-            <input
-              type="number"
-              min="1"
-              max="31"
-              value={localSettings.monthStartDay}
-              onChange={(e) => setLocalSettings({ ...localSettings, monthStartDay: e.target.value })}
-            />
-          </label>
-          <label>
-            Recommended Credit Card Payment Rate
-            <input
-              type="number"
-              step="0.01"
-              value={localSettings.recommendedPaymentRate}
-              onChange={(e) => setLocalSettings({ ...localSettings, recommendedPaymentRate: e.target.value })}
-            />
-          </label>
-        </div>
-        <div className="row" style={{ marginTop: 12 }}>
-          <button type="button" className="primary" onClick={persistSettings}>Save Settings</button>
-        </div>
+        <button type="button" className="collapseToggle" onClick={() => setPreferencesCollapsed((value) => !value)}>
+          <span>App Preferences</span>
+          <span className="muted">{preferencesCollapsed ? ">" : "v"}</span>
+        </button>
+        {!preferencesCollapsed ? (
+          <>
+            <div className="formGrid">
+              <label>
+                Utilization Threshold (%)
+                <input
+                  type="number"
+                  value={localSettings.utilizationThreshold}
+                  onChange={(e) => setLocalSettings({ ...localSettings, utilizationThreshold: e.target.value })}
+                />
+              </label>
+              <label>
+                Currency
+                <select
+                  value={localSettings.currency}
+                  onChange={(e) => setLocalSettings({ ...localSettings, currency: e.target.value })}
+                >
+                  <option value="USD">USD</option>
+                </select>
+              </label>
+              <label>
+                Month Start Day
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={localSettings.monthStartDay}
+                  onChange={(e) => setLocalSettings({ ...localSettings, monthStartDay: e.target.value })}
+                />
+              </label>
+              <label>
+                Recommended Credit Card Payment Rate
+                <input
+                  type="number"
+                  step="0.01"
+                  value={localSettings.recommendedPaymentRate}
+                  onChange={(e) => setLocalSettings({ ...localSettings, recommendedPaymentRate: e.target.value })}
+                />
+              </label>
+            </div>
+            <div className="row" style={{ marginTop: 12 }}>
+              <button type="button" className="primary" onClick={persistSettings}>Save Settings</button>
+            </div>
+          </>
+        ) : null}
       </section>
-
       <section className="data-panel section moduleConnections">
         <div className="row">
           <div>
@@ -517,7 +575,7 @@ export default function SettingsPage({
                       <div className="muted">Confidence {Math.round((item.confidence || 0) * 100)}%</div>
                     </td>
                     <td>{item.cadenceGuess || "unknown"}</td>
-                    <td>{formatCurrency(item.averageAmount, localSettings.currency || "USD")}</td>
+                    <td className={item.typeGuess === "income" ? "value-positive" : "value-negative"}>{formatCurrency(item.averageAmount, localSettings.currency || "USD")}</td>
                     <td>{item.nextExpectedDate?.toDate ? item.nextExpectedDate.toDate().toLocaleDateString() : "-"}</td>
                     <td>{item.typeGuess || "unknown"}</td>
                     <td>{item.status || "suggested"}</td>
@@ -557,7 +615,7 @@ export default function SettingsPage({
             </thead>
             <tbody>
               {accounts.length === 0 ? (
-                <tr><td colSpan={4} className="muted">No accounts yet.</td></tr>
+                <tr><td colSpan={5} className="muted">No accounts yet.</td></tr>
               ) : null}
               {accounts.map((a) => (
                 <tr key={a.id}>
