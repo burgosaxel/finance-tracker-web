@@ -3429,3 +3429,14 @@ button:disabled {
   min-width: 0;
   max-width: none;
 }
+
+/* Signals pills match the wider dashboard row behavior */
+.signals-card .row-list-item {
+  grid-template-columns: minmax(0, 1.5fr) 110px 100px;
+}
+
+.signals-card .row-list-item .primary {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
