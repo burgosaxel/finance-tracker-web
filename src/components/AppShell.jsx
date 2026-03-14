@@ -52,12 +52,10 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
         <div>
           <div className="sidebarBrand sidebar-brand">
             <img src={brandLogo} alt="BudgetCommand" className="brandLogo sidebar-logo" />
-            <div className="sidebarBrandCopy sidebar-brand-copy">
-              <div className="sidebarEyebrow sidebar-kicker">Premium Finance Workspace</div>
-              <div className="sidebarTitle sidebar-title">BudgetCommand</div>
-              <div className="sidebarSubtitle sidebar-subtitle">
-                Financial command center for cash, debt, bills, sync, and recurring insight.
-              </div>
+            <div className="sidebarEyebrow sidebar-kicker">Premium Finance Workspace</div>
+            <div className="sidebarTitle sidebar-title">BudgetCommand</div>
+            <div className="sidebarSubtitle sidebar-subtitle">
+              Financial command center for cash, debt, bills, sync, and recurring insight.
             </div>
           </div>
 

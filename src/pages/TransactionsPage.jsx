@@ -438,6 +438,18 @@ export default function TransactionsPage({
             })}
           </tbody>
         </table>
+        <div className="listFooter cardSectionFooter transactionListFooter desktopOnly">
+          <div className="muted">Showing {visibleRows.length} of {rows.length} transactions</div>
+          <label className="fieldGroup compactField inlineSelector">
+            <span>Show</span>
+            <select value={visibleCount} onChange={(e) => setVisibleCount(e.target.value)}>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="all">All</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="mobileDataList">
@@ -509,7 +521,7 @@ export default function TransactionsPage({
         })}
       </div>
 
-      <div className="listFooter">
+      <div className="listFooter cardSectionFooter mobileOnly transactionListFooter">
         <div className="muted">Showing {visibleRows.length} of {rows.length} transactions</div>
         <label className="fieldGroup compactField inlineSelector">
           <span>Show</span>

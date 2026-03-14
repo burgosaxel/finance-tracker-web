@@ -159,9 +159,6 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
                 <option value="dueDate">Due date</option>
               </select>
             </label>
-            <button type="button" className="button-secondary secondary" onClick={() => setSortDirection((value) => (value === "asc" ? "desc" : "asc"))}>
-              {SORT_META[sortBy][sortDirection]}
-            </button>
             <button type="button" className="primary" onClick={startAdd}>
               Add Loan
             </button>

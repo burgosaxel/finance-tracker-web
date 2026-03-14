@@ -357,10 +357,19 @@ export default function SettingsPage({
 
   async function saveRecurringLink() {
     if (!selectedRecurring) return;
-    const target = recurringCandidateByKey.get(selectedRecurringTarget);
-    if (!target) return;
     try {
-      await linkRecurringPayment(uid, selectedRecurring, target);
+      if (createRecurringItemMode) {
+        const created = await createManualItem(uid, {
+          ...createRecurringItemForm,
+          monthId: selectedMonth,
+          amount: Math.abs(safeNumber(createRecurringItemForm.amount, 0)),
+        });
+        await linkRecurringPayment(uid, selectedRecurring, created);
+      } else {
+        const target = recurringCandidateByKey.get(selectedRecurringTarget);
+        if (!target) return;
+        await linkRecurringPayment(uid, selectedRecurring, target);
+      }
       onToast("Recurring item linked.");
       closeRecurringLink();
     } catch (error) {
@@ -573,66 +582,42 @@ export default function SettingsPage({
               </tr>
             </thead>
             <tbody>
-              {(recurringPayments || [])
-                .filter((item) => item.status !== "ignored")
-                .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-                .map((item) => (
-                  <tr key={item.id || item.recurringId}>
-                    <td>
-                      {item.displayName || item.merchantName || item.normalizedMerchant}
-                      <div className="muted">Confidence {Math.round((item.confidence || 0) * 100)}%</div>
-                    </td>
-                    <td>{item.cadenceGuess || "unknown"}</td>
-                    <td className={item.typeGuess === "income" ? "value-positive" : "value-negative"}>{formatCurrency(item.averageAmount, localSettings.currency || "USD")}</td>
-                    <td>{item.nextExpectedDate?.toDate ? item.nextExpectedDate.toDate().toLocaleDateString() : "-"}</td>
-                    <td>{item.typeGuess || "unknown"}</td>
-                    <td>{item.status || "suggested"}</td>
-                    <td>{recurringManualLabel(item) || "-"}</td>
-                    <td className="row">
-                      <button type="button" onClick={() => confirmRecurring(item)}>Confirm</button>
-                      <button type="button" onClick={() => ignoreRecurring(item)}>Ignore</button>
-                      <button type="button" onClick={() => openRecurringLink(item)}>
-                        {item.linkedManualId ? "Change link" : "Link"}
-                      </button>
-                      {item.linkedManualId ? (
-                        <button type="button" onClick={() => removeRecurringLink(item)}>Unlink</button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="data-panel section moduleAccounts">
-        <div className="row">
-          <h3>Accounts</h3>
-          <div className="spacer" />
-          <button type="button" className="primary" onClick={startAddAccount}>Add Account</button>
-        </div>
-        <div className="tableWrap premiumTableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Balance</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
               {accounts.length === 0 ? (
                 <tr><td colSpan={5} className="muted">No accounts yet.</td></tr>
               ) : null}
               {accounts.map((a) => (
                 <tr key={a.id}>
-                  <td>{a.name}</td>
+                  <td>
+                    {a.name}
+                    {a.plaidAccountId ? (
+                      <div className="muted">
+                        Linked to {linkedAccounts.find((account) => account.id === a.plaidAccountId || account.accountId === a.plaidAccountId)?.name || "Plaid account"}
+                      </div>
+                    ) : null}
+                  </td>
                   <td>{a.type}</td>
-                  <td>{a.balance}</td>
-                  <td className="row">
-                    <button type="button" onClick={() => startEditAccount(a)}>Edit</button>
-                    <button type="button" onClick={() => removeAccount(a.id)}>Delete</button>
+                  <td>{formatCurrency(a.balance, localSettings.currency || "USD")}</td>
+                  <td>
+                    <ActionMenu
+                      items={[
+                        { label: "Edit", onClick: () => startEditAccount(a) },
+                        { label: a.plaidAccountId ? "Change Linked Plaid Account" : "Link Plaid Account", onClick: () => openAccountPlaidLink(a) },
+                        {
+                          label: "Unlink Plaid Account",
+                          hidden: !a.plaidAccountId,
+                          onClick: async () => {
+                            try {
+                              await upsertEntity(uid, "accounts", { ...a, plaidAccountId: "" }, a.id);
+                              onToast("Plaid account link removed.");
+                            } catch (error) {
+                              onError?.(error?.message || String(error));
+                              onToast("Failed to remove Plaid account link.", "error");
+                            }
+                          },
+                        },
+                        { label: "Delete", tone: "danger", onClick: () => removeAccount(a.id) },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
@@ -686,36 +671,74 @@ export default function SettingsPage({
 
       <Modal title="Link Recurring Item" open={recurringLinkOpen} onClose={closeRecurringLink}>
         <div className="formGrid">
-          <label>
-            Manual item
-            <select value={selectedRecurringTarget} onChange={(e) => setSelectedRecurringTarget(e.target.value)}>
-              <option value="">Select an item</option>
-              <optgroup label="Bills">
-                {recurringCandidates.filter((candidate) => candidate.manualType === "bill").map((candidate) => {
-                  const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
-                  return <option key={key} value={key}>{candidate.label}</option>;
-                })}
-              </optgroup>
-              <optgroup label="Income">
-                {recurringCandidates.filter((candidate) => candidate.manualType === "income").map((candidate) => {
-                  const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
-                  return <option key={key} value={key}>{candidate.label}</option>;
-                })}
-              </optgroup>
-              <optgroup label="Loans">
-                {recurringCandidates.filter((candidate) => candidate.manualType === "loan").map((candidate) => {
-                  const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
-                  return <option key={key} value={key}>{candidate.label}</option>;
-                })}
-              </optgroup>
-              <optgroup label="Credit Cards">
-                {recurringCandidates.filter((candidate) => candidate.manualType === "creditCard").map((candidate) => {
-                  const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
-                  return <option key={key} value={key}>{candidate.label}</option>;
-                })}
-              </optgroup>
-            </select>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={createRecurringItemMode} onChange={(e) => setCreateRecurringItemMode(e.target.checked)} />
+            Create new manual item instead of linking to an existing one
           </label>
+          {!createRecurringItemMode ? (
+            <label>
+              Manual item
+              <select value={selectedRecurringTarget} onChange={(e) => setSelectedRecurringTarget(e.target.value)}>
+                <option value="">Select an item</option>
+                <optgroup label="Bills">
+                  {recurringCandidates.filter((candidate) => candidate.manualType === "bill").map((candidate) => {
+                    const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
+                    return <option key={key} value={key}>{candidate.label}</option>;
+                  })}
+                </optgroup>
+                <optgroup label="Income">
+                  {recurringCandidates.filter((candidate) => candidate.manualType === "income").map((candidate) => {
+                    const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
+                    return <option key={key} value={key}>{candidate.label}</option>;
+                  })}
+                </optgroup>
+                <optgroup label="Loans">
+                  {recurringCandidates.filter((candidate) => candidate.manualType === "loan").map((candidate) => {
+                    const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
+                    return <option key={key} value={key}>{candidate.label}</option>;
+                  })}
+                </optgroup>
+                <optgroup label="Credit Cards">
+                  {recurringCandidates.filter((candidate) => candidate.manualType === "creditCard").map((candidate) => {
+                    const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
+                    return <option key={key} value={key}>{candidate.label}</option>;
+                  })}
+                </optgroup>
+              </select>
+            </label>
+          ) : (
+            <>
+              <label>
+                Type
+                <select value={createRecurringItemForm.manualType} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, manualType: e.target.value })}>
+                  <option value="bill">Bill</option>
+                  <option value="income">Income</option>
+                  <option value="loan">Loan</option>
+                  <option value="creditCard">Credit Card</option>
+                  <option value="account">Account</option>
+                </select>
+              </label>
+              <label>
+                Name
+                <input value={createRecurringItemForm.name} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, name: e.target.value })} />
+              </label>
+              <label>
+                Amount
+                <input type="number" value={createRecurringItemForm.amount} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, amount: e.target.value })} />
+              </label>
+              {createRecurringItemForm.manualType === "income" ? (
+                <label>
+                  Pay Day
+                  <input type="number" min="1" max="31" value={createRecurringItemForm.payDay} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, payDay: e.target.value })} />
+                </label>
+              ) : (
+                <label>
+                  Due Day
+                  <input type="number" min="1" max="31" value={createRecurringItemForm.dueDay} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, dueDay: e.target.value })} />
+                </label>
+              )}
+            </>
+          )}
           {selectedRecurring ? (
             <div className="data-panel">
               <strong>{selectedRecurring.displayName || selectedRecurring.merchantName || selectedRecurring.normalizedMerchant}</strong>
@@ -728,6 +751,30 @@ export default function SettingsPage({
         <div className="row" style={{ marginTop: 12 }}>
           <div className="spacer" />
           <button type="button" className="primary" onClick={saveRecurringLink}>Save Link</button>
+        </div>
+      </Modal>
+
+      <Modal title="Link Plaid Account" open={accountPlaidLinkOpen} onClose={() => { setAccountPlaidLinkOpen(false); setSelectedManualAccount(null); setSelectedPlaidAccountId(""); }}>
+        <div className="formGrid">
+          <label>
+            Manual account
+            <input value={selectedManualAccount?.name || ""} disabled />
+          </label>
+          <label>
+            Plaid account
+            <select value={selectedPlaidAccountId} onChange={(e) => setSelectedPlaidAccountId(e.target.value)}>
+              <option value="">No linked Plaid account</option>
+              {linkedAccounts.map((account) => (
+                <option key={account.id || account.accountId} value={account.id || account.accountId}>
+                  {(account.institutionName ? account.institutionName + " - " : "") + account.name + (account.mask ? " ****" + account.mask : "")}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="row" style={{ marginTop: 12 }}>
+          <div className="spacer" />
+          <button type="button" className="primary" onClick={saveManualAccountPlaidLink}>Save Link</button>
         </div>
       </Modal>
     </div>

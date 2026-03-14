@@ -155,9 +155,6 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
                 <option value="apr">APR</option>
               </select>
             </label>
-            <button type="button" className="button-secondary secondary" onClick={() => setSortDirection((value) => (value === "asc" ? "desc" : "asc"))}>
-              {SORT_META[sortBy][sortDirection]}
-            </button>
             <button type="button" className="primary" onClick={startAdd}>Add Card</button>
           </div>
         </div>
