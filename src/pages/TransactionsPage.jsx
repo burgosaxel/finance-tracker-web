@@ -39,6 +39,12 @@ function matchStatusLabel(transaction) {
   return "Unmatched";
 }
 
+function matchSourceLabel(transaction) {
+  if (transaction?.matchedBy === "rule") return "Rule match";
+  if (transaction?.matchedBy === "manual") return "Manual match";
+  return "";
+}
+
 export default function TransactionsPage({
   uid,
   transactions,
@@ -288,10 +294,11 @@ export default function TransactionsPage({
               <tr><td colSpan={8} className="muted">No transactions for this filter.</td></tr>
             ) : null}
             {rows.map((t) => {
-              const suggestions = (t.source || "") === "plaid"
+              const suggestions = (t.source || "") === "plaid" && t.matchStatus !== "matched"
                 ? getTransactionMatchSuggestions(t, manualCandidates, matchingRules, 3)
                 : [];
               const matchedLabel = getMatchedManualLabel(t, manualCandidates);
+              const matchedByLabel = matchSourceLabel(t);
               return (
                 <tr key={t.id}>
                   <td>{t.date || "-"}</td>
@@ -325,7 +332,12 @@ export default function TransactionsPage({
                     <span className={`pill ${t.matchStatus === "matched" ? "" : t.matchStatus === "ignored" ? "warn" : ""}`}>
                       {matchStatusLabel(t)}
                     </span>
-                    {matchedLabel ? <div className="muted">{matchedLabel}</div> : null}
+                    {matchedLabel ? (
+                      <div className="matchConfirmed">
+                        <strong>Matched to: {matchedLabel}</strong>
+                        {matchedByLabel ? <div className="muted">{matchedByLabel}</div> : null}
+                      </div>
+                    ) : null}
                     {t.linkedManualType === "bill" ? <div className="muted">Suggested follow-up: mark bill paid</div> : null}
                     {t.linkedManualType === "income" ? <div className="muted">Suggested follow-up: mark income received</div> : null}
                   </td>
@@ -356,10 +368,11 @@ export default function TransactionsPage({
       <div className="mobileDataList">
         {rows.length === 0 ? <div className="card section muted">No transactions for this filter.</div> : null}
         {rows.map((t) => {
-          const suggestions = (t.source || "") === "plaid"
+          const suggestions = (t.source || "") === "plaid" && t.matchStatus !== "matched"
             ? getTransactionMatchSuggestions(t, manualCandidates, matchingRules, 3)
             : [];
           const matchedLabel = getMatchedManualLabel(t, manualCandidates);
+          const matchedByLabel = matchSourceLabel(t);
           return (
             <article key={`mobile-${t.id}`} className="card section dataItem">
               <div className="dataItemHeader">
@@ -376,6 +389,7 @@ export default function TransactionsPage({
                 <div className="dataRow"><span className="dataLabel">Source</span><span className="dataValue">{t.source || "manual"}</span></div>
                 <div className="dataRow"><span className="dataLabel">Status</span><span className="dataValue">{matchStatusLabel(t)}</span></div>
                 <div className="dataRow"><span className="dataLabel">Matched To</span><span className="dataValue">{matchedLabel || "-"}</span></div>
+                <div className="dataRow"><span className="dataLabel">Matched By</span><span className="dataValue">{matchedByLabel || "-"}</span></div>
                 <div className="dataRow"><span className="dataLabel">Notes</span><span className="dataValue">{t.notes || "-"}</span></div>
               </div>
               {suggestions.length ? (

@@ -549,6 +549,15 @@ tfoot td {
   background: var(--surface-alt);
 }
 
+.matchConfirmed {
+  margin-top: 6px;
+}
+
+.matchConfirmed strong {
+  display: block;
+  color: var(--text-primary);
+}
+
 .cleanList {
   list-style: none;
   padding: 0;
