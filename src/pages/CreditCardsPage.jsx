@@ -14,12 +14,26 @@ const EMPTY_CARD = {
   dueDay: "",
 };
 
-const SORT_META = {
-  name: { asc: "A -> Z", desc: "Z -> A" },
-  utilization: { asc: "Low -> High", desc: "High -> Low" },
-  balance: { asc: "Low -> High", desc: "High -> Low" },
-  apr: { asc: "Low -> High", desc: "High -> Low" },
+const SORT_DEFAULTS = {
+  name: "asc",
+  limit: "desc",
+  balance: "desc",
+  available: "desc",
+  utilization: "desc",
+  apr: "desc",
+  minimum: "desc",
 };
+
+function SortHeader({ label, column, sortBy, sortDirection, onSort }) {
+  const active = sortBy === column;
+  const arrow = !active ? "" : sortDirection === "asc" ? "?" : "?";
+  return (
+    <button type="button" className="sortableHeaderButton" onClick={() => onSort(column)}>
+      <span>{label}</span>
+      <span className="sortIndicator" aria-hidden="true">{arrow}</span>
+    </button>
+  );
+}
 
 export default function CreditCardsPage({ uid, cards, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
@@ -51,8 +65,20 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
         const result = String(a.name || "").localeCompare(String(b.name || ""));
         return sortDirection === "asc" ? result : -result;
       }
-      const valueA = sortBy === "utilization" ? a.utilization : sortBy === "balance" ? a.balance : a.apr;
-      const valueB = sortBy === "utilization" ? b.utilization : sortBy === "balance" ? b.balance : b.apr;
+      const valueA =
+        sortBy === "limit" ? a.limit :
+        sortBy === "balance" ? a.balance :
+        sortBy === "available" ? a.available :
+        sortBy === "utilization" ? a.utilization :
+        sortBy === "apr" ? a.apr :
+        a.minimumPayment;
+      const valueB =
+        sortBy === "limit" ? b.limit :
+        sortBy === "balance" ? b.balance :
+        sortBy === "available" ? b.available :
+        sortBy === "utilization" ? b.utilization :
+        sortBy === "apr" ? b.apr :
+        b.minimumPayment;
       return sortDirection === "asc" ? valueA - valueB : valueB - valueA;
     });
     return sorted;
@@ -70,13 +96,13 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
     };
   }, [rows]);
 
-  function changeSort(nextSortBy) {
-    if (nextSortBy === sortBy) {
+  function handleSort(column) {
+    if (column === sortBy) {
       setSortDirection((value) => (value === "asc" ? "desc" : "asc"));
       return;
     }
-    setSortBy(nextSortBy);
-    setSortDirection(nextSortBy === "name" ? "asc" : "desc");
+    setSortBy(column);
+    setSortDirection(SORT_DEFAULTS[column] || "desc");
   }
 
   function startAdd() {
@@ -146,15 +172,6 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
             </p>
           </div>
           <div className="pageActions">
-            <label className="fieldGroup compactField">
-              <span>Sort</span>
-              <select value={sortBy} onChange={(e) => changeSort(e.target.value)}>
-                <option value="name">Name</option>
-                <option value="utilization">Utilization</option>
-                <option value="balance">Balance</option>
-                <option value="apr">APR</option>
-              </select>
-            </label>
             <button type="button" className="primary" onClick={startAdd}>Add Card</button>
           </div>
         </div>
@@ -170,66 +187,64 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
         <div className="sectionHeader">
           <div>
             <h3>Card portfolio</h3>
-            <div className="muted compactSubtext">Sort by name, utilization, balance, or APR and toggle direction as needed.</div>
+            <div className="muted compactSubtext">Sort directly from the table headers without a separate sort control.</div>
           </div>
         </div>
         <div className="tableWrap card desktopDataTable premiumTableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Issuer</th>
-              <th>Limit</th>
-              <th>Balance</th>
-              <th>Available</th>
-              <th>Utilization</th>
-              <th>APR</th>
-              <th>Minimum</th>
-              <th>Recommended</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={10} className="muted">No credit cards yet.</td></tr>
-            ) : null}
-            {rows.map((card) => (
-              <tr key={card.id}>
-                <td>{card.name}</td>
-                <td>{card.issuer || "-"}</td>
-                <td>{formatCurrency(card.limit, cfg.currency)}</td>
-                <td className="value-negative">{formatCurrency(card.balance, cfg.currency)}</td>
-                <td>{formatCurrency(card.available, cfg.currency)}</td>
-                <td>
-                  <span className={card.utilization > cfg.utilizationThreshold ? "pill danger" : "pill"}>
-                    {formatPercent(card.utilization)}
-                  </span>
-                </td>
-                <td>{formatPercent(card.apr)}</td>
-                <td className="value-negative">{formatCurrency(card.minimumPayment, cfg.currency)}</td>
-                <td>{formatCurrency(card.recommendedPayment, cfg.currency)}</td>
-                <td className="row">
-                  <button type="button" onClick={() => startEdit(card)}>Edit</button>
-                  <button type="button" onClick={() => remove(card.id)}>Delete</button>
-                </td>
+          <table>
+            <thead>
+              <tr>
+                <th><SortHeader label="Name" column="name" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th>Issuer</th>
+                <th><SortHeader label="Limit" column="limit" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th><SortHeader label="Balance" column="balance" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th><SortHeader label="Available" column="available" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th><SortHeader label="Utilization" column="utilization" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th><SortHeader label="APR" column="apr" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th><SortHeader label="Minimum" column="minimum" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th>Recommended</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th colSpan={2}>Totals</th>
-              <th>{formatCurrency(totals.totalLimit, cfg.currency)}</th>
-              <th className="value-negative">{formatCurrency(totals.totalBalance, cfg.currency)}</th>
-              <th>{formatCurrency(totals.totalLimit - totals.totalBalance, cfg.currency)}</th>
-              <th>{formatPercent(totals.avgUtil)}</th>
-              <th />
-              <th className="value-negative">{formatCurrency(totals.totalMin, cfg.currency)}</th>
-              <th />
-              <th />
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? <tr><td colSpan={10} className="muted">No credit cards yet.</td></tr> : null}
+              {rows.map((card) => (
+                <tr key={card.id}>
+                  <td>{card.name}</td>
+                  <td>{card.issuer || "-"}</td>
+                  <td>{formatCurrency(card.limit, cfg.currency)}</td>
+                  <td className="value-negative">{formatCurrency(card.balance, cfg.currency)}</td>
+                  <td>{formatCurrency(card.available, cfg.currency)}</td>
+                  <td>
+                    <span className={card.utilization > cfg.utilizationThreshold ? "pill danger" : "pill"}>
+                      {formatPercent(card.utilization)}
+                    </span>
+                  </td>
+                  <td>{formatPercent(card.apr)}</td>
+                  <td className="value-negative">{formatCurrency(card.minimumPayment, cfg.currency)}</td>
+                  <td>{formatCurrency(card.recommendedPayment, cfg.currency)}</td>
+                  <td className="row">
+                    <button type="button" onClick={() => startEdit(card)}>Edit</button>
+                    <button type="button" onClick={() => remove(card.id)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colSpan={2}>Totals</th>
+                <th>{formatCurrency(totals.totalLimit, cfg.currency)}</th>
+                <th className="value-negative">{formatCurrency(totals.totalBalance, cfg.currency)}</th>
+                <th>{formatCurrency(totals.totalLimit - totals.totalBalance, cfg.currency)}</th>
+                <th>{formatPercent(totals.avgUtil)}</th>
+                <th />
+                <th className="value-negative">{formatCurrency(totals.totalMin, cfg.currency)}</th>
+                <th />
+                <th />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </section>
 
       <div className="mobileDataList">
@@ -295,3 +310,4 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
     </div>
   );
 }
+

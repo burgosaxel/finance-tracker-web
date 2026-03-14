@@ -65,6 +65,7 @@ export default function SettingsPage({
   const [selectedRecurring, setSelectedRecurring] = useState(null);
   const [selectedRecurringTarget, setSelectedRecurringTarget] = useState("");
   const [recurringVisibleCount, setRecurringVisibleCount] = useState("20");
+  const [recurringPage, setRecurringPage] = useState(1);
   const [createRecurringItemMode, setCreateRecurringItemMode] = useState(false);
   const [createRecurringItemForm, setCreateRecurringItemForm] = useState(EMPTY_CREATE_ITEM);
   const [accountPlaidLinkOpen, setAccountPlaidLinkOpen] = useState(false);
@@ -297,13 +298,28 @@ export default function SettingsPage({
     }
   }
 
-  const visibleRecurringPayments = useMemo(() => {
-    const scoped = (recurringPayments || [])
+  const filteredRecurringPayments = useMemo(() => {
+    return (recurringPayments || [])
       .filter((item) => item.status !== "ignored")
       .sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-    if (recurringVisibleCount === "all") return scoped;
-    return scoped.slice(0, Number(recurringVisibleCount));
-  }, [recurringPayments, recurringVisibleCount]);
+  }, [recurringPayments]);
+
+  const recurringPageSize = recurringVisibleCount === "all" ? filteredRecurringPayments.length : Number(recurringVisibleCount);
+
+  const recurringPageCount = useMemo(() => {
+    if (recurringVisibleCount === "all") return 1;
+    return Math.max(1, Math.ceil(filteredRecurringPayments.length / Math.max(1, recurringPageSize)));
+  }, [filteredRecurringPayments.length, recurringPageSize, recurringVisibleCount]);
+
+  useEffect(() => {
+    setRecurringPage(1);
+  }, [filteredRecurringPayments, recurringVisibleCount]);
+
+  const visibleRecurringPayments = useMemo(() => {
+    if (recurringVisibleCount === "all") return filteredRecurringPayments;
+    const start = (recurringPage - 1) * recurringPageSize;
+    return filteredRecurringPayments.slice(start, start + recurringPageSize);
+  }, [filteredRecurringPayments, recurringPage, recurringPageSize, recurringVisibleCount]);
 
   function openAccountPlaidLink(account) {
     setSelectedManualAccount(account);
@@ -553,7 +569,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="data-panel section moduleRecurring">
+      <section className="data-panel section moduleRecurring settingsRecurringSection">
         <div className="row">
           <div>
             <h3>Detected Recurring</h3>
@@ -563,11 +579,11 @@ export default function SettingsPage({
           </div>
           <div className="spacer" />
           <div className="data-panel">
-            <strong>Active:</strong> {(recurringPayments || []).filter((item) => item.status !== "ignored" && item.active !== false).length}
+            <strong>Active:</strong> {filteredRecurringPayments.filter((item) => item.active !== false).length}
           </div>
         </div>
-        {recurringPayments.length === 0 ? <div className="muted">No recurring patterns detected yet.</div> : null}
-        <div className="tableWrap premiumTableWrap">
+        {filteredRecurringPayments.length === 0 ? <div className="muted">No recurring patterns detected yet.</div> : null}
+        <div className="tableWrap premiumTableWrap desktopDataTable">
           <table>
             <thead>
               <tr>
@@ -582,40 +598,25 @@ export default function SettingsPage({
               </tr>
             </thead>
             <tbody>
-              {accounts.length === 0 ? (
-                <tr><td colSpan={5} className="muted">No accounts yet.</td></tr>
+              {visibleRecurringPayments.length === 0 ? (
+                <tr><td colSpan={8} className="muted">No recurring items for this filter.</td></tr>
               ) : null}
-              {accounts.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    {a.name}
-                    {a.plaidAccountId ? (
-                      <div className="muted">
-                        Linked to {linkedAccounts.find((account) => account.id === a.plaidAccountId || account.accountId === a.plaidAccountId)?.name || "Plaid account"}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td>{a.type}</td>
-                  <td>{formatCurrency(a.balance, localSettings.currency || "USD")}</td>
+              {visibleRecurringPayments.map((item) => (
+                <tr key={item.id || item.recurringId}>
+                  <td>{item.displayName || item.merchantName || item.normalizedMerchant || "Recurring item"}</td>
+                  <td className="recurringMetaCell">{item.cadenceGuess || "unknown"}</td>
+                  <td>{formatCurrency(item.averageAmount, localSettings.currency || "USD")}</td>
+                  <td>{item.nextExpectedDate || "-"}</td>
+                  <td>{item.typeGuess || "unknown"}</td>
+                  <td>{item.status || "suggested"}</td>
+                  <td>{recurringManualLabel(item) || "-"}</td>
                   <td>
                     <ActionMenu
                       items={[
-                        { label: "Edit", onClick: () => startEditAccount(a) },
-                        { label: a.plaidAccountId ? "Change Linked Plaid Account" : "Link Plaid Account", onClick: () => openAccountPlaidLink(a) },
-                        {
-                          label: "Unlink Plaid Account",
-                          hidden: !a.plaidAccountId,
-                          onClick: async () => {
-                            try {
-                              await upsertEntity(uid, "accounts", { ...a, plaidAccountId: "" }, a.id);
-                              onToast("Plaid account link removed.");
-                            } catch (error) {
-                              onError?.(error?.message || String(error));
-                              onToast("Failed to remove Plaid account link.", "error");
-                            }
-                          },
-                        },
-                        { label: "Delete", tone: "danger", onClick: () => removeAccount(a.id) },
+                        { label: "Confirm", hidden: item.status === "confirmed", onClick: () => confirmRecurring(item) },
+                        { label: "Ignore", hidden: item.status === "ignored", onClick: () => ignoreRecurring(item) },
+                        { label: item.linkedManualId ? "Change link" : "Link", onClick: () => openRecurringLink(item) },
+                        { label: "Unlink", hidden: !item.linkedManualId, onClick: () => removeRecurringLink(item) },
                       ]}
                     />
                   </td>
@@ -623,6 +624,162 @@ export default function SettingsPage({
               ))}
             </tbody>
           </table>
+          <PagedListFooter
+            className="settingsRecurringFooter desktopOnly"
+            showingCount={visibleRecurringPayments.length}
+            totalCount={filteredRecurringPayments.length}
+            itemLabel="recurring items"
+            page={recurringPage}
+            pageCount={recurringPageCount}
+            pageSize={recurringVisibleCount}
+            onPageChange={setRecurringPage}
+            onPageSizeChange={setRecurringVisibleCount}
+          />
+        </div>
+
+        <div className="mobileDataList">
+          {visibleRecurringPayments.map((item) => (
+            <article key={`mobile-recurring-${item.id || item.recurringId}`} className="data-panel dataItem mobileOnly">
+              <div className="dataItemHeader">
+                <div>
+                  <h3 className="dataItemTitle">{item.displayName || item.merchantName || item.normalizedMerchant || "Recurring item"}</h3>
+                  <div className="muted compactSubtext">{item.cadenceGuess || "unknown"} | {item.typeGuess || "unknown"}</div>
+                </div>
+                <span className="pill">{item.status || "suggested"}</span>
+              </div>
+              <div className="dataGrid">
+                <div className="dataRow"><span className="dataLabel">Average</span><span className="dataValue">{formatCurrency(item.averageAmount, localSettings.currency || "USD")}</span></div>
+                <div className="dataRow"><span className="dataLabel">Next expected</span><span className="dataValue">{item.nextExpectedDate || "-"}</span></div>
+                <div className="dataRow"><span className="dataLabel">Linked</span><span className="dataValue">{recurringManualLabel(item) || "-"}</span></div>
+              </div>
+              <div className="row dataActions">
+                <ActionMenu
+                  items={[
+                    { label: "Confirm", hidden: item.status === "confirmed", onClick: () => confirmRecurring(item) },
+                    { label: "Ignore", hidden: item.status === "ignored", onClick: () => ignoreRecurring(item) },
+                    { label: item.linkedManualId ? "Change link" : "Link", onClick: () => openRecurringLink(item) },
+                    { label: "Unlink", hidden: !item.linkedManualId, onClick: () => removeRecurringLink(item) },
+                  ]}
+                />
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <PagedListFooter
+          className="settingsRecurringFooter recurringMobileFooter mobileOnly data-panel"
+          showingCount={visibleRecurringPayments.length}
+          totalCount={filteredRecurringPayments.length}
+          itemLabel="recurring items"
+          page={recurringPage}
+          pageCount={recurringPageCount}
+          pageSize={recurringVisibleCount}
+          onPageChange={setRecurringPage}
+          onPageSizeChange={setRecurringVisibleCount}
+        />
+      </section>
+
+      <section className="data-panel section moduleAccounts">
+        <div className="row">
+          <div>
+            <h3>Accounts</h3>
+            <div className="muted pageIntro">
+              Maintain manual accounts separately and optionally connect them to synced Plaid-linked accounts.
+            </div>
+          </div>
+          <div className="spacer" />
+          <button type="button" className="primary" onClick={startAddAccount}>Add Account</button>
+        </div>
+        <div className="tableWrap premiumTableWrap desktopDataTable">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Balance</th>
+                <th>Linked Plaid</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.length === 0 ? (
+                <tr><td colSpan={5} className="muted">No accounts yet.</td></tr>
+              ) : null}
+              {accounts.map((a) => {
+                const linkedPlaid = linkedAccounts.find((account) => account.id === a.plaidAccountId || account.accountId === a.plaidAccountId);
+                return (
+                  <tr key={a.id}>
+                    <td>{a.name}</td>
+                    <td>{a.type}</td>
+                    <td>{formatCurrency(a.balance, localSettings.currency || "USD")}</td>
+                    <td>{linkedPlaid ? `${linkedPlaid.institutionName ? linkedPlaid.institutionName + " - " : ""}${linkedPlaid.name}` : "-"}</td>
+                    <td>
+                      <ActionMenu
+                        items={[
+                          { label: "Edit", onClick: () => startEditAccount(a) },
+                          { label: a.plaidAccountId ? "Change Link" : "Link Plaid Account", onClick: () => openAccountPlaidLink(a) },
+                          {
+                            label: "Unlink",
+                            hidden: !a.plaidAccountId,
+                            onClick: async () => {
+                              try {
+                                await upsertEntity(uid, "accounts", { ...a, plaidAccountId: "" }, a.id);
+                                onToast("Plaid account link removed.");
+                              } catch (error) {
+                                onError?.(error?.message || String(error));
+                                onToast("Failed to remove Plaid account link.", "error");
+                              }
+                            },
+                          },
+                          { label: "Delete", tone: "danger", onClick: () => removeAccount(a.id) },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mobileDataList">
+          {accounts.map((a) => {
+            const linkedPlaid = linkedAccounts.find((account) => account.id === a.plaidAccountId || account.accountId === a.plaidAccountId);
+            return (
+              <article key={`mobile-account-${a.id}`} className="data-panel dataItem mobileOnly">
+                <div className="dataItemHeader">
+                  <h3 className="dataItemTitle">{a.name}</h3>
+                  <span className="pill">{a.type}</span>
+                </div>
+                <div className="dataGrid">
+                  <div className="dataRow"><span className="dataLabel">Balance</span><span className="dataValue">{formatCurrency(a.balance, localSettings.currency || "USD")}</span></div>
+                  <div className="dataRow"><span className="dataLabel">Linked Plaid</span><span className="dataValue">{linkedPlaid ? `${linkedPlaid.institutionName ? linkedPlaid.institutionName + " - " : ""}${linkedPlaid.name}` : "-"}</span></div>
+                </div>
+                <div className="row dataActions">
+                  <ActionMenu
+                    items={[
+                      { label: "Edit", onClick: () => startEditAccount(a) },
+                      { label: a.plaidAccountId ? "Change Link" : "Link Plaid Account", onClick: () => openAccountPlaidLink(a) },
+                      {
+                        label: "Unlink",
+                        hidden: !a.plaidAccountId,
+                        onClick: async () => {
+                          try {
+                            await upsertEntity(uid, "accounts", { ...a, plaidAccountId: "" }, a.id);
+                            onToast("Plaid account link removed.");
+                          } catch (error) {
+                            onError?.(error?.message || String(error));
+                            onToast("Failed to remove Plaid account link.", "error");
+                          }
+                        },
+                      },
+                      { label: "Delete", tone: "danger", onClick: () => removeAccount(a.id) },
+                    ]}
+                  />
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 

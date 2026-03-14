@@ -14,13 +14,24 @@ const EMPTY_LOAN = {
   notes: "",
 };
 
-const SORT_META = {
-  name: { asc: "A -> Z", desc: "Z -> A" },
-  balance: { asc: "Low -> High", desc: "High -> Low" },
-  monthlyPayment: { asc: "Low -> High", desc: "High -> Low" },
-  interest: { asc: "Low -> High", desc: "High -> Low" },
-  dueDate: { asc: "Earliest -> Latest", desc: "Latest -> Earliest" },
+const SORT_DEFAULTS = {
+  name: "asc",
+  balance: "desc",
+  monthlyPayment: "desc",
+  interest: "desc",
+  dueDay: "asc",
 };
+
+function SortHeader({ label, column, sortBy, sortDirection, onSort }) {
+  const active = sortBy === column;
+  const arrow = !active ? "" : sortDirection === "asc" ? "?" : "?";
+  return (
+    <button type="button" className="sortableHeaderButton" onClick={() => onSort(column)}>
+      <span>{label}</span>
+      <span className="sortIndicator" aria-hidden="true">{arrow}</span>
+    </button>
+  );
+}
 
 export default function LoansPage({ uid, loans, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
@@ -70,13 +81,13 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
     [rows]
   );
 
-  function changeSort(nextSortBy) {
-    if (nextSortBy === sortBy) {
+  function handleSort(column) {
+    if (column === sortBy) {
       setSortDirection((value) => (value === "asc" ? "desc" : "asc"));
       return;
     }
-    setSortBy(nextSortBy);
-    setSortDirection(nextSortBy === "name" || nextSortBy === "dueDate" ? "asc" : "desc");
+    setSortBy(column);
+    setSortDirection(SORT_DEFAULTS[column] || "desc");
   }
 
   function startAdd() {
@@ -149,16 +160,6 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
             </p>
           </div>
           <div className="pageActions">
-            <label className="fieldGroup compactField">
-              <span>Sort</span>
-              <select value={sortBy} onChange={(e) => changeSort(e.target.value)}>
-                <option value="name">Name</option>
-                <option value="balance">Balance</option>
-                <option value="monthlyPayment">Monthly payment</option>
-                <option value="interest">Interest</option>
-                <option value="dueDate">Due date</option>
-              </select>
-            </label>
             <button type="button" className="primary" onClick={startAdd}>
               Add Loan
             </button>
@@ -174,53 +175,47 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         <div className="sectionHeader">
           <div>
             <h3>Loan accounts</h3>
-            <div className="muted compactSubtext">Sort by name, balance, payment, interest, or due date without changing any loan data.</div>
+            <div className="muted compactSubtext">Sort directly from the table headers without a separate sort control.</div>
           </div>
         </div>
         <div className="tableWrap card desktopDataTable premiumTableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Lender</th>
-              <th>Balance</th>
-              <th>Monthly Payment</th>
-              <th>Interest</th>
-              <th>Due Day</th>
-              <th>Status</th>
-              <th>Notes</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
+          <table>
+            <thead>
               <tr>
-                <td colSpan={8} className="muted">
-                  No loans yet.
-                </td>
+                <th><SortHeader label="Lender" column="name" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th><SortHeader label="Balance" column="balance" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th><SortHeader label="Monthly Payment" column="monthlyPayment" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th><SortHeader label="Interest" column="interest" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th><SortHeader label="Due Day" column="dueDay" sortBy={sortBy} sortDirection={sortDirection} onSort={handleSort} /></th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th />
               </tr>
-            ) : null}
-            {rows.map((loan) => (
-              <tr key={loan.id}>
-                <td>{loan.lender}</td>
-                <td className="value-negative">{formatCurrency(loan.balance, cfg.currency)}</td>
-                <td className="value-negative">{formatCurrency(loan.monthlyPayment, cfg.currency)}</td>
-                <td>{loan.interestRate === null ? "-" : formatPercent(loan.interestRate)}</td>
-                <td>{loan.dueDay || "-"}</td>
-                <td>{loan.status || "active"}</td>
-                <td>{loan.notes || "-"}</td>
-                <td className="row">
-                  <button type="button" onClick={() => startEdit(loan)}>
-                    Edit
-                  </button>
-                  <button type="button" onClick={() => remove(loan.id)}>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="muted">No loans yet.</td>
+                </tr>
+              ) : null}
+              {rows.map((loan) => (
+                <tr key={loan.id}>
+                  <td>{loan.lender}</td>
+                  <td className="value-negative">{formatCurrency(loan.balance, cfg.currency)}</td>
+                  <td className="value-negative">{formatCurrency(loan.monthlyPayment, cfg.currency)}</td>
+                  <td>{loan.interestRate === null ? "-" : formatPercent(loan.interestRate)}</td>
+                  <td>{loan.dueDay || "-"}</td>
+                  <td>{loan.status || "active"}</td>
+                  <td>{loan.notes || "-"}</td>
+                  <td className="row">
+                    <button type="button" onClick={() => startEdit(loan)}>Edit</button>
+                    <button type="button" onClick={() => remove(loan.id)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <div className="mobileDataList">
@@ -268,37 +263,19 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
           </label>
           <label>
             Balance
-            <input
-              type="number"
-              value={form.balance}
-              onChange={(e) => setForm({ ...form, balance: e.target.value })}
-            />
+            <input type="number" value={form.balance} onChange={(e) => setForm({ ...form, balance: e.target.value })} />
           </label>
           <label>
             Monthly Payment
-            <input
-              type="number"
-              value={form.monthlyPayment}
-              onChange={(e) => setForm({ ...form, monthlyPayment: e.target.value })}
-            />
+            <input type="number" value={form.monthlyPayment} onChange={(e) => setForm({ ...form, monthlyPayment: e.target.value })} />
           </label>
           <label>
             Interest Rate %
-            <input
-              type="number"
-              value={form.interestRate}
-              onChange={(e) => setForm({ ...form, interestRate: e.target.value })}
-            />
+            <input type="number" value={form.interestRate} onChange={(e) => setForm({ ...form, interestRate: e.target.value })} />
           </label>
           <label>
             Due Day
-            <input
-              type="number"
-              min="1"
-              max="31"
-              value={form.dueDay}
-              onChange={(e) => setForm({ ...form, dueDay: e.target.value })}
-            />
+            <input type="number" min="1" max="31" value={form.dueDay} onChange={(e) => setForm({ ...form, dueDay: e.target.value })} />
           </label>
           <label>
             Status
@@ -315,11 +292,10 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <div className="spacer" />
-          <button type="button" className="primary" onClick={save}>
-            Save
-          </button>
+          <button type="button" className="primary" onClick={save}>Save</button>
         </div>
       </Modal>
     </div>
   );
 }
+
