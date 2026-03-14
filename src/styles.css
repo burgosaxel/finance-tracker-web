@@ -3414,3 +3414,18 @@ button:disabled {
   min-width: 185px;
   max-width: 185px;
 }
+
+/* Cashflow Snapshot pill width matches the wider dashboard pills */
+.cashflow-snapshot .row-list-item {
+  grid-template-columns: minmax(0, 1.5fr) 0 110px;
+}
+
+.cashflow-snapshot .row-list-item > :nth-child(2) {
+  display: none;
+}
+
+.cashflow-snapshot .row-list-item .primary {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
