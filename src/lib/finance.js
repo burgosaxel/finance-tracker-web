@@ -270,6 +270,54 @@ export function getEffectiveTransactionCategory(transaction) {
   );
 }
 
+function toTitleWord(word) {
+  const lower = String(word || "").toLowerCase();
+  if (!lower) return "";
+  if (lower === "and") return "and";
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+function formatCategorySegment(value) {
+  return String(value || "")
+    .split("_")
+    .filter(Boolean)
+    .map(toTitleWord)
+    .join(" ");
+}
+
+export function formatCategoryLabel(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "Uncategorized";
+
+  const normalized = raw.replace(/\./g, "_").replace(/\//g, "_").replace(/\s+/g, "_").toUpperCase();
+  const groupedPrefixes = [
+    "BANK_FEES",
+    "GENERAL_MERCHANDISE",
+    "FOOD_AND_DRINK",
+    "HOME_IMPROVEMENT",
+    "INCOME_DIVIDENDS",
+    "INCOME_INTEREST",
+    "INCOME_RETIREMENT",
+    "INCOME_TAX_REFUND",
+    "INCOME_UNEMPLOYMENT",
+    "INCOME_WAGES",
+    "LOAN_PAYMENTS",
+    "PERSONAL_CARE",
+    "TRANSFER_IN",
+    "TRANSFER_OUT",
+  ];
+
+  const prefix = groupedPrefixes.find((candidate) => normalized === candidate || normalized.startsWith(`${candidate}_`));
+  if (prefix) {
+    const remainder = normalized.slice(prefix.length).replace(/^_+/, "");
+    return remainder
+      ? `${formatCategorySegment(prefix)} / ${formatCategorySegment(remainder)}`
+      : formatCategorySegment(prefix);
+  }
+
+  return formatCategorySegment(normalized);
+}
+
 export function getMonthTransactions(transactions, month = monthKey()) {
   return (transactions || []).filter((transaction) => {
     if (transaction?.removed) return false;
@@ -303,7 +351,7 @@ export function summarizeSpendingByCategory(transactions, month = monthKey(), li
   }
 
   return [...totals.entries()]
-    .map(([category, amount]) => ({ category, amount }))
+    .map(([category, amount]) => ({ category, label: formatCategoryLabel(category), amount }))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, limit);
 }
@@ -371,7 +419,7 @@ export function getManualMatchCandidates({
     manualId: bill.id,
     monthId: selectedMonth || "",
     label: bill.merchant || bill.name || "Bill",
-    subtitle: `Bill${bill.dueDate || bill.dueDay ? ` · due ${getBillDueDate(bill).toLocaleDateString()}` : ""}`,
+    subtitle: `Bill${bill.dueDate || bill.dueDay ? ` - due ${getBillDueDate(bill).toLocaleDateString()}` : ""}`,
     amount: safeNumber(bill.amount, 0),
     date: getBillDueDate(bill),
     searchText: `${bill.merchant || ""} ${bill.name || ""}`,
@@ -381,7 +429,7 @@ export function getManualMatchCandidates({
     manualId: item.id,
     monthId: selectedMonth || "",
     label: item.source || item.name || "Income",
-    subtitle: `Income${item.payDate || item.payDay ? ` · ${getIncomePayDate(item).toLocaleDateString()}` : ""}`,
+    subtitle: `Income${item.payDate || item.payDay ? ` - ${getIncomePayDate(item).toLocaleDateString()}` : ""}`,
     amount: safeNumber(item.amount ?? item.expectedAmount, 0),
     date: getIncomePayDate(item),
     searchText: `${item.source || ""} ${item.name || ""}`,
@@ -401,7 +449,7 @@ export function getManualMatchCandidates({
     manualId: card.id,
     monthId: "",
     label: card.name || "Credit card",
-    subtitle: `${card.issuer || "Credit card"}${card.minimumPayment ? ` · min ${formatCurrency(card.minimumPayment)}` : ""}`,
+    subtitle: `${card.issuer || "Credit card"}${card.minimumPayment ? ` - min ${formatCurrency(card.minimumPayment)}` : ""}`,
     amount: safeNumber(card.minimumPayment, 0),
     date: null,
     searchText: `${card.name || ""} ${card.issuer || ""}`,

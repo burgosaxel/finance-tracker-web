@@ -606,7 +606,7 @@ export default function BillsIncomePage({
             <div className="pageEyebrow">Monthly operations</div>
             <h2>Bills & Income</h2>
             <p className="muted pageIntro">
-              Manage the current month’s obligations and incoming cash while keeping recurring templates and statement history intact.
+              Manage the current month's obligations and incoming cash while keeping recurring templates and statement history intact.
             </p>
           </div>
           <div className="pageActions">
@@ -836,4 +836,3 @@ export default function BillsIncomePage({
     </div>
   );
 }
-

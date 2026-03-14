@@ -11,6 +11,7 @@ import {
 import {
   DEFAULT_SETTINGS,
   formatCurrency,
+  formatCategoryLabel,
   getEffectiveTransactionCategory,
   getManualMatchCandidates,
   getMatchedManualLabel,
@@ -269,7 +270,7 @@ export default function TransactionsPage({
             <span>Category</span>
             <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
               <option value="">All</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => <option key={c} value={c}>{formatCategoryLabel(c)}</option>)}
             </select>
           </label>
           <label className="fieldGroup compactField">
@@ -328,7 +329,7 @@ export default function TransactionsPage({
                       </div>
                     ) : null}
                   </td>
-                  <td>{getEffectiveTransactionCategory(t)}</td>
+                  <td>{formatCategoryLabel(getEffectiveTransactionCategory(t))}</td>
                   <td className={safeNumber(t.amount, 0) < 0 ? "neg" : "pos"}>
                     {formatCurrency(t.amount, cfg.currency)}
                   </td>
@@ -391,7 +392,7 @@ export default function TransactionsPage({
               </div>
               <div className="dataGrid">
                 <div className="dataRow"><span className="dataLabel">Date</span><span className="dataValue">{t.date || "-"}</span></div>
-                <div className="dataRow"><span className="dataLabel">Category</span><span className="dataValue">{getEffectiveTransactionCategory(t)}</span></div>
+                <div className="dataRow"><span className="dataLabel">Category</span><span className="dataValue">{formatCategoryLabel(getEffectiveTransactionCategory(t))}</span></div>
                 <div className="dataRow"><span className="dataLabel">Account</span><span className="dataValue">{accounts.find((a) => a.id === t.accountId)?.name || "-"}</span></div>
                 <div className="dataRow"><span className="dataLabel">Institution</span><span className="dataValue">{t.institutionName || "-"}</span></div>
                 <div className="dataRow"><span className="dataLabel">Source</span><span className="dataValue">{t.source || "manual"}</span></div>

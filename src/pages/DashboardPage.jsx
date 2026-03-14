@@ -125,7 +125,7 @@ export default function DashboardPage({
             <div className="pageEyebrow">Financial command center</div>
             <h2>Dashboard</h2>
             <p className="muted pageIntro">
-              A structured view of balance-sheet health, this month’s obligations, and the operational signals that need attention.
+              A structured view of balance-sheet health, this month's obligations, and the operational signals that need attention.
             </p>
           </div>
         </div>
@@ -164,7 +164,7 @@ export default function DashboardPage({
         <div className="sectionHeader">
           <div>
             <h3>Monthly Overview</h3>
-            <div className="muted compactSubtext">This month’s income, required bills, and unpaid obligations.</div>
+            <div className="muted compactSubtext">This month's income, required bills, and unpaid obligations.</div>
           </div>
         </div>
         <div className="dashboardMetricGrid">
@@ -383,8 +383,8 @@ export default function DashboardPage({
             ) : (
               <ul className="cleanList">
                 {summary.topSpending.map((entry) => (
-                  <li key={entry.category} className="listRow compactTriplet">
-                    <span>{entry.category}</span>
+                  <li key={entry.label || entry.category} className="listRow compactTriplet">
+                    <span>{entry.label || entry.category}</span>
                     <span>This month</span>
                     <strong>{formatCurrency(entry.amount, cfg.currency)}</strong>
                   </li>

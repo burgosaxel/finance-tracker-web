@@ -789,7 +789,9 @@ td {
   padding: 12px 13px;
   text-align: left;
   vertical-align: top;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: none;
 }
 
 tbody tr {
@@ -809,6 +811,7 @@ thead th {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 tfoot th,
