@@ -3232,3 +3232,92 @@ button:disabled {
   min-width: 175px;
   max-width: 175px;
 }
+
+.sidebar-brand,
+.sidebarBrand {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.sidebar-logo,
+.brandLogo,
+.sidebarLogo {
+  width: 135px;
+  height: 135px;
+  flex: 0 0 135px;
+  object-fit: contain;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 0 16px rgba(67,216,255,0.18));
+}
+
+.sidebar-logo.compact,
+.brandLogo.compact {
+  width: 42px;
+  height: 42px;
+  flex-basis: 42px;
+  margin-bottom: 0;
+}
+
+.sidebar-kicker,
+.sidebarEyebrow {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sidebar-title,
+.sidebarTitle {
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sidebar-subtitle,
+.sidebarSubtitle {
+  max-width: 185px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.dashboard-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 150px;
+  padding: 28px 34px;
+}
+
+.dashboard-hero-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 720px;
+  width: 100%;
+  align-self: center;
+  text-align: center;
+}
+
+.dashboard-title {
+  align-self: flex-start;
+}
+
+.recurring-cadence-label {
+  white-space: nowrap;
+}
+
+.cashflow-snapshot .row-list-item .primary {
+  width: 170px;
+  min-width: 170px;
+  max-width: 170px;
+}
+
+.signals-card .row-list-item .primary {
+  width: 185px;
+  min-width: 185px;
+  max-width: 185px;
+}
