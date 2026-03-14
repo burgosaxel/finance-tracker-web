@@ -107,7 +107,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
 
   return (
     <div className="page">
-      <section className="card section pageHero">
+      <section className="card section pageHero heroDebt">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Long-term debt tracking</div>
@@ -128,7 +128,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         </div>
       </section>
 
-      <section className="card section">
+      <section className="card section moduleAccounts">
         <div className="sectionHeader">
           <div>
             <h3>Loan accounts</h3>
@@ -204,7 +204,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         ))}
       </div>
 
-      <article className="card section dataItem">
+      <article className="card section dataItem moduleTotals">
         <h3 className="dataItemTitle">Totals</h3>
         <div className="summaryGrid two">
           <div className="summaryCell">

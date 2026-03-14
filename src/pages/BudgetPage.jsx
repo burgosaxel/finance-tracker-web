@@ -83,7 +83,7 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
 
   return (
     <div className="page">
-      <section className="card section pageHero">
+      <section className="card section pageHero heroPlan">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Monthly planning</div>
@@ -107,7 +107,7 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
         </div>
       </section>
 
-      <section className="card section">
+      <section className="card section modulePlan">
         <div className="sectionHeader">
           <div>
             <h3>Budget Categories</h3>

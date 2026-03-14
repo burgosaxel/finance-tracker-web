@@ -332,7 +332,7 @@ export default function SettingsPage({
 
   return (
     <div className="page">
-      <section className="card section pageHero">
+      <section className="card section pageHero heroSettings">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Preferences and integrations</div>
@@ -344,7 +344,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section">
+      <section className="card section moduleSettings">
         <h3>App Preferences</h3>
         <div className="formGrid">
           <label>
@@ -389,7 +389,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section">
+      <section className="card section moduleConnections">
         <div className="row">
           <div>
             <h3>Linked Bank Accounts</h3>
@@ -478,7 +478,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section">
+      <section className="card section moduleRecurring">
         <div className="row">
           <div>
             <h3>Detected Recurring</h3>
@@ -539,7 +539,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section">
+      <section className="card section moduleAccounts">
         <div className="row">
           <h3>Accounts</h3>
           <div className="spacer" />
@@ -575,7 +575,7 @@ export default function SettingsPage({
         </div>
       </section>
 
-      <section className="card section">
+      <section className="card section moduleTools">
         <h3>Data Tools</h3>
         <div className="row">
           <button type="button" onClick={runRecurringMigration}>Import existing bills as recurring templates</button>
@@ -667,4 +667,5 @@ export default function SettingsPage({
     </div>
   );
 }
+
 

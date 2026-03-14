@@ -240,7 +240,7 @@ export default function TransactionsPage({
 
   return (
     <div className="page">
-      <section className="card section pageHero">
+      <section className="card section pageHero heroActivity">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Activity review</div>
@@ -284,7 +284,7 @@ export default function TransactionsPage({
         </div>
       </section>
 
-      <div className="tableWrap card desktopDataTable">
+      <div className="tableWrap card desktopDataTable moduleActivity">
         <table>
           <thead>
             <tr>

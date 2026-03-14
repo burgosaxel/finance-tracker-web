@@ -600,7 +600,7 @@ export default function BillsIncomePage({
 
   return (
     <div className="page">
-      <section className="card section pageHero">
+      <section className="card section pageHero heroOperations">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Monthly operations</div>
@@ -625,7 +625,7 @@ export default function BillsIncomePage({
         <div className="muted">Recurring sync runs automatically. Use "Sync now" only if needed.</div>
       </section>
 
-      <section className="card section">
+      <section className="card section moduleForecast">
         <button
           type="button"
           className="collapseToggle"
@@ -651,7 +651,7 @@ export default function BillsIncomePage({
       </section>
 
       <div className="twoCol">
-        <section className="card section">
+        <section className="card section moduleBills">
           <div className="row">
             <h2>Bills</h2>
             <div className="spacer" />
@@ -691,7 +691,7 @@ export default function BillsIncomePage({
           </section>
         </section>
 
-        <section className="card section">
+        <section className="card section moduleIncome">
           <div className="row">
             <h2>Income</h2>
             <div className="spacer" />
@@ -757,7 +757,7 @@ export default function BillsIncomePage({
         </div>
       </Modal>
 
-      <section className="card section">
+      <section className="card section moduleTemplates">
         <div className="row">
           <h3>Recurring Templates</h3>
           <div className="spacer" />

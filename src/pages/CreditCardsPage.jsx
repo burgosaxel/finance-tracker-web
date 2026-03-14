@@ -113,7 +113,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
 
   return (
     <div className="page">
-      <section className="card section pageHero">
+      <section className="card section pageHero heroDebt">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Debt overview</div>
@@ -142,7 +142,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
         </div>
       </section>
 
-      <section className="card section">
+      <section className="card section moduleAccounts">
         <div className="sectionHeader">
           <div>
             <h3>Card portfolio</h3>

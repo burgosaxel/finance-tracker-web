@@ -58,63 +58,71 @@
   --radius-lg: 18px;
   --radius-md: 14px;
   --radius-sm: 10px;
+  --panel-accent-1: rgba(47, 140, 255, 0.12);
+  --panel-accent-2: rgba(16, 185, 129, 0.08);
+  --panel-accent-3: rgba(129, 140, 248, 0.08);
+  --panel-alert: rgba(220, 38, 38, 0.1);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --background: #07111d;
-  --background-alt: #0b1522;
-  --surface: rgba(16, 24, 39, 0.9);
-  --surface-elevated: rgba(19, 29, 47, 0.96);
-  --surface-alt: #142133;
-  --surface-strong: #101a29;
-  --border: rgba(53, 74, 107, 0.62);
-  --border-strong: rgba(78, 107, 151, 0.72);
-  --text-primary: #e7eef9;
-  --text-secondary: #9aaecc;
-  --text-tertiary: #6f86a9;
-  --accent: #4da2ff;
-  --accent-strong: #2e7fe5;
-  --accent-soft: rgba(77, 162, 255, 0.18);
-  --accent-surface: rgba(77, 162, 255, 0.08);
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --muted: rgba(154, 174, 204, 0.12);
-  --bg-glow-1: rgba(77, 162, 255, 0.15);
-  --bg-glow-2: rgba(16, 185, 129, 0.08);
-  --bg-glow-3: rgba(255, 255, 255, 0.03);
-  --surface-overlay: rgba(255, 255, 255, 0.03);
-  --button-bg: rgba(20, 33, 51, 0.96);
-  --button-bg-hover: #1a2a41;
-  --button-border-hover: #3d5a80;
-  --button-primary-top: #56a8ff;
-  --button-primary-bottom: #2677dd;
-  --button-primary-border: rgba(109, 176, 255, 0.76);
-  --button-primary-shadow: rgba(38, 119, 221, 0.3);
-  --button-primary-top-hover: #6ab2ff;
-  --button-primary-bottom-hover: #3282ea;
-  --button-primary-border-hover: #90c6ff;
-  --input-bg: rgba(10, 18, 31, 0.92);
-  --input-border-hover: rgba(82, 116, 166, 0.78);
+  --background: #040a14;
+  --background-alt: #09111f;
+  --surface: rgba(12, 20, 35, 0.9);
+  --surface-elevated: rgba(17, 27, 44, 0.96);
+  --surface-alt: #101c30;
+  --surface-strong: #0e1829;
+  --border: rgba(67, 89, 128, 0.56);
+  --border-strong: rgba(106, 130, 183, 0.7);
+  --text-primary: #eef4ff;
+  --text-secondary: #9db1d2;
+  --text-tertiary: #7088ad;
+  --accent: #62a8ff;
+  --accent-strong: #347ff2;
+  --accent-soft: rgba(98, 168, 255, 0.2);
+  --accent-surface: rgba(98, 168, 255, 0.1);
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #fb7185;
+  --muted: rgba(153, 173, 208, 0.13);
+  --bg-glow-1: rgba(75, 150, 255, 0.24);
+  --bg-glow-2: rgba(73, 222, 214, 0.14);
+  --bg-glow-3: rgba(167, 139, 250, 0.1);
+  --surface-overlay: rgba(255, 255, 255, 0.035);
+  --button-bg: rgba(18, 30, 49, 0.98);
+  --button-bg-hover: #1b2f4d;
+  --button-border-hover: #4f6f9d;
+  --button-primary-top: #77b4ff;
+  --button-primary-bottom: #3a7dff;
+  --button-primary-border: rgba(127, 190, 255, 0.74);
+  --button-primary-shadow: rgba(58, 125, 255, 0.34);
+  --button-primary-top-hover: #89beff;
+  --button-primary-bottom-hover: #4c89ff;
+  --button-primary-border-hover: #b0d9ff;
+  --input-bg: rgba(8, 16, 29, 0.94);
+  --input-border-hover: rgba(100, 137, 194, 0.8);
   --error: #fca5a5;
-  --sidebar-hover-bg: rgba(77, 162, 255, 0.08);
-  --nav-active-bg: linear-gradient(180deg, rgba(77, 162, 255, 0.23), rgba(77, 162, 255, 0.14));
-  --nav-active-border: rgba(82, 117, 169, 0.8);
+  --sidebar-hover-bg: rgba(98, 168, 255, 0.08);
+  --nav-active-bg: linear-gradient(180deg, rgba(98, 168, 255, 0.24), rgba(77, 222, 214, 0.1));
+  --nav-active-border: rgba(100, 141, 204, 0.8);
   --nav-active-text: #eff5ff;
-  --table-head-bg: rgba(20, 33, 51, 0.98);
-  --pill-bg: rgba(13, 24, 40, 0.9);
-  --modal-backdrop: rgba(4, 8, 16, 0.76);
-  --toast-bg: #13233c;
-  --toast-border: #365985;
+  --table-head-bg: rgba(16, 29, 49, 0.98);
+  --pill-bg: rgba(10, 21, 37, 0.92);
+  --modal-backdrop: rgba(3, 7, 15, 0.82);
+  --toast-bg: #10233d;
+  --toast-border: #3a6393;
   --toast-error-bg: #6f1a22;
   --toast-error-border: #9b2c38;
   --neg: #fda4af;
-  --pos: #86efac;
-  --shadow-lg: 0 22px 56px rgba(2, 10, 21, 0.46);
-  --shadow-md: 0 16px 34px rgba(2, 10, 21, 0.34);
-  --shadow-sm: 0 10px 20px rgba(2, 10, 21, 0.22);
+  --pos: #6ee7b7;
+  --shadow-lg: 0 26px 64px rgba(1, 7, 16, 0.54);
+  --shadow-md: 0 18px 38px rgba(1, 7, 16, 0.4);
+  --shadow-sm: 0 12px 24px rgba(1, 7, 16, 0.28);
+  --panel-accent-1: rgba(98, 168, 255, 0.16);
+  --panel-accent-2: rgba(73, 222, 214, 0.12);
+  --panel-accent-3: rgba(167, 139, 250, 0.14);
+  --panel-alert: rgba(251, 113, 133, 0.14);
 }
 
 * {
@@ -137,6 +145,7 @@ body {
     radial-gradient(1200px 580px at 8% -12%, var(--bg-glow-1), transparent 55%),
     radial-gradient(920px 520px at 96% -14%, var(--bg-glow-2), transparent 50%),
     radial-gradient(780px 420px at 50% 0%, var(--bg-glow-3), transparent 60%),
+    radial-gradient(880px 580px at 80% 25%, rgba(34, 211, 238, 0.06), transparent 58%),
     linear-gradient(180deg, var(--background), var(--background-alt));
   color: var(--text-primary);
   transition: background-color 0.25s ease, color 0.2s ease;
@@ -172,12 +181,16 @@ h4 {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 24px 28px 28px;
+  padding: 20px 24px 28px;
 }
 
 .card {
   position: relative;
-  background: linear-gradient(180deg, var(--surface-overlay), transparent), var(--surface);
+  overflow: hidden;
+  background:
+    radial-gradient(140% 140% at 100% 0%, rgba(255, 255, 255, 0.045), transparent 50%),
+    linear-gradient(180deg, var(--surface-overlay), transparent),
+    var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -186,9 +199,19 @@ h4 {
   transition: border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
 }
 
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 45%);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .card:hover {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .row {
@@ -216,12 +239,15 @@ textarea {
 button {
   border: 1px solid var(--border);
   color: var(--text-primary);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent), var(--button-bg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+    var(--button-bg);
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
   transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  font-weight: 650;
 }
 
 button:hover {
@@ -245,6 +271,10 @@ button.primary {
   color: #f8fbff;
   border-color: var(--button-primary-border);
   box-shadow: 0 12px 24px var(--button-primary-shadow);
+}
+
+.ghostButton {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 button.primary:hover {
@@ -293,7 +323,7 @@ textarea {
 .appShell {
   display: grid;
   grid-template-columns: 272px minmax(0, 1fr);
-  gap: 18px;
+  gap: 22px;
   width: 100%;
   min-height: calc(100vh - 52px);
   min-width: 0;
@@ -303,16 +333,71 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent), var(--surface-elevated);
+  padding: 18px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, var(--panel-accent-3), transparent 44%),
+    radial-gradient(120% 160% at 100% 0%, var(--panel-accent-1), transparent 44%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    var(--surface-elevated);
   border-color: var(--border-strong);
   box-shadow: var(--shadow-lg);
 }
 
 .sidebarBrand {
   display: grid;
-  gap: 4px;
-  padding: 8px 6px 12px;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px 8px;
+}
+
+.brandMark {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(98, 168, 255, 0.28), rgba(73, 222, 214, 0.12));
+  border: 1px solid rgba(138, 186, 255, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 28px rgba(38, 119, 221, 0.18);
+  overflow: hidden;
+}
+
+.brandMark.compact {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+}
+
+.brandMarkOrb {
+  position: absolute;
+  border-radius: 999px;
+}
+
+.brandMarkOrbPrimary {
+  width: 24px;
+  height: 24px;
+  left: 6px;
+  top: 7px;
+  background: rgba(119, 180, 255, 0.82);
+}
+
+.brandMarkOrbSecondary {
+  width: 18px;
+  height: 18px;
+  right: 6px;
+  bottom: 7px;
+  background: rgba(73, 222, 214, 0.75);
+}
+
+.brandMarkGlyph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  color: #f2f8ff;
 }
 
 .sidebarEyebrow,
@@ -341,6 +426,7 @@ textarea {
 .navLink {
   display: flex;
   align-items: center;
+  gap: 12px;
   min-height: 44px;
   color: var(--text-secondary);
   text-decoration: none;
@@ -349,6 +435,38 @@ textarea {
   border: 1px solid transparent;
   font-weight: 600;
   transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.navIcon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  color: inherit;
+}
+
+.navIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.navTextWrap {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.navLabel {
+  color: inherit;
+  font-size: 0.94rem;
+}
+
+.navMeta {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .navLink:hover {
@@ -362,7 +480,36 @@ textarea {
   background: var(--nav-active-bg);
   border-color: var(--nav-active-border);
   color: var(--nav-active-text);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(47, 140, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 12px 24px rgba(47, 140, 255, 0.16);
+}
+
+.navLink.active .navMeta {
+  color: rgba(239, 245, 255, 0.72);
+}
+
+.sidebarPanel {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(98, 168, 255, 0.22);
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(98, 168, 255, 0.12), transparent 42%),
+    radial-gradient(140% 140% at 0% 100%, rgba(73, 222, 214, 0.08), transparent 48%),
+    rgba(10, 20, 34, 0.72);
+  display: grid;
+  gap: 6px;
+}
+
+.sidebarPanelLabel {
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sidebarPanelValue {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-primary);
 }
 
 .sidebarFooter {
@@ -373,6 +520,14 @@ textarea {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent), var(--surface-alt);
   display: grid;
   gap: 6px;
+}
+
+.sidebarFooterActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
 }
 
 .sidebarMetaValue,
@@ -388,8 +543,55 @@ textarea {
 }
 
 .mobileHeader,
-.mobileMenu {
+.mobileMenu,
+.mobileBottomNav {
   display: none;
+}
+
+.mobileBrandWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mobileMenuHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mobileMenuTitle {
+  font-size: 1.1rem;
+  font-weight: 760;
+  letter-spacing: -0.03em;
+}
+
+.bottomNavLink {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-decoration: none;
+  color: var(--text-secondary);
+  padding: 10px 6px 8px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  min-width: 0;
+}
+
+.bottomNavLink span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.bottomNavLink.active {
+  color: var(--text-primary);
+  background: var(--nav-active-bg);
+  border-color: var(--nav-active-border);
+  box-shadow: 0 12px 22px rgba(47, 140, 255, 0.16);
 }
 
 .mainPanel {
@@ -400,8 +602,11 @@ textarea {
 }
 
 .topbar {
-  padding: 14px 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent), var(--surface-elevated);
+  padding: 15px 20px;
+  background:
+    radial-gradient(120% 160% at 100% 0%, rgba(98, 168, 255, 0.1), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    var(--surface-elevated);
   border-color: var(--border-strong);
 }
 
@@ -418,6 +623,7 @@ textarea {
 .pageContent {
   min-height: 0;
   min-width: 0;
+  padding-bottom: 10px;
 }
 
 .page {
@@ -433,6 +639,12 @@ textarea {
 
 .pageHero {
   overflow: hidden;
+  background:
+    radial-gradient(160% 160% at 100% 0%, var(--panel-accent-1), transparent 42%),
+    radial-gradient(120% 120% at 0% 100%, var(--panel-accent-2), transparent 46%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    var(--surface-elevated);
+  border-color: rgba(98, 168, 255, 0.2);
 }
 
 .pageHeader {
@@ -445,7 +657,7 @@ textarea {
 
 .pageHeaderContent {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   max-width: 80ch;
 }
@@ -456,6 +668,10 @@ textarea {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: 700;
+}
+
+.pageHeaderContent h2 {
+  font-size: clamp(1.85rem, 1.4rem + 1vw, 2.65rem);
 }
 
 .pageActions {
@@ -478,6 +694,10 @@ textarea {
   grid-template-columns: repeat(4, minmax(140px, 1fr));
   gap: 12px;
   margin-top: 14px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border);
 }
 
 .fieldGroup {
@@ -544,6 +764,9 @@ textarea {
   display: grid;
   gap: 6px;
   align-content: start;
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(73, 222, 214, 0.1), transparent 42%),
+    rgba(255, 255, 255, 0.02);
 }
 
 .inlineMetric strong {
@@ -552,9 +775,21 @@ textarea {
 }
 
 .statCard {
-  padding: 14px 16px;
-  background: linear-gradient(180deg, rgba(77, 162, 255, 0.1), transparent 48%), var(--surface-elevated);
+  padding: 16px 18px;
+  background:
+    radial-gradient(140% 140% at 100% 0%, rgba(98, 168, 255, 0.14), transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 55%),
+    var(--surface-elevated);
   border-color: var(--border-strong);
+}
+
+.statCardGlow {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle, rgba(98, 168, 255, 0.18), transparent 70%);
+  pointer-events: none;
 }
 
 .heroStat {
@@ -625,7 +860,7 @@ textarea {
 }
 
 .section {
-  padding: 16px;
+  padding: 18px;
 }
 
 .sectionHeader {
@@ -634,7 +869,83 @@ textarea {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.heroOverview {
+  background:
+    radial-gradient(160% 160% at 100% 0%, rgba(98, 168, 255, 0.18), transparent 40%),
+    radial-gradient(130% 160% at 0% 100%, rgba(73, 222, 214, 0.12), transparent 46%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    var(--surface-elevated);
+}
+
+.heroPlan,
+.heroSettings {
+  background:
+    radial-gradient(160% 160% at 100% 0%, rgba(167, 139, 250, 0.18), transparent 42%),
+    radial-gradient(120% 150% at 0% 100%, rgba(98, 168, 255, 0.12), transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    var(--surface-elevated);
+}
+
+.heroDebt {
+  background:
+    radial-gradient(160% 160% at 100% 0%, rgba(251, 113, 133, 0.16), transparent 40%),
+    radial-gradient(120% 150% at 0% 100%, rgba(98, 168, 255, 0.12), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    var(--surface-elevated);
+}
+
+.heroOperations,
+.heroActivity {
+  background:
+    radial-gradient(160% 160% at 100% 0%, rgba(73, 222, 214, 0.14), transparent 42%),
+    radial-gradient(140% 160% at 0% 100%, rgba(98, 168, 255, 0.14), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    var(--surface-elevated);
+}
+
+.moduleAccounts,
+.moduleConnections,
+.moduleRecurring,
+.moduleForecast,
+.moduleBills,
+.moduleIncome,
+.moduleTemplates,
+.modulePlan,
+.moduleSettings,
+.moduleTools,
+.moduleActivity,
+.moduleAlert,
+.moduleUpcoming,
+.moduleTotals {
+  background:
+    radial-gradient(130% 140% at 100% 0%, rgba(98, 168, 255, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    var(--surface-elevated);
+}
+
+.moduleRecurring {
+  background:
+    radial-gradient(130% 140% at 100% 0%, rgba(167, 139, 250, 0.12), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    var(--surface-elevated);
+}
+
+.moduleAlert {
+  background:
+    radial-gradient(130% 140% at 100% 0%, rgba(251, 113, 133, 0.13), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    var(--surface-elevated);
+}
+
+.moduleUpcoming,
+.moduleIncome {
+  background:
+    radial-gradient(130% 140% at 100% 0%, rgba(73, 222, 214, 0.11), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    var(--surface-elevated);
 }
 
 .subsection {
@@ -682,8 +993,11 @@ textarea {
   min-width: 0;
   overflow: auto;
   border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    rgba(255, 255, 255, 0.015);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 .mobileDataList {
@@ -693,6 +1007,10 @@ textarea {
 .dataItem {
   display: grid;
   gap: 12px;
+  background:
+    radial-gradient(140% 140% at 100% 0%, rgba(98, 168, 255, 0.1), transparent 46%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    var(--surface-elevated);
 }
 
 .dataItemHeader {
@@ -728,7 +1046,9 @@ textarea {
 
 .summaryCell {
   border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent), var(--surface-alt);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    var(--surface-alt);
   border-radius: 14px;
   padding: 10px 11px;
   display: grid;
@@ -745,9 +1065,9 @@ textarea {
 
 .pageIntro {
   margin: -4px 0 2px;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   max-width: 78ch;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 .dataRow {
@@ -1048,12 +1368,17 @@ tfoot td {
     justify-content: space-between;
     padding: 12px 14px;
     position: static;
-    border-radius: 16px;
+    border-radius: 22px;
+    background:
+      radial-gradient(130% 150% at 100% 0%, rgba(98, 168, 255, 0.14), transparent 42%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+      var(--surface-elevated);
   }
 
   .mobileBrand {
     display: grid;
     gap: 3px;
+    min-width: 0;
   }
 
   .mobileBrandMeta {
@@ -1121,11 +1446,15 @@ tfoot td {
     max-height: calc(100vh - 24px);
     overflow: auto;
     z-index: 40;
-    padding: 14px;
+    padding: 16px;
     transform: translateY(-10px) scale(0.98);
     opacity: 0;
     pointer-events: none;
     transition: transform 0.2s ease, opacity 0.2s ease;
+    background:
+      radial-gradient(130% 150% at 100% 0%, rgba(98, 168, 255, 0.15), transparent 42%),
+      radial-gradient(120% 150% at 0% 100%, rgba(73, 222, 214, 0.1), transparent 42%),
+      var(--surface-elevated);
   }
 
   .mobileMenu.open {
@@ -1136,7 +1465,7 @@ tfoot td {
 
   .mobileNav {
     display: grid;
-    gap: 7px;
+    gap: 8px;
   }
 
   .mobileMenuFooter {
@@ -1148,7 +1477,7 @@ tfoot td {
   }
 
   .container {
-    padding: 10px;
+    padding: 10px 10px 92px;
   }
 
   .appShell {
@@ -1162,6 +1491,23 @@ tfoot td {
 
   .page {
     gap: 10px;
+  }
+
+  .mobileBottomNav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    position: sticky;
+    bottom: 8px;
+    z-index: 20;
+    padding: 10px;
+    border-radius: 24px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+      rgba(9, 17, 31, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-color: rgba(102, 135, 189, 0.48);
   }
 
   .section {

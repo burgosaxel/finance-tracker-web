@@ -119,7 +119,7 @@ export default function DashboardPage({
 
   return (
     <div className="page">
-      <section className="card section pageHero">
+      <section className="card section pageHero heroOverview">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Financial command center</div>
@@ -131,7 +131,7 @@ export default function DashboardPage({
         </div>
       </section>
 
-      <section className="dashboardSection">
+      <section className="dashboardSection dashboardBlock dashboardBlockOverview">
         <div className="sectionHeader">
           <div>
             <h3>Financial Overview</h3>
@@ -160,7 +160,7 @@ export default function DashboardPage({
         </div>
       </section>
 
-      <section className="dashboardSection">
+      <section className="dashboardSection dashboardBlock dashboardBlockMonthly">
         <div className="sectionHeader">
           <div>
             <h3>Monthly Overview</h3>
@@ -174,7 +174,7 @@ export default function DashboardPage({
         </div>
       </section>
 
-      <section className="dashboardSection">
+      <section className="dashboardSection dashboardBlock dashboardBlockHealth">
         <div className="sectionHeader">
           <div>
             <h3>Financial Health</h3>
@@ -194,7 +194,7 @@ export default function DashboardPage({
         </div>
       </section>
 
-      <section className="dashboardSection">
+      <section className="dashboardSection dashboardBlock dashboardBlockInsights">
         <div className="sectionHeader">
           <div>
             <h3>Insights</h3>
@@ -202,7 +202,7 @@ export default function DashboardPage({
           </div>
         </div>
         <div className="dashboardInsightsGrid">
-          <section className="card section insightCard">
+          <section className="card section insightCard moduleRecurring">
             <div className="sectionHeader">
               <div>
                 <h4>Recurring Items Detected</h4>
@@ -236,7 +236,7 @@ export default function DashboardPage({
             )}
           </section>
 
-          <section className="card section insightCard">
+          <section className="card section insightCard moduleAlert">
             <div className="sectionHeader">
               <div>
                 <h4>Past Due Bills</h4>
@@ -259,7 +259,7 @@ export default function DashboardPage({
             ) : null}
           </section>
 
-          <section className="card section insightCard">
+          <section className="card section insightCard moduleUpcoming">
             <div className="sectionHeader">
               <div>
                 <h4>Upcoming Bills</h4>
@@ -284,7 +284,7 @@ export default function DashboardPage({
             </div>
           </section>
 
-          <section className="card section insightCard">
+          <section className="card section insightCard moduleActivity">
             <div className="sectionHeader">
               <div>
                 <h4>Recent Transactions</h4>
@@ -309,7 +309,7 @@ export default function DashboardPage({
         </div>
       </section>
 
-      <section className="dashboardSection">
+      <section className="dashboardSection dashboardBlock dashboardBlockSnapshot">
         <div className="sectionHeader">
           <div>
             <h3>Operational Snapshot</h3>
