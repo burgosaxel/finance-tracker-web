@@ -5,8 +5,11 @@ export default function Modal({ title, open, onClose, children }) {
   return (
     <div className="modalBackdrop" onClick={onClose}>
       <div className="modal card" onClick={(e) => e.stopPropagation()}>
-        <div className="row" style={{ marginBottom: 10 }}>
-          <strong>{title}</strong>
+        <div className="row modalHeader">
+          <div>
+            <div className="modalEyebrow">Edit details</div>
+            <strong className="modalTitle">{title}</strong>
+          </div>
           <div className="spacer" />
           <button type="button" onClick={onClose}>Close</button>
         </div>

@@ -25,7 +25,10 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
   return (
     <div className="appShell">
       <aside className="sidebar card desktopOnly">
-        <div className="sidebarTitle">BudgetCommand</div>
+        <div className="sidebarBrand">
+          <div className="sidebarEyebrow">Personal Finance Command Center</div>
+          <div className="sidebarTitle">BudgetCommand</div>
+        </div>
         <nav className="sidebarNav">
           {NAV_ITEMS.map((item) => (
             <a
@@ -37,10 +40,18 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
             </a>
           ))}
         </nav>
+        <div className="sidebarFooter">
+          <div className="sidebarMetaLabel">Signed in</div>
+          <div className="sidebarMetaValue">{user.email}</div>
+          {status ? <div className="statusBadge subtle">{status}</div> : null}
+        </div>
       </aside>
       <div className="mainPanel">
         <header className="mobileHeader card">
-          <div className="sidebarTitle">BudgetCommand</div>
+          <div className="mobileBrand">
+            <div className="sidebarTitle">BudgetCommand</div>
+            <div className="mobileBrandMeta">Personal finance command center</div>
+          </div>
           <button
             type="button"
             className="menuButton"
@@ -73,15 +84,27 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
             ))}
           </nav>
           <div className="mobileMenuFooter">
-            <div className="muted">{user.email}</div>
+            <div>
+              <div className="sidebarMetaLabel">Signed in</div>
+              <div className="sidebarMetaValue">{user.email}</div>
+            </div>
+            {status ? <div className="statusBadge subtle">{status}</div> : null}
             <button type="button" onClick={onSignOut}>Sign out</button>
           </div>
         </aside>
 
         <header className="topbar card desktopOnly">
-          <div className="muted">{status || ""}</div>
-          <div className="row">
-            <div className="muted">{user.email}</div>
+          <div className="row topbarRow">
+            <div>
+              <div className="topbarLabel">Workspace</div>
+              <div className="topbarTitle">BudgetCommand</div>
+            </div>
+            <div className="spacer" />
+            {status ? <div className="statusBadge subtle">{status}</div> : null}
+            <div className="topbarAccount">
+              <div className="sidebarMetaLabel">Signed in</div>
+              <div className="sidebarMetaValue">{user.email}</div>
+            </div>
             <button type="button" onClick={onSignOut}>Sign out</button>
           </div>
         </header>
