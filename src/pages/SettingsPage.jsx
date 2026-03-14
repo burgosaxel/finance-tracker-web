@@ -29,6 +29,14 @@ const EMPTY_ACCOUNT = {
   balance: 0,
 };
 
+const EMPTY_CREATE_ITEM = {
+  manualType: "bill",
+  name: "",
+  amount: 0,
+  dueDay: 1,
+  payDay: 1,
+};
+
 export default function SettingsPage({
   uid,
   settings,

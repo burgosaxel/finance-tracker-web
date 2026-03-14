@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
 import ActionMenu from "../components/ActionMenu";
 import {
@@ -371,7 +371,7 @@ export default function TransactionsPage({
               const matchedByLabel = matchSourceLabel(t);
               return (
                 <tr key={t.id}>
-                  <td>{t.date || "-"}</td>
+                  <td className="dateCell">{t.date || "-"}</td>
                   <td>
                     {t.merchantName || t.payee}
                     {t.pending ? <div className="muted">Pending</div> : null}
@@ -457,7 +457,7 @@ export default function TransactionsPage({
                 </span>
               </div>
               <div className="dataGrid">
-                <div className="dataRow"><span className="dataLabel">Date</span><span className="dataValue">{t.date || "-"}</span></div>
+                <div className="dataRow"><span className="dataLabel">Date</span><span className="dataValue dateCell">{t.date || "-"}</span></div>
                 <div className="dataRow"><span className="dataLabel">Category</span><span className="dataValue">{formatCategoryLabel(getEffectiveTransactionCategory(t))}</span></div>
                 <div className="dataRow"><span className="dataLabel">Account</span><span className="dataValue">{accounts.find((a) => a.id === t.accountId)?.name || "-"}</span></div>
                 <div className="dataRow"><span className="dataLabel">Institution</span><span className="dataValue">{t.institutionName || "-"}</span></div>

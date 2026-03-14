@@ -149,21 +149,7 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
           </div>
         </aside>
 
-        <header className="topbar workspace-bar card desktopOnly">
-          <div className="row topbarRow">
-            <div>
-              <div className="topbarLabel meta-kicker">Workspace</div>
-              <div className="topbarTitle meta-value">BudgetCommand</div>
-            </div>
-            <div className="spacer" />
-            {status ? <div className="statusBadge subtle status-pill">{status}</div> : null}
-            <div className="topbarAccount">
-              <div className="sidebarMetaLabel meta-kicker">Workspace owner</div>
-              <div className="sidebarMetaValue meta-value">{user.email}</div>
-            </div>
-            <button type="button" className="ghostButton button-secondary secondary" onClick={onSignOut}>Sign out</button>
-          </div>
-        </header>
+
 
         <main className="pageContent">{children}</main>
 

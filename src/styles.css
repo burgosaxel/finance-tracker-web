@@ -2834,7 +2834,7 @@ button:disabled {
 /* Correction pass */
 .app-shell,
 .appShell {
-  grid-template-columns: 312px minmax(0, 1fr);
+  grid-template-columns: 328px minmax(0, 1fr);
 }
 
 .mobileHeader {
@@ -2854,9 +2854,16 @@ button:disabled {
 
 .sidebar-title,
 .sidebarTitle {
-  font-size: 1.7rem;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  font-size: 1.9rem;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: normal;
+}
+
+.sidebar-brand-copy,
+.sidebarBrandCopy {
+  overflow: visible;
 }
 
 .sidebar-subtitle,
@@ -2970,5 +2977,61 @@ button:disabled {
 
   .billListRow {
     grid-template-columns: 1fr;
+  }
+}
+
+.operationsControls {
+  align-items: center;
+}
+
+.operationsControlRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.monthPickerField {
+  min-width: 0;
+}
+
+.monthPickerField .monthPickerInputWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(10, 21, 37, 0.94);
+  border: 1px solid rgba(118, 160, 209, 0.18);
+}
+
+.monthPickerField .monthPickerInputWrap input {
+  min-height: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.monthPickerField .monthPickerInputWrap input:focus {
+  border: none;
+  box-shadow: none;
+}
+
+.transactions-table .col-date,
+.transaction-row .date-cell,
+.dateCell {
+  white-space: nowrap;
+  width: 110px;
+}
+
+@media (max-width: 720px) {
+  .operationsControlRow {
+    align-items: stretch;
+  }
+
+  .monthPickerField .monthPickerInputWrap {
+    width: 100%;
   }
 }

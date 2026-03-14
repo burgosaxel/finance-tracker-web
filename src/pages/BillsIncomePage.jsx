@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import Modal from "../components/Modal";
 import ActionMenu from "../components/ActionMenu";
+import { CalendarDays } from "lucide-react";
 import {
   deleteStatementItem,
   deleteTemplate,
@@ -614,16 +615,19 @@ export default function BillsIncomePage({
               Manage the current month's obligations and incoming cash while keeping recurring templates and statement history intact.
             </p>
           </div>
-          <div className="pageActions">
-            <div className="actionCluster">
-              <button type="button" onClick={() => goMonth(-1)}>Prev</button>
-              <label className="fieldGroup compactField">
+          <div className="pageActions operationsControls">
+            <div className="actionCluster operationsControlRow">
+              <button type="button" className="button-secondary secondary" onClick={() => goMonth(-1)}>Prev</button>
+              <label className="fieldGroup compactField monthPickerField">
                 <span>Month</span>
-                <input type="month" value={currentMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+                <div className="monthPickerInputWrap">
+                  <CalendarDays size={16} />
+                  <input type="month" value={currentMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+                </div>
               </label>
-              <button type="button" onClick={() => goMonth(1)}>Next</button>
+              <button type="button" className="button-secondary secondary" onClick={() => goMonth(1)}>Next</button>
+              <button type="button" className="button-secondary secondary" onClick={syncMonth}>Sync now</button>
             </div>
-            <button type="button" onClick={syncMonth}>Sync now</button>
           </div>
         </div>
         {!isCurrentMonth ? <div className="muted">Viewing historical month {currentMonth} (read-only).</div> : null}

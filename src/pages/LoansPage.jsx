@@ -14,30 +14,53 @@ const EMPTY_LOAN = {
   notes: "",
 };
 
+const SORT_META = {
+  name: { asc: "A -> Z", desc: "Z -> A" },
+  balance: { asc: "Low -> High", desc: "High -> Low" },
+  monthlyPayment: { asc: "Low -> High", desc: "High -> Low" },
+  interest: { asc: "Low -> High", desc: "High -> Low" },
+  dueDate: { asc: "Earliest -> Latest", desc: "Latest -> Earliest" },
+};
+
 export default function LoansPage({ uid, loans, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_LOAN);
   const [editingId, setEditingId] = useState(null);
+  const [sortBy, setSortBy] = useState("balance");
+  const [sortDirection, setSortDirection] = useState("desc");
 
-  const rows = useMemo(
-    () =>
-      [...(loans || [])]
-        .map((loan) => ({
-          ...loan,
-          lender: loan.lender || loan.name || "",
-          balance: safeNumber(loan.balance, 0),
-          monthlyPayment: safeNumber(loan.monthlyPayment, 0),
-          interestRate:
-            loan.interestRate === null || loan.interestRate === undefined || loan.interestRate === ""
-              ? null
-              : safeNumber(loan.interestRate, 0),
-          dueDay: loan.dueDay ? Number(loan.dueDay) : null,
-          status: loan.status || "active",
-        }))
-        .sort((a, b) => b.balance - a.balance),
-    [loans]
-  );
+  const rows = useMemo(() => {
+    const normalized = [...(loans || [])].map((loan) => ({
+      ...loan,
+      lender: loan.lender || loan.name || "",
+      balance: safeNumber(loan.balance, 0),
+      monthlyPayment: safeNumber(loan.monthlyPayment, 0),
+      interestRate:
+        loan.interestRate === null || loan.interestRate === undefined || loan.interestRate === ""
+          ? null
+          : safeNumber(loan.interestRate, 0),
+      dueDay: loan.dueDay ? Number(loan.dueDay) : null,
+      status: loan.status || "active",
+    }));
+    normalized.sort((a, b) => {
+      if (sortBy === "name") {
+        const result = String(a.lender || "").localeCompare(String(b.lender || ""));
+        return sortDirection === "asc" ? result : -result;
+      }
+      if (sortBy === "balance") return sortDirection === "asc" ? a.balance - b.balance : b.balance - a.balance;
+      if (sortBy === "monthlyPayment") return sortDirection === "asc" ? a.monthlyPayment - b.monthlyPayment : b.monthlyPayment - a.monthlyPayment;
+      if (sortBy === "interest") {
+        const aValue = a.interestRate ?? -1;
+        const bValue = b.interestRate ?? -1;
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      }
+      const aDue = a.dueDay ?? 99;
+      const bDue = b.dueDay ?? 99;
+      return sortDirection === "asc" ? aDue - bDue : bDue - aDue;
+    });
+    return normalized;
+  }, [loans, sortBy, sortDirection]);
 
   const totals = useMemo(
     () => ({
@@ -46,6 +69,15 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
     }),
     [rows]
   );
+
+  function changeSort(nextSortBy) {
+    if (nextSortBy === sortBy) {
+      setSortDirection((value) => (value === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortBy(nextSortBy);
+    setSortDirection(nextSortBy === "name" || nextSortBy === "dueDate" ? "asc" : "desc");
+  }
 
   function startAdd() {
     setEditingId(null);
@@ -117,6 +149,19 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
             </p>
           </div>
           <div className="pageActions">
+            <label className="fieldGroup compactField">
+              <span>Sort</span>
+              <select value={sortBy} onChange={(e) => changeSort(e.target.value)}>
+                <option value="name">Name</option>
+                <option value="balance">Balance</option>
+                <option value="monthlyPayment">Monthly payment</option>
+                <option value="interest">Interest</option>
+                <option value="dueDate">Due date</option>
+              </select>
+            </label>
+            <button type="button" className="button-secondary secondary" onClick={() => setSortDirection((value) => (value === "asc" ? "desc" : "asc"))}>
+              {SORT_META[sortBy][sortDirection]}
+            </button>
             <button type="button" className="primary" onClick={startAdd}>
               Add Loan
             </button>
@@ -132,7 +177,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         <div className="sectionHeader">
           <div>
             <h3>Loan accounts</h3>
-            <div className="muted compactSubtext">A clear ledger of lender balances, due-day timing, and status.</div>
+            <div className="muted compactSubtext">Sort by name, balance, payment, interest, or due date without changing any loan data.</div>
           </div>
         </div>
         <div className="tableWrap card desktopDataTable premiumTableWrap">
@@ -160,8 +205,8 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
             {rows.map((loan) => (
               <tr key={loan.id}>
                 <td>{loan.lender}</td>
-                <td>{formatCurrency(loan.balance, cfg.currency)}</td>
-                <td>{formatCurrency(loan.monthlyPayment, cfg.currency)}</td>
+                <td className="value-negative">{formatCurrency(loan.balance, cfg.currency)}</td>
+                <td className="value-negative">{formatCurrency(loan.monthlyPayment, cfg.currency)}</td>
                 <td>{loan.interestRate === null ? "-" : formatPercent(loan.interestRate)}</td>
                 <td>{loan.dueDay || "-"}</td>
                 <td>{loan.status || "active"}</td>
@@ -190,8 +235,8 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
               <span className="pill">{loan.status || "active"}</span>
             </div>
             <div className="summaryGrid two">
-              <div className="summaryCell"><span className="dataLabel">Balance</span><strong>{formatCurrency(loan.balance, cfg.currency)}</strong></div>
-              <div className="summaryCell"><span className="dataLabel">Monthly Payment</span><strong>{formatCurrency(loan.monthlyPayment, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Balance</span><strong className="value-negative">{formatCurrency(loan.balance, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Monthly Payment</span><strong className="value-negative">{formatCurrency(loan.monthlyPayment, cfg.currency)}</strong></div>
               <div className="summaryCell"><span className="dataLabel">Interest Rate</span><strong>{loan.interestRate === null ? "-" : formatPercent(loan.interestRate)}</strong></div>
               <div className="summaryCell"><span className="dataLabel">Due Day</span><strong>{loan.dueDay || "-"}</strong></div>
             </div>
@@ -209,11 +254,11 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
         <div className="summaryGrid two">
           <div className="summaryCell">
             <span className="dataLabel">Total Loan Balance</span>
-            <strong>{formatCurrency(totals.totalBalance, cfg.currency)}</strong>
+            <strong className="value-negative">{formatCurrency(totals.totalBalance, cfg.currency)}</strong>
           </div>
           <div className="summaryCell">
             <span className="dataLabel">Total Monthly Payment</span>
-            <strong>{formatCurrency(totals.totalMonthlyPayment, cfg.currency)}</strong>
+            <strong className="value-negative">{formatCurrency(totals.totalMonthlyPayment, cfg.currency)}</strong>
           </div>
         </div>
       </article>

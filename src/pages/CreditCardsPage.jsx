@@ -14,9 +14,17 @@ const EMPTY_CARD = {
   dueDay: "",
 };
 
+const SORT_META = {
+  name: { asc: "A -> Z", desc: "Z -> A" },
+  utilization: { asc: "Low -> High", desc: "High -> Low" },
+  balance: { asc: "Low -> High", desc: "High -> Low" },
+  apr: { asc: "Low -> High", desc: "High -> Low" },
+};
+
 export default function CreditCardsPage({ uid, cards, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [sortBy, setSortBy] = useState("utilization");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_CARD);
   const [editingId, setEditingId] = useState(null);
@@ -38,12 +46,17 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
       };
     });
     const sorted = [...mapped];
-    if (sortBy === "name") sorted.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
-    if (sortBy === "utilization") sorted.sort((a, b) => b.utilization - a.utilization);
-    if (sortBy === "balance") sorted.sort((a, b) => b.balance - a.balance);
-    if (sortBy === "apr") sorted.sort((a, b) => b.apr - a.apr);
+    sorted.sort((a, b) => {
+      if (sortBy === "name") {
+        const result = String(a.name || "").localeCompare(String(b.name || ""));
+        return sortDirection === "asc" ? result : -result;
+      }
+      const valueA = sortBy === "utilization" ? a.utilization : sortBy === "balance" ? a.balance : a.apr;
+      const valueB = sortBy === "utilization" ? b.utilization : sortBy === "balance" ? b.balance : b.apr;
+      return sortDirection === "asc" ? valueA - valueB : valueB - valueA;
+    });
     return sorted;
-  }, [cards, cfg.recommendedPaymentRate, sortBy]);
+  }, [cards, cfg.recommendedPaymentRate, sortBy, sortDirection]);
 
   const totals = useMemo(() => {
     const totalLimit = rows.reduce((s, c) => s + c.limit, 0);
@@ -56,6 +69,15 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
       avgUtil: totalLimit > 0 ? (totalBalance / totalLimit) * 100 : 0,
     };
   }, [rows]);
+
+  function changeSort(nextSortBy) {
+    if (nextSortBy === sortBy) {
+      setSortDirection((value) => (value === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortBy(nextSortBy);
+    setSortDirection(nextSortBy === "name" ? "asc" : "desc");
+  }
 
   function startAdd() {
     setEditingId(null);
@@ -126,13 +148,16 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
           <div className="pageActions">
             <label className="fieldGroup compactField">
               <span>Sort</span>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <select value={sortBy} onChange={(e) => changeSort(e.target.value)}>
                 <option value="name">Name</option>
                 <option value="utilization">Utilization</option>
                 <option value="balance">Balance</option>
                 <option value="apr">APR</option>
               </select>
             </label>
+            <button type="button" className="button-secondary secondary" onClick={() => setSortDirection((value) => (value === "asc" ? "desc" : "asc"))}>
+              {SORT_META[sortBy][sortDirection]}
+            </button>
             <button type="button" className="primary" onClick={startAdd}>Add Card</button>
           </div>
         </div>
@@ -148,7 +173,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
         <div className="sectionHeader">
           <div>
             <h3>Card portfolio</h3>
-            <div className="muted compactSubtext">Sort by utilization, balance, or APR to prioritize what needs attention.</div>
+            <div className="muted compactSubtext">Sort by name, utilization, balance, or APR and toggle direction as needed.</div>
           </div>
         </div>
         <div className="tableWrap card desktopDataTable premiumTableWrap">
@@ -176,7 +201,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
                 <td>{card.name}</td>
                 <td>{card.issuer || "-"}</td>
                 <td>{formatCurrency(card.limit, cfg.currency)}</td>
-                <td>{formatCurrency(card.balance, cfg.currency)}</td>
+                <td className="value-negative">{formatCurrency(card.balance, cfg.currency)}</td>
                 <td>{formatCurrency(card.available, cfg.currency)}</td>
                 <td>
                   <span className={card.utilization > cfg.utilizationThreshold ? "pill danger" : "pill"}>
@@ -184,7 +209,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
                   </span>
                 </td>
                 <td>{formatPercent(card.apr)}</td>
-                <td>{formatCurrency(card.minimumPayment, cfg.currency)}</td>
+                <td className="value-negative">{formatCurrency(card.minimumPayment, cfg.currency)}</td>
                 <td>{formatCurrency(card.recommendedPayment, cfg.currency)}</td>
                 <td className="row">
                   <button type="button" onClick={() => startEdit(card)}>Edit</button>
@@ -197,11 +222,11 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
             <tr>
               <th colSpan={2}>Totals</th>
               <th>{formatCurrency(totals.totalLimit, cfg.currency)}</th>
-              <th>{formatCurrency(totals.totalBalance, cfg.currency)}</th>
+              <th className="value-negative">{formatCurrency(totals.totalBalance, cfg.currency)}</th>
               <th>{formatCurrency(totals.totalLimit - totals.totalBalance, cfg.currency)}</th>
               <th>{formatPercent(totals.avgUtil)}</th>
               <th />
-              <th>{formatCurrency(totals.totalMin, cfg.currency)}</th>
+              <th className="value-negative">{formatCurrency(totals.totalMin, cfg.currency)}</th>
               <th />
               <th />
             </tr>
@@ -225,12 +250,12 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
             </div>
             <div className="summaryGrid three">
               <div className="summaryCell"><span className="dataLabel">Limit</span><strong>{formatCurrency(card.limit, cfg.currency)}</strong></div>
-              <div className="summaryCell"><span className="dataLabel">Balance</span><strong>{formatCurrency(card.balance, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Balance</span><strong className="value-negative">{formatCurrency(card.balance, cfg.currency)}</strong></div>
               <div className="summaryCell"><span className="dataLabel">Available</span><strong>{formatCurrency(card.available, cfg.currency)}</strong></div>
             </div>
             <div className="summaryGrid two">
               <div className="summaryCell"><span className="dataLabel">APR</span><strong>{formatPercent(card.apr)}</strong></div>
-              <div className="summaryCell"><span className="dataLabel">Minimum</span><strong>{formatCurrency(card.minimumPayment, cfg.currency)}</strong></div>
+              <div className="summaryCell"><span className="dataLabel">Minimum</span><strong className="value-negative">{formatCurrency(card.minimumPayment, cfg.currency)}</strong></div>
               <div className="summaryCell"><span className="dataLabel">Recommended</span><strong>{formatCurrency(card.recommendedPayment, cfg.currency)}</strong></div>
               <div className="summaryCell"><span className="dataLabel">Utilization</span><strong>{formatPercent(card.utilization)}</strong></div>
             </div>
@@ -246,10 +271,10 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
             <h3 className="dataItemTitle">Totals</h3>
             <div className="dataGrid">
               <div className="dataRow"><span className="dataLabel">Total Limit</span><span className="dataValue">{formatCurrency(totals.totalLimit, cfg.currency)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Total Balance</span><span className="dataValue">{formatCurrency(totals.totalBalance, cfg.currency)}</span></div>
+              <div className="dataRow"><span className="dataLabel">Total Balance</span><span className="dataValue value-negative">{formatCurrency(totals.totalBalance, cfg.currency)}</span></div>
               <div className="dataRow"><span className="dataLabel">Available</span><span className="dataValue">{formatCurrency(totals.totalLimit - totals.totalBalance, cfg.currency)}</span></div>
               <div className="dataRow"><span className="dataLabel">Avg Utilization</span><span className="dataValue">{formatPercent(totals.avgUtil)}</span></div>
-              <div className="dataRow"><span className="dataLabel">Total Minimum</span><span className="dataValue">{formatCurrency(totals.totalMin, cfg.currency)}</span></div>
+              <div className="dataRow"><span className="dataLabel">Total Minimum</span><span className="dataValue value-negative">{formatCurrency(totals.totalMin, cfg.currency)}</span></div>
             </div>
           </article>
         ) : null}
