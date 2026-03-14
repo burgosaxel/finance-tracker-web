@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import AppShell from "./components/AppShell";
 import Toast from "./components/Toast";
-import brandLogo from "../BudgetCommand Logo v2.png";
+import brandLogo from "./assets/budgetcommand-logo.png";
 import DashboardPage from "./pages/DashboardPage";
 import BudgetPage from "./pages/BudgetPage";
 import CreditCardsPage from "./pages/CreditCardsPage";

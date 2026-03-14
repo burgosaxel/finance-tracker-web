@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { routeHref } from "../lib/hashRouter";
 import { Home, Target, CreditCard, Building2, Receipt, ArrowLeftRight, Settings } from "lucide-react";
-import brandLogo from "../../BudgetCommand Logo v2.png";
+import brandLogo from "../assets/budgetcommand-logo.png";
 
 function NavIcon({ kind }) {
   const iconMap = {
@@ -47,50 +47,55 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
   }
 
   return (
-    <div className="appShell">
+    <div className="appShell app-shell">
       <aside className="sidebar card desktopOnly">
-        <div className="sidebarBrand">
-          <img className="brandLogo" src={brandLogo} alt="BudgetCommand" />
-          <div>
-            <div className="sidebarEyebrow">Premium finance workspace</div>
-            <div className="sidebarTitle">BudgetCommand</div>
+        <div>
+          <div className="sidebarBrand sidebar-brand">
+            <img src={brandLogo} alt="BudgetCommand" className="brandLogo sidebar-logo" />
+            <div className="sidebarBrandCopy sidebar-brand-copy">
+              <div className="sidebarEyebrow sidebar-kicker">Premium Finance Workspace</div>
+              <div className="sidebarTitle sidebar-title">BudgetCommand</div>
+              <div className="sidebarSubtitle sidebar-subtitle">
+                Financial command center for cash, debt, bills, sync, and recurring insight.
+              </div>
+            </div>
           </div>
+
+          <nav className="sidebarNav sidebar-nav">
+            {NAV_ITEMS.map((item) => (
+              <a
+                key={item.id}
+                className={`navLink sidebar-link ${route === item.id ? "active" : ""}`}
+                href={routeHref(item.id)}
+              >
+                <NavIcon kind={item.icon} />
+                <span className="navTextWrap">
+                  <span className="navLabel label">{item.label}</span>
+                  <span className="navMeta sublabel">{item.shortLabel}</span>
+                </span>
+              </a>
+            ))}
+          </nav>
         </div>
-        <div className="sidebarPanel">
-          <div className="sidebarPanelLabel">Financial command center</div>
-          <div className="sidebarPanelValue">Track cash, debt, bills, sync health, and recurring patterns in one flow.</div>
-        </div>
-        <nav className="sidebarNav">
-          {NAV_ITEMS.map((item) => (
-            <a
-              key={item.id}
-              className={`navLink ${route === item.id ? "active" : ""}`}
-              href={routeHref(item.id)}
-            >
-              <NavIcon kind={item.icon} />
-              <span className="navTextWrap">
-                <span className="navLabel">{item.label}</span>
-                <span className="navMeta">{item.shortLabel}</span>
-              </span>
-            </a>
-          ))}
-        </nav>
-        <div className="sidebarFooter">
-          <div className="sidebarMetaLabel">Workspace owner</div>
-          <div className="sidebarMetaValue">{user.email}</div>
+
+        <div className="sidebarFooter sidebar-user-card">
+          <div className="sidebarMetaLabel kicker">Workspace owner</div>
+          <div className="sidebarMetaValue email">{user.email}</div>
           <div className="sidebarFooterActions">
-            {status ? <div className="statusBadge subtle">{status}</div> : null}
-            <button type="button" className="ghostButton" onClick={onSignOut}>Sign out</button>
+            {status ? <div className="statusBadge subtle status-pill">{status}</div> : null}
+            <button type="button" className="ghostButton button-secondary secondary" onClick={onSignOut}>Sign out</button>
           </div>
         </div>
       </aside>
-      <div className="mainPanel">
-        <header className="mobileHeader card">
+
+      <div className="mainPanel main-column">
+        <header className="mobileHeader workspace-bar card">
           <div className="mobileBrandWrap">
-            <img className="brandLogo compact" src={brandLogo} alt="BudgetCommand" />
+            <img className="brandLogo compact sidebar-logo" src={brandLogo} alt="BudgetCommand" />
             <div className="mobileBrand">
-              <div className="sidebarTitle">BudgetCommand</div>
-              <div className="mobileBrandMeta">Personal finance command center</div>
+              <div className="sidebarEyebrow sidebar-kicker">Premium Finance Workspace</div>
+              <div className="sidebarTitle sidebar-title">BudgetCommand</div>
+              <div className="mobileBrandMeta">Cash, debt, bills, sync, and recurring insight.</div>
             </div>
           </div>
           <button
@@ -114,52 +119,54 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
         <aside id="mobile-nav-menu" className={`mobileMenu card ${mobileMenuOpen ? "open" : ""}`}>
           <div className="mobileMenuHeader">
             <div>
-              <div className="sidebarEyebrow">Workspace</div>
+              <div className="sidebarEyebrow sidebar-kicker">Workspace</div>
               <div className="mobileMenuTitle">BudgetCommand</div>
             </div>
-            {status ? <div className="statusBadge subtle">{status}</div> : null}
+            {status ? <div className="statusBadge subtle status-pill">{status}</div> : null}
           </div>
           <nav className="mobileNav">
             {NAV_ITEMS.map((item) => (
               <a
                 key={item.id}
-                className={`navLink ${route === item.id ? "active" : ""}`}
+                className={`navLink sidebar-link ${route === item.id ? "active" : ""}`}
                 href={routeHref(item.id)}
                 onClick={closeMobileMenu}
               >
                 <NavIcon kind={item.icon} />
                 <span className="navTextWrap">
-                  <span className="navLabel">{item.label}</span>
-                  <span className="navMeta">{item.shortLabel}</span>
+                  <span className="navLabel label">{item.label}</span>
+                  <span className="navMeta sublabel">{item.shortLabel}</span>
                 </span>
               </a>
             ))}
           </nav>
-          <div className="mobileMenuFooter">
+          <div className="mobileMenuFooter sidebar-user-card">
             <div>
-              <div className="sidebarMetaLabel">Signed in</div>
-              <div className="sidebarMetaValue">{user.email}</div>
+              <div className="sidebarMetaLabel kicker">Workspace owner</div>
+              <div className="sidebarMetaValue email">{user.email}</div>
             </div>
-            <button type="button" className="primary" onClick={onSignOut}>Sign out</button>
+            <button type="button" className="button-primary primary" onClick={onSignOut}>Sign out</button>
           </div>
         </aside>
 
-        <header className="topbar card desktopOnly">
+        <header className="topbar workspace-bar card desktopOnly">
           <div className="row topbarRow">
             <div>
-              <div className="topbarLabel">Workspace</div>
-              <div className="topbarTitle">BudgetCommand</div>
+              <div className="topbarLabel meta-kicker">Workspace</div>
+              <div className="topbarTitle meta-value">BudgetCommand</div>
             </div>
             <div className="spacer" />
-            {status ? <div className="statusBadge subtle">{status}</div> : null}
+            {status ? <div className="statusBadge subtle status-pill">{status}</div> : null}
             <div className="topbarAccount">
-              <div className="sidebarMetaLabel">Workspace owner</div>
-              <div className="sidebarMetaValue">{user.email}</div>
+              <div className="sidebarMetaLabel meta-kicker">Workspace owner</div>
+              <div className="sidebarMetaValue meta-value">{user.email}</div>
             </div>
-            <button type="button" className="ghostButton" onClick={onSignOut}>Sign out</button>
+            <button type="button" className="ghostButton button-secondary secondary" onClick={onSignOut}>Sign out</button>
           </div>
         </header>
+
         <main className="pageContent">{children}</main>
+
         <nav className="mobileBottomNav card" aria-label="Primary">
           {MOBILE_PRIMARY_NAV.map((item) => (
             <a
