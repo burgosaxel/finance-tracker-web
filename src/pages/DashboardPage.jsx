@@ -16,6 +16,7 @@ import {
   summarizeCashFlowFromTransactions,
   summarizeSpendingByCategory,
 } from "../lib/finance";
+import { TrendingUp, DollarSign, CreditCard, PiggyBank, Calendar, AlertTriangle, BarChart3, Wallet } from "lucide-react";
 
 export default function DashboardPage({
   data,
@@ -141,18 +142,21 @@ export default function DashboardPage({
         <div className="dashboardHeroGrid">
           <StatCard
             className="heroStat heroStatPrimary"
+            icon={TrendingUp}
             label="Net Worth"
             value={formatCurrency(summary.netWorth, cfg.currency)}
             subtitle={`Cash ${formatCurrency(summary.totalCash, cfg.currency)} | Debt ${formatCurrency(summary.totalDebt, cfg.currency)}`}
           />
           <StatCard
             className="heroStat"
+            icon={Wallet}
             label="Total Cash"
             value={formatCurrency(summary.totalCash, cfg.currency)}
             subtitle={`Manual ${formatCurrency(summary.manualCash, cfg.currency)} | Linked ${formatCurrency(summary.linkedCash, cfg.currency)}`}
           />
           <StatCard
             className="heroStat heroStatDanger"
+            icon={CreditCard}
             label="Total Debt"
             value={formatCurrency(summary.totalDebt, cfg.currency)}
             subtitle={`Cards ${formatCurrency(summary.creditCardDebt, cfg.currency)} | Loans ${formatCurrency(summary.loanDebt, cfg.currency)}`}
@@ -168,9 +172,9 @@ export default function DashboardPage({
           </div>
         </div>
         <div className="dashboardMetricGrid">
-          <StatCard label="This Month Income" value={formatCurrency(summary.monthIncome, cfg.currency)} />
-          <StatCard label="Bills Due This Month" value={formatCurrency(summary.monthBills, cfg.currency)} />
-          <StatCard label="Bills Remaining" value={formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)} />
+          <StatCard icon={PiggyBank} className="cardMint" label="This Month Income" value={formatCurrency(summary.monthIncome, cfg.currency)} />
+          <StatCard icon={Calendar} className="cardTeal" label="Bills Due This Month" value={formatCurrency(summary.monthBills, cfg.currency)} />
+          <StatCard icon={AlertTriangle} className="cardViolet" label="Bills Remaining" value={formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)} />
         </div>
       </section>
 
@@ -182,12 +186,16 @@ export default function DashboardPage({
           </div>
         </div>
         <div className="dashboardMetricGrid">
-          <StatCard label="Credit Utilization" value={formatPercent(summary.utilization)} />
+          <StatCard icon={BarChart3} className="cardTeal" label="Credit Utilization" value={formatPercent(summary.utilization)} />
           <StatCard
+            icon={TrendingUp}
+            className="cardMint"
             label="Projected Month End Balance"
             value={formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}
           />
           <StatCard
+            icon={DollarSign}
+            className="cardViolet"
             label="Monthly Outflow"
             value={formatCurrency(summary.transactionCashFlow.outflow, cfg.currency)}
           />

@@ -1,21 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { routeHref } from "../lib/hashRouter";
+import { Home, Target, CreditCard, Building2, Receipt, ArrowLeftRight, Settings } from "lucide-react";
 
 function NavIcon({ kind }) {
-  const paths = {
-    dashboard: "M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.75v-5.5h-4.5V21H5a1 1 0 0 1-1-1z",
-    budget: "M5 6.5h14M5 12h14M5 17.5h8M17 16.5l2 2 3-4",
-    cards: "M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5zm0 3h16",
-    loans: "M4.5 9.5 12 5l7.5 4.5v8.5a1 1 0 0 1-1 1H5.5a1 1 0 0 1-1-1zm4 8v-4h7v4",
-    bills: "M7 4.75h10A1.25 1.25 0 0 1 18.25 6v12A1.25 1.25 0 0 1 17 19.25H7A1.25 1.25 0 0 1 5.75 18V6A1.25 1.25 0 0 1 7 4.75m2.25 4h5.5m-5.5 4h5.5m-5.5 4h3.5",
-    transactions: "M6 7.25h12M6 12h8m-8 4.75h12M16.5 9l2.5-1.75L16.5 5M7.5 19 5 17.25 7.5 15.5",
-    settings: "M12 8.25A3.75 3.75 0 1 1 8.25 12 3.75 3.75 0 0 1 12 8.25m0-4.5 1.05 2.2 2.43.35-.92 2.25 1.58 1.87-1.96 1.47.23 2.45L12 15.9l-2.41 1.44.23-2.45-1.96-1.47 1.58-1.87-.92-2.25 2.43-.35z",
+  const iconMap = {
+    dashboard: Home,
+    budget: Target,
+    cards: CreditCard,
+    loans: Building2,
+    bills: Receipt,
+    transactions: ArrowLeftRight,
+    settings: Settings,
   };
+  const IconComponent = iconMap[kind] || Home;
   return (
     <span className="navIcon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d={paths[kind] || paths.dashboard} />
-      </svg>
+      <IconComponent size={20} />
     </span>
   );
 }

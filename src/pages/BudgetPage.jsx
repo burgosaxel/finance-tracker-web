@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import StatCard from "../components/StatCard";
 import { getBudgetDocIdForMonth, upsertEntity } from "../lib/db";
 import { DEFAULT_SETTINGS, formatCurrency, monthKey, safeNumber } from "../lib/finance";
+import { PiggyBank, DollarSign, TrendingUp } from "lucide-react";
 
 export default function BudgetPage({ uid, budgets, bills, income, transactions, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
@@ -101,9 +102,9 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
           </div>
         </div>
         <div className="statsGrid compactStats">
-          <StatCard label="Month Income" value={formatCurrency(monthIncome, cfg.currency)} />
-          <StatCard label="Total Assigned" value={formatCurrency(totals.totalAssigned, cfg.currency)} />
-          <StatCard label="To Be Budgeted" value={formatCurrency(totals.toBeBudgeted, cfg.currency)} />
+          <StatCard icon={PiggyBank} label="Month Income" value={formatCurrency(monthIncome, cfg.currency)} />
+          <StatCard icon={DollarSign} label="Total Assigned" value={formatCurrency(totals.totalAssigned, cfg.currency)} />
+          <StatCard icon={TrendingUp} label="To Be Budgeted" value={formatCurrency(totals.toBeBudgeted, cfg.currency)} />
         </div>
       </section>
 

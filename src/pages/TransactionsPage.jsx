@@ -19,6 +19,7 @@ import {
   monthKey,
   safeNumber,
 } from "../lib/finance";
+import { Plus, Settings } from "lucide-react";
 
 const EMPTY_TX = {
   date: new Date().toISOString().slice(0, 10),
@@ -250,8 +251,8 @@ export default function TransactionsPage({
             </p>
           </div>
           <div className="pageActions">
-            <button type="button" onClick={runRules}>Apply Rules</button>
-            <button type="button" className="primary" onClick={startAdd}>Add Transaction</button>
+            <button type="button" onClick={runRules}><Settings size={16} /> Apply Rules</button>
+            <button type="button" className="primary" onClick={startAdd}><Plus size={16} /> Add Transaction</button>
           </div>
         </div>
         <div className="filtersBar">
