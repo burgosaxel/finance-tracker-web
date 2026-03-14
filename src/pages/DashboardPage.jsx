@@ -62,6 +62,15 @@ export default function DashboardPage({
     const transactionCashFlow = summarizeCashFlowFromTransactions(transactions, currentMonth);
     const topSpending = summarizeSpendingByCategory(transactions, currentMonth, 5);
     const recentSyncedTransactions = getRecentSyncedTransactions(transactions, 5);
+    const recurringActive = (recurringPayments || [])
+      .filter((entry) => entry?.active !== false && entry?.status !== "ignored")
+      .sort((a, b) => {
+        const left = a?.nextExpectedDate?.toDate ? a.nextExpectedDate.toDate().getTime() : Number.MAX_SAFE_INTEGER;
+        const right = b?.nextExpectedDate?.toDate ? b.nextExpectedDate.toDate().getTime() : Number.MAX_SAFE_INTEGER;
+        return left - right;
+      });
+    const recurringConfirmed = recurringActive.filter((entry) => entry.status === "confirmed");
+    const recurringSuggested = recurringActive.filter((entry) => entry.status !== "confirmed");
 
     const overUtilized = (data.creditCards || [])
       .map((c) => {
@@ -88,6 +97,9 @@ export default function DashboardPage({
       transactionCashFlow,
       topSpending,
       recentSyncedTransactions,
+      recurringActive,
+      recurringConfirmed,
+      recurringSuggested,
       overUtilized,
     };
   }, [
@@ -100,6 +112,7 @@ export default function DashboardPage({
     data.loans,
     incomes,
     now,
+    recurringPayments,
     transactions,
   ]);
 
@@ -127,6 +140,11 @@ export default function DashboardPage({
         <StatCard
           label="This Month Outflow"
           value={formatCurrency(summary.transactionCashFlow.outflow, cfg.currency)}
+        />
+        <StatCard
+          label="Recurring Items Detected"
+          value={String(summary.recurringActive.length)}
+          subtitle={`${summary.recurringConfirmed.length} confirmed | ${summary.recurringSuggested.length} suggested`}
         />
       </div>
 
@@ -257,15 +275,29 @@ export default function DashboardPage({
             </ul>
           )}
           <h4 style={{ marginTop: 10 }}>Recurring payment candidates</h4>
-          {(recurringPayments || []).length === 0 ? (
+          {summary.recurringActive.length === 0 ? (
             <div className="muted">Recurring candidates will appear after Plaid transaction syncs.</div>
           ) : (
             <ul className="cleanList">
-              {recurringPayments.slice(0, 5).map((entry) => (
+              {summary.recurringActive.slice(0, 5).map((entry) => (
                 <li key={entry.recurringId || entry.id} className="listRow compactTriplet">
-                  <span>{entry.merchantName}</span>
-                  <span>{entry.cadenceGuess || getEffectiveTransactionCategory(entry)}</span>
-                  <strong>{formatCurrency(entry.averageAmount, cfg.currency)}</strong>
+                  <span>
+                    {entry.displayName || entry.merchantName}
+                    <div className="muted">
+                      {entry.status === "confirmed" ? "Confirmed" : "Suggested"}
+                      {entry.linkedManualType ? ` | linked to ${entry.linkedManualType}` : ""}
+                    </div>
+                  </span>
+                  <span>
+                    {entry.cadenceGuess || getEffectiveTransactionCategory(entry)}
+                    <div className="muted">{entry.typeGuess || "unknown"}</div>
+                  </span>
+                  <strong>
+                    {formatCurrency(entry.averageAmount, cfg.currency)}
+                    {entry.nextExpectedDate?.toDate ? (
+                      <div className="muted">{entry.nextExpectedDate.toDate().toLocaleDateString()}</div>
+                    ) : null}
+                  </strong>
                 </li>
               ))}
             </ul>
