@@ -239,41 +239,49 @@ export default function TransactionsPage({
 
   return (
     <div className="page">
-      <div className="row">
-        <h2>Transactions</h2>
-        <div className="spacer" />
-        <label>
-          Month
-          <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
-        </label>
-        <label>
-          Account
-          <select value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
-            <option value="">All</option>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-        </label>
-        <label>
-          Category
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="">All</option>
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
-        <label>
-          Source
-          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
-            <option value="">All</option>
-            <option value="manual">Manual</option>
-            <option value="plaid">Plaid</option>
-          </select>
-        </label>
-        <button type="button" onClick={runRules}>Apply Rules</button>
-        <button type="button" className="primary" onClick={startAdd}>Add Transaction</button>
-      </div>
-      <p className="muted pageIntro">
-        Activity log for money in and out, with filters for month, account, and category. Plaid transactions can be matched to your manual bills, income, loans, and credit cards without replacing the planner.
-      </p>
+      <section className="card section pageHero">
+        <div className="pageHeader">
+          <div className="pageHeaderContent">
+            <div className="pageEyebrow">Activity review</div>
+            <h2>Transactions</h2>
+            <p className="muted pageIntro">
+              Review money movement, filter the ledger, and connect Plaid transactions to your manual planner without replacing it.
+            </p>
+          </div>
+          <div className="pageActions">
+            <button type="button" onClick={runRules}>Apply Rules</button>
+            <button type="button" className="primary" onClick={startAdd}>Add Transaction</button>
+          </div>
+        </div>
+        <div className="filtersBar">
+          <label className="fieldGroup compactField">
+            <span>Month</span>
+            <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
+          </label>
+          <label className="fieldGroup compactField">
+            <span>Account</span>
+            <select value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
+              <option value="">All</option>
+              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </label>
+          <label className="fieldGroup compactField">
+            <span>Category</span>
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="">All</option>
+              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+          <label className="fieldGroup compactField">
+            <span>Source</span>
+            <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+              <option value="">All</option>
+              <option value="manual">Manual</option>
+              <option value="plaid">Plaid</option>
+            </select>
+          </label>
+        </div>
+      </section>
 
       <div className="tableWrap card desktopDataTable">
         <table>

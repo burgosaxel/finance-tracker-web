@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
+import StatCard from "../components/StatCard";
 import { deleteEntity, upsertEntity } from "../lib/db";
 import { DEFAULT_SETTINGS, formatCurrency, formatPercent, safeNumber } from "../lib/finance";
 
@@ -106,15 +107,35 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
 
   return (
     <div className="page">
-      <div className="row">
-        <h2>Loans</h2>
-        <div className="spacer" />
-        <button type="button" className="primary" onClick={startAdd}>
-          Add Loan
-        </button>
-      </div>
+      <section className="card section pageHero">
+        <div className="pageHeader">
+          <div className="pageHeaderContent">
+            <div className="pageEyebrow">Long-term debt tracking</div>
+            <h2>Loans</h2>
+            <p className="muted pageIntro">
+              Track lender balances, monthly obligations, and payoff posture with the same clean structure used across the app.
+            </p>
+          </div>
+          <div className="pageActions">
+            <button type="button" className="primary" onClick={startAdd}>
+              Add Loan
+            </button>
+          </div>
+        </div>
+        <div className="statsGrid compactStats">
+          <StatCard label="Loan Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
+          <StatCard label="Monthly Payments" value={formatCurrency(totals.totalMonthlyPayment, cfg.currency)} />
+        </div>
+      </section>
 
-      <div className="tableWrap card desktopDataTable">
+      <section className="card section">
+        <div className="sectionHeader">
+          <div>
+            <h3>Loan accounts</h3>
+            <div className="muted compactSubtext">A clear ledger of lender balances, due-day timing, and status.</div>
+          </div>
+        </div>
+        <div className="tableWrap card desktopDataTable">
         <table>
           <thead>
             <tr>
@@ -158,6 +179,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
           </tbody>
         </table>
       </div>
+      </section>
 
       <div className="mobileDataList">
         {rows.length === 0 ? <div className="card section muted">No loans yet.</div> : null}

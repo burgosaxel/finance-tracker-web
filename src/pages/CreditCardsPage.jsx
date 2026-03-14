@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
+import StatCard from "../components/StatCard";
 import { deleteEntity, upsertEntity } from "../lib/db";
 import { DEFAULT_SETTINGS, formatCurrency, formatPercent, safeNumber } from "../lib/finance";
 
@@ -112,21 +113,43 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
 
   return (
     <div className="page">
-      <div className="row">
-        <h2>Credit Cards</h2>
-        <div className="spacer" />
-        <label className="row">
-          <span className="muted">Sort</span>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="utilization">Utilization</option>
-            <option value="balance">Balance</option>
-            <option value="apr">APR</option>
-          </select>
-        </label>
-        <button type="button" className="primary" onClick={startAdd}>Add Card</button>
-      </div>
+      <section className="card section pageHero">
+        <div className="pageHeader">
+          <div className="pageHeaderContent">
+            <div className="pageEyebrow">Debt overview</div>
+            <h2>Credit Cards</h2>
+            <p className="muted pageIntro">
+              Review balances, utilization, APR, and minimum payments in one place without losing manual control.
+            </p>
+          </div>
+          <div className="pageActions">
+            <label className="fieldGroup compactField">
+              <span>Sort</span>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="utilization">Utilization</option>
+                <option value="balance">Balance</option>
+                <option value="apr">APR</option>
+              </select>
+            </label>
+            <button type="button" className="primary" onClick={startAdd}>Add Card</button>
+          </div>
+        </div>
+        <div className="statsGrid compactStats">
+          <StatCard label="Total Limit" value={formatCurrency(totals.totalLimit, cfg.currency)} />
+          <StatCard label="Total Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
+          <StatCard label="Weighted Utilization" value={formatPercent(totals.avgUtil)} />
+          <StatCard label="Total Minimums" value={formatCurrency(totals.totalMin, cfg.currency)} />
+        </div>
+      </section>
 
-      <div className="tableWrap card desktopDataTable">
+      <section className="card section">
+        <div className="sectionHeader">
+          <div>
+            <h3>Card portfolio</h3>
+            <div className="muted compactSubtext">Sort by utilization, balance, or APR to prioritize what needs attention.</div>
+          </div>
+        </div>
+        <div className="tableWrap card desktopDataTable">
         <table>
           <thead>
             <tr>
@@ -183,6 +206,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
           </tfoot>
         </table>
       </div>
+      </section>
 
       <div className="mobileDataList">
         {rows.length === 0 ? <div className="card section muted">No credit cards yet.</div> : null}

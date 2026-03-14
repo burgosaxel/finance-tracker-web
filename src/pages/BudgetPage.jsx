@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import StatCard from "../components/StatCard";
 import { getBudgetDocIdForMonth, upsertEntity } from "../lib/db";
 import { DEFAULT_SETTINGS, formatCurrency, monthKey, safeNumber } from "../lib/finance";
 
@@ -82,55 +83,84 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
 
   return (
     <div className="page">
-      <div className="row">
-        <h2>Budget</h2>
-        <div className="spacer" />
-        <label>
-          Month
-          <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
-        </label>
-        <button type="button" className="primary" onClick={saveBudget}>Save Month Budget</button>
-      </div>
-      <p className="muted pageIntro">
-        Plan your month by assigning dollars to categories and comparing assigned amounts against activity.
-      </p>
-      <div className="statsGrid" style={{ marginBottom: 10 }}>
-        <div className="card section"><strong>Month Income:</strong> {formatCurrency(monthIncome, cfg.currency)}</div>
-        <div className="card section"><strong>Total Assigned:</strong> {formatCurrency(totals.totalAssigned, cfg.currency)}</div>
-        <div className="card section"><strong>To Be Budgeted:</strong> {formatCurrency(totals.toBeBudgeted, cfg.currency)}</div>
-      </div>
+      <section className="card section pageHero">
+        <div className="pageHeader">
+          <div className="pageHeaderContent">
+            <div className="pageEyebrow">Monthly planning</div>
+            <h2>Budget</h2>
+            <p className="muted pageIntro">
+              Plan your month by assigning dollars to categories and comparing assigned amounts against activity.
+            </p>
+          </div>
+          <div className="pageActions">
+            <label className="fieldGroup compactField">
+              <span>Month</span>
+              <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+            </label>
+            <button type="button" className="primary" onClick={saveBudget}>Save Month Budget</button>
+          </div>
+        </div>
+        <div className="statsGrid compactStats">
+          <StatCard label="Month Income" value={formatCurrency(monthIncome, cfg.currency)} />
+          <StatCard label="Total Assigned" value={formatCurrency(totals.totalAssigned, cfg.currency)} />
+          <StatCard label="To Be Budgeted" value={formatCurrency(totals.toBeBudgeted, cfg.currency)} />
+        </div>
+      </section>
 
-      <div className="tableWrap card desktopDataTable">
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Assigned</th>
-              <th>Activity</th>
-              <th>Available</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={4} className="muted">No categories yet. Add bills/transactions first.</td></tr>
-            ) : null}
-            {rows.map((r) => (
-              <tr key={r.name}>
-                <td>{r.name}</td>
-                <td>
-                  <input
-                    type="number"
-                    value={r.assigned}
-                    onChange={(e) => setAssignedDraft({ ...assignedDraft, [r.name]: e.target.value })}
-                  />
-                </td>
-                <td>{formatCurrency(r.activity, cfg.currency)}</td>
-                <td>{formatCurrency(r.available, cfg.currency)}</td>
+      <section className="card section">
+        <div className="sectionHeader">
+          <div>
+            <h3>Budget Categories</h3>
+            <div className="muted compactSubtext">Assign monthly funding and compare it against recorded activity.</div>
+          </div>
+        </div>
+        <div className="statsGrid compactStats summaryStrip">
+          <div className="card section inlineMetric">
+            <span className="dataLabel">Month Income</span>
+            <strong>{formatCurrency(monthIncome, cfg.currency)}</strong>
+          </div>
+          <div className="card section inlineMetric">
+            <span className="dataLabel">Assigned</span>
+            <strong>{formatCurrency(totals.totalAssigned, cfg.currency)}</strong>
+          </div>
+          <div className="card section inlineMetric">
+            <span className="dataLabel">Available to Assign</span>
+            <strong>{formatCurrency(totals.toBeBudgeted, cfg.currency)}</strong>
+          </div>
+        </div>
+
+        <div className="tableWrap card desktopDataTable">
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Assigned</th>
+                <th>Activity</th>
+                <th>Available</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr><td colSpan={4} className="muted">No categories yet. Add bills/transactions first.</td></tr>
+              ) : null}
+              {rows.map((r) => (
+                <tr key={r.name}>
+                  <td>{r.name}</td>
+                  <td>
+                    <input
+                      type="number"
+                      value={r.assigned}
+                      onChange={(e) => setAssignedDraft({ ...assignedDraft, [r.name]: e.target.value })}
+                    />
+                  </td>
+                  <td>{formatCurrency(r.activity, cfg.currency)}</td>
+                  <td>{formatCurrency(r.available, cfg.currency)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <div className="mobileDataList">
         {rows.length === 0 ? <div className="card section muted">No categories yet. Add bills/transactions first.</div> : null}

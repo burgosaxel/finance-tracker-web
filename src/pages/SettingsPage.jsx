@@ -332,7 +332,17 @@ export default function SettingsPage({
 
   return (
     <div className="page">
-      <h2>Settings</h2>
+      <section className="card section pageHero">
+        <div className="pageHeader">
+          <div className="pageHeaderContent">
+            <div className="pageEyebrow">Preferences and integrations</div>
+            <h2>Settings</h2>
+            <p className="muted pageIntro">
+              Configure app defaults, manage linked accounts, review sync health, and control recurring detection from one place.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <section className="card section">
         <h3>App Preferences</h3>
@@ -408,18 +418,22 @@ export default function SettingsPage({
         </div>
         {plaidMessage ? <div className="muted">{plaidMessage}</div> : null}
         {plaidSyncState ? (
-          <div className="row" style={{ marginTop: 8 }}>
-            <div className="card section">
-              <strong>Status:</strong> {plaidSyncState.syncStatus || "idle"}
+          <div className="statsGrid compactStats summaryStrip" style={{ marginTop: 8 }}>
+            <div className="card section inlineMetric">
+              <span className="dataLabel">Status</span>
+              <strong>{plaidSyncState.syncStatus || "idle"}</strong>
             </div>
-            <div className="card section">
-              <strong>Last sync:</strong> {plaidSyncState.lastGlobalSyncAt || "-"}
+            <div className="card section inlineMetric">
+              <span className="dataLabel">Last sync</span>
+              <strong>{plaidSyncState.lastGlobalSyncAt || "-"}</strong>
             </div>
-            <div className="card section">
-              <strong>Accounts:</strong> {plaidSyncState.accountCount || 0}
+            <div className="card section inlineMetric">
+              <span className="dataLabel">Accounts</span>
+              <strong>{plaidSyncState.accountCount || 0}</strong>
             </div>
-            <div className="card section">
-              <strong>Transactions:</strong> {plaidSyncState.transactionCount || 0}
+            <div className="card section inlineMetric">
+              <span className="dataLabel">Transactions</span>
+              <strong>{plaidSyncState.transactionCount || 0}</strong>
             </div>
           </div>
         ) : null}

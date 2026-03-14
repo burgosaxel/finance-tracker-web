@@ -600,14 +600,26 @@ export default function BillsIncomePage({
 
   return (
     <div className="page">
-      <section className="card section">
-        <div className="row">
-          <h2>Bills & Income</h2>
-          <div className="spacer" />
-          <button type="button" onClick={() => goMonth(-1)}>Prev</button>
-          <input type="month" value={currentMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
-          <button type="button" onClick={() => goMonth(1)}>Next</button>
-          <button type="button" onClick={syncMonth}>Sync now</button>
+      <section className="card section pageHero">
+        <div className="pageHeader">
+          <div className="pageHeaderContent">
+            <div className="pageEyebrow">Monthly operations</div>
+            <h2>Bills & Income</h2>
+            <p className="muted pageIntro">
+              Manage the current month’s obligations and incoming cash while keeping recurring templates and statement history intact.
+            </p>
+          </div>
+          <div className="pageActions">
+            <div className="actionCluster">
+              <button type="button" onClick={() => goMonth(-1)}>Prev</button>
+              <label className="fieldGroup compactField">
+                <span>Month</span>
+                <input type="month" value={currentMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+              </label>
+              <button type="button" onClick={() => goMonth(1)}>Next</button>
+            </div>
+            <button type="button" onClick={syncMonth}>Sync now</button>
+          </div>
         </div>
         {!isCurrentMonth ? <div className="muted">Viewing historical month {currentMonth} (read-only).</div> : null}
         <div className="muted">Recurring sync runs automatically. Use "Sync now" only if needed.</div>
@@ -645,6 +657,7 @@ export default function BillsIncomePage({
             <div className="spacer" />
             <button type="button" className="primary" onClick={startBillAdd} disabled={isReadOnly}>Add Bill</button>
           </div>
+          <div className="muted compactSubtext">Track what is still due, what has been paid, and which account each payment comes from.</div>
 
           <h4>Due next 7 days</h4>
           {dueSoon.length === 0 ? <div className="muted">No bills due in next 7 days.</div> : null}
@@ -684,6 +697,7 @@ export default function BillsIncomePage({
             <div className="spacer" />
             <button type="button" className="primary" onClick={startIncomeAdd} disabled={isReadOnly}>Add Income</button>
           </div>
+          <div className="muted compactSubtext">Monitor expected paychecks, received income, and monthly cash entering your plan.</div>
           <div className="muted" style={{ marginBottom: 10 }}>
             This month total: {formatCurrency(monthIncomeTotal, cfg.currency)}
           </div>

@@ -431,10 +431,97 @@ textarea {
   margin-bottom: -4px;
 }
 
+.pageHero {
+  overflow: hidden;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pageHeaderContent {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-width: 80ch;
+}
+
+.pageEyebrow {
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+.pageActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.actionCluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filtersBar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fieldGroup > span {
+  color: var(--text-tertiary);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.compactField {
+  min-width: 150px;
+}
+
 .statsGrid {
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(4, minmax(180px, 1fr));
+}
+
+.compactStats {
+  margin-top: 16px;
+}
+
+.summaryStrip {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.inlineMetric {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.inlineMetric strong {
+  font-size: 1.08rem;
+  letter-spacing: -0.02em;
 }
 
 .statCard {
@@ -469,6 +556,15 @@ textarea {
 
 .section {
   padding: 16px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
 .subsection {
@@ -989,6 +1085,22 @@ tfoot td {
     padding: 12px;
   }
 
+  .pageHeader {
+    gap: 12px;
+  }
+
+  .pageActions,
+  .actionCluster {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .filtersBar {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
   .statsGrid {
     grid-template-columns: 1fr;
     gap: 10px;
@@ -1125,6 +1237,10 @@ tfoot td {
   .summaryGrid.two,
   .summaryGrid.three {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .filtersBar {
+    grid-template-columns: 1fr;
   }
 
   .summaryCell {

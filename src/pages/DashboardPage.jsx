@@ -118,7 +118,18 @@ export default function DashboardPage({
 
   return (
     <div className="page">
-      <h2>Dashboard</h2>
+      <section className="card section pageHero">
+        <div className="pageHeader">
+          <div className="pageHeaderContent">
+            <div className="pageEyebrow">Financial command center</div>
+            <h2>Dashboard</h2>
+            <p className="muted pageIntro">
+              A high-level view of cash, debt, bill timing, synced activity, and recurring patterns so you can see what matters first.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="statsGrid">
         <StatCard
           label="Total Cash"
