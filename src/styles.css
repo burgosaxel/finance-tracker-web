@@ -513,6 +513,33 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
+.dashboardSection {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboardHeroGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1.35fr 1fr 1fr;
+}
+
+.dashboardMetricGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.dashboardInsightsGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.insightCard {
+  min-height: 100%;
+}
+
 .inlineMetric {
   display: grid;
   gap: 6px;
@@ -528,6 +555,49 @@ textarea {
   padding: 14px 16px;
   background: linear-gradient(180deg, rgba(77, 162, 255, 0.1), transparent 48%), var(--surface-elevated);
   border-color: var(--border-strong);
+}
+
+.heroStat {
+  min-height: 170px;
+  padding: 18px 20px;
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(77, 162, 255, 0.14), transparent 45%),
+    linear-gradient(180deg, rgba(77, 162, 255, 0.08), transparent 52%),
+    var(--surface-elevated);
+}
+
+.heroStat .statMeta {
+  gap: 12px;
+}
+
+.heroStat .statLabel {
+  font-size: 0.86rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.heroStat .statValue {
+  font-size: clamp(2rem, 1.5rem + 1.6vw, 3.1rem);
+}
+
+.heroStat .statSubtitle {
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: 0.84rem;
+}
+
+.heroStatPrimary {
+  background:
+    radial-gradient(130% 140% at 100% 0%, rgba(77, 162, 255, 0.2), transparent 46%),
+    linear-gradient(180deg, rgba(77, 162, 255, 0.14), transparent 56%),
+    var(--surface-elevated);
+}
+
+.heroStatDanger {
+  background:
+    radial-gradient(120% 130% at 100% 0%, rgba(239, 68, 68, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(239, 68, 68, 0.1), transparent 56%),
+    var(--surface-elevated);
 }
 
 .statMeta {
@@ -932,6 +1002,10 @@ tfoot td {
   .statsGrid {
     grid-template-columns: repeat(3, minmax(180px, 1fr));
   }
+
+  .dashboardHeroGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1024px) {
@@ -951,6 +1025,12 @@ tfoot td {
 
   .statsGrid {
     grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+
+  .dashboardHeroGrid,
+  .dashboardMetricGrid,
+  .dashboardInsightsGrid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1106,6 +1186,12 @@ tfoot td {
     gap: 10px;
   }
 
+  .dashboardHeroGrid,
+  .dashboardMetricGrid,
+  .dashboardInsightsGrid {
+    gap: 10px;
+  }
+
   .statCard {
     padding: 12px;
   }
@@ -1128,6 +1214,15 @@ tfoot td {
   .statSubtitle {
     margin-top: 8px;
     font-size: 0.79rem;
+  }
+
+  .heroStat {
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .heroStat .statValue {
+    font-size: 1.35rem;
   }
 
   h2 {

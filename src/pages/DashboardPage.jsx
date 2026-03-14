@@ -5,7 +5,6 @@ import {
   DEFAULT_SETTINGS,
   formatCurrency,
   formatPercent,
-  getEffectiveTransactionCategory,
   getBillDueDate,
   getBillsDueLaterThisMonth,
   getBillsDueWithinDays,
@@ -86,6 +85,8 @@ export default function DashboardPage({
       manualCash,
       linkedCash,
       totalDebt,
+      creditCardDebt,
+      loanDebt,
       netWorth: totalCash - totalDebt,
       monthIncome,
       monthBills,
@@ -124,197 +125,275 @@ export default function DashboardPage({
             <div className="pageEyebrow">Financial command center</div>
             <h2>Dashboard</h2>
             <p className="muted pageIntro">
-              A high-level view of cash, debt, bill timing, synced activity, and recurring patterns so you can see what matters first.
+              A structured view of balance-sheet health, this month’s obligations, and the operational signals that need attention.
             </p>
           </div>
         </div>
       </section>
 
-      <div className="statsGrid">
-        <StatCard
-          label="Total Cash"
-          value={formatCurrency(summary.totalCash, cfg.currency)}
-          subtitle={`Manual ${formatCurrency(summary.manualCash, cfg.currency)} | Linked ${formatCurrency(summary.linkedCash, cfg.currency)}`}
-        />
-        <StatCard label="Total Debt" value={formatCurrency(summary.totalDebt, cfg.currency)} />
-        <StatCard label="Net Worth" value={formatCurrency(summary.netWorth, cfg.currency)} />
-        <StatCard label="This Month Income" value={formatCurrency(summary.monthIncome, cfg.currency)} />
-        <StatCard label="This Month Bills Due" value={formatCurrency(summary.monthBills, cfg.currency)} />
-        <StatCard label="Credit Utilization" value={formatPercent(summary.utilization)} />
-        <StatCard label="Bills Remaining" value={formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)} />
-        <StatCard label="Income Received" value={formatCurrency(summary.cashflow.totalIncomeReceived, cfg.currency)} />
-        <StatCard label="Linked Cash" value={formatCurrency(summary.linkedCash, cfg.currency)} />
-        <StatCard
-          label="Projected Month End"
-          value={formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}
-        />
-        <StatCard
-          label="This Month Outflow"
-          value={formatCurrency(summary.transactionCashFlow.outflow, cfg.currency)}
-        />
-        <StatCard
-          label="Recurring Items Detected"
-          value={String(summary.recurringActive.length)}
-          subtitle={`${summary.recurringConfirmed.length} confirmed | ${summary.recurringSuggested.length} suggested`}
-        />
-      </div>
-
-      <div className="twoCol">
-        <section className="card section">
-          <h3>Unpaid bills</h3>
-          {loadError ? <div className="errorText">{loadError}</div> : null}
-          <h4 style={{ marginTop: 4 }}>Past Due</h4>
-          {summary.pastDue.length === 0 ? <div className="muted">No past-due unpaid bills.</div> : null}
-          {summary.pastDue.length > 0 ? (
-            <ul className="cleanList">
-              {summary.pastDue.map((b) => (
-                <li key={b.id} className="listRow compactTriplet">
-                  <span>{b.merchant || b.name}</span>
-                  <span>{new Date(b.nextDueDate).toLocaleDateString()}</span>
-                  <strong>{formatCurrency(b.amount, cfg.currency)}</strong>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <h4 style={{ marginTop: 10 }}>Due in next 7 days</h4>
-          {summary.dueSoon.length === 0 ? <div className="muted">No bills due in the next week.</div> : null}
-          {summary.dueSoon.length > 0 ? (
-            <ul className="cleanList">
-              {summary.dueSoon.map((b) => (
-                <li key={`soon-${b.id}`} className="listRow compactTriplet">
-                  <span>{b.merchant || b.name}</span>
-                  <span>{new Date(b.nextDueDate).toLocaleDateString()}</span>
-                  <strong>{formatCurrency(b.amount, cfg.currency)}</strong>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="muted" style={{ marginTop: 8 }}>
-            Due later this month: {summary.dueLater.length}
+      <section className="dashboardSection">
+        <div className="sectionHeader">
+          <div>
+            <h3>Financial Overview</h3>
+            <div className="muted compactSubtext">The highest-value metrics in the workspace, emphasized first.</div>
           </div>
-        </section>
+        </div>
+        <div className="dashboardHeroGrid">
+          <StatCard
+            className="heroStat heroStatPrimary"
+            label="Net Worth"
+            value={formatCurrency(summary.netWorth, cfg.currency)}
+            subtitle={`Cash ${formatCurrency(summary.totalCash, cfg.currency)} | Debt ${formatCurrency(summary.totalDebt, cfg.currency)}`}
+          />
+          <StatCard
+            className="heroStat"
+            label="Total Cash"
+            value={formatCurrency(summary.totalCash, cfg.currency)}
+            subtitle={`Manual ${formatCurrency(summary.manualCash, cfg.currency)} | Linked ${formatCurrency(summary.linkedCash, cfg.currency)}`}
+          />
+          <StatCard
+            className="heroStat heroStatDanger"
+            label="Total Debt"
+            value={formatCurrency(summary.totalDebt, cfg.currency)}
+            subtitle={`Cards ${formatCurrency(summary.creditCardDebt, cfg.currency)} | Loans ${formatCurrency(summary.loanDebt, cfg.currency)}`}
+          />
+        </div>
+      </section>
 
-        <section className="card section">
-          <h3>Cashflow Snapshot</h3>
-          <ul className="cleanList">
-            <li className="listRow">
-              <span>Income expected</span>
-              <strong>{formatCurrency(summary.cashflow.totalIncomeExpected, cfg.currency)}</strong>
-            </li>
-            <li className="listRow">
-              <span>Bills paid</span>
-              <strong>{formatCurrency(summary.cashflow.totalBillsPaid, cfg.currency)}</strong>
-            </li>
-            <li className="listRow">
-              <span>Bills unpaid</span>
-              <strong>{formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)}</strong>
-            </li>
-            <li className="listRow">
-              <span>Remaining from received paychecks</span>
-              <strong>{formatCurrency(summary.cashflow.remainingFromReceived, cfg.currency)}</strong>
-            </li>
-            <li className="listRow">
-              <span>Projected remaining by month end</span>
-              <strong>{formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}</strong>
-            </li>
-          </ul>
-          <h4 style={{ marginTop: 10 }}>Next events</h4>
-          {summary.cashflow.events.length === 0 ? (
-            <div className="muted">No upcoming events this month.</div>
-          ) : (
-            <ul className="cleanList">
-              {summary.cashflow.events.map((e) => (
-                <li key={e.id} className="listRow compactTriplet">
-                  <span>{e.type === "income" ? `Paycheck: ${e.label}` : `Bill: ${e.label}`}</span>
-                  <span>{e.date.toLocaleDateString()}</span>
-                  <strong>{formatCurrency(e.amount, cfg.currency)}</strong>
-                </li>
-              ))}
-            </ul>
-          )}
-          <h4 style={{ marginTop: 10 }}>Credit utilization alerts</h4>
-          {summary.overUtilized.length === 0 ? (
-            <div className="muted">All cards are under the alert threshold.</div>
-          ) : (
-            <ul className="cleanList">
-              {summary.overUtilized.map((c) => (
-                <li key={c.id} className="listRow compactTriplet">
-                  <span>{c.name}</span>
-                  <span>{formatPercent(c.util)}</span>
-                  <strong>{formatCurrency(c.balance, cfg.currency)}</strong>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      <div className="twoCol">
-        <section className="card section">
-          <h3>Recent synced activity</h3>
-          {summary.recentSyncedTransactions.length === 0 ? (
-            <div className="muted">Link an account to see recent bank activity here.</div>
-          ) : (
-            <ul className="cleanList">
-              {summary.recentSyncedTransactions.map((transaction) => (
-                <li key={transaction.id} className="listRow compactTriplet">
-                  <span>{transaction.merchantName || transaction.payee || transaction.name}</span>
-                  <span>{transaction.date || "-"}</span>
-                  <strong>{formatCurrency(transaction.amount, cfg.currency)}</strong>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="card section">
-          <h3>Spending and recurring</h3>
-          <div className="muted" style={{ marginBottom: 8 }}>
-            Category summary uses synced transaction data when available and respects manual category overrides.
+      <section className="dashboardSection">
+        <div className="sectionHeader">
+          <div>
+            <h3>Monthly Overview</h3>
+            <div className="muted compactSubtext">This month’s income, required bills, and unpaid obligations.</div>
           </div>
-          {summary.topSpending.length === 0 ? (
-            <div className="muted">No synced spending categories for this month yet.</div>
-          ) : (
+        </div>
+        <div className="dashboardMetricGrid">
+          <StatCard label="This Month Income" value={formatCurrency(summary.monthIncome, cfg.currency)} />
+          <StatCard label="Bills Due This Month" value={formatCurrency(summary.monthBills, cfg.currency)} />
+          <StatCard label="Bills Remaining" value={formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)} />
+        </div>
+      </section>
+
+      <section className="dashboardSection">
+        <div className="sectionHeader">
+          <div>
+            <h3>Financial Health</h3>
+            <div className="muted compactSubtext">Operational metrics that affect leverage and month-end position.</div>
+          </div>
+        </div>
+        <div className="dashboardMetricGrid">
+          <StatCard label="Credit Utilization" value={formatPercent(summary.utilization)} />
+          <StatCard
+            label="Projected Month End Balance"
+            value={formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}
+          />
+          <StatCard
+            label="Monthly Outflow"
+            value={formatCurrency(summary.transactionCashFlow.outflow, cfg.currency)}
+          />
+        </div>
+      </section>
+
+      <section className="dashboardSection">
+        <div className="sectionHeader">
+          <div>
+            <h3>Insights</h3>
+            <div className="muted compactSubtext">Recurring patterns, overdue items, upcoming bills, and recent activity.</div>
+          </div>
+        </div>
+        <div className="dashboardInsightsGrid">
+          <section className="card section insightCard">
+            <div className="sectionHeader">
+              <div>
+                <h4>Recurring Items Detected</h4>
+                <div className="muted compactSubtext">
+                  {summary.recurringConfirmed.length} confirmed | {summary.recurringSuggested.length} suggested
+                </div>
+              </div>
+              <span className="statusBadge subtle">{summary.recurringActive.length}</span>
+            </div>
+            {summary.recurringActive.length === 0 ? (
+              <div className="muted">Recurring candidates will appear after Plaid transaction syncs.</div>
+            ) : (
+              <ul className="cleanList">
+                {summary.recurringActive.slice(0, 4).map((entry) => (
+                  <li key={entry.recurringId || entry.id} className="listRow compactTriplet">
+                    <span>
+                      {entry.displayName || entry.merchantName}
+                      <div className="muted">
+                        {entry.status === "confirmed" ? "Confirmed" : "Suggested"}
+                        {entry.linkedManualType ? ` | linked to ${entry.linkedManualType}` : ""}
+                      </div>
+                    </span>
+                    <span>
+                      {entry.cadenceGuess || "unknown"}
+                      <div className="muted">{entry.typeGuess || "unknown"}</div>
+                    </span>
+                    <strong>{formatCurrency(entry.averageAmount, cfg.currency)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="card section insightCard">
+            <div className="sectionHeader">
+              <div>
+                <h4>Past Due Bills</h4>
+                <div className="muted compactSubtext">Unpaid bills already past their due date.</div>
+              </div>
+              <span className={`statusBadge ${summary.pastDue.length ? "" : "subtle"}`}>{summary.pastDue.length}</span>
+            </div>
+            {loadError ? <div className="errorText">{loadError}</div> : null}
+            {summary.pastDue.length === 0 ? <div className="muted">No past-due unpaid bills.</div> : null}
+            {summary.pastDue.length > 0 ? (
+              <ul className="cleanList">
+                {summary.pastDue.map((b) => (
+                  <li key={b.id} className="listRow compactTriplet">
+                    <span>{b.merchant || b.name}</span>
+                    <span>{new Date(b.nextDueDate).toLocaleDateString()}</span>
+                    <strong>{formatCurrency(b.amount, cfg.currency)}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+
+          <section className="card section insightCard">
+            <div className="sectionHeader">
+              <div>
+                <h4>Upcoming Bills</h4>
+                <div className="muted compactSubtext">Due in the next 7 days, with a look ahead to the rest of the month.</div>
+              </div>
+              <span className="statusBadge subtle">{summary.dueSoon.length}</span>
+            </div>
+            {summary.dueSoon.length === 0 ? <div className="muted">No bills due in the next week.</div> : null}
+            {summary.dueSoon.length > 0 ? (
+              <ul className="cleanList">
+                {summary.dueSoon.map((b) => (
+                  <li key={`soon-${b.id}`} className="listRow compactTriplet">
+                    <span>{b.merchant || b.name}</span>
+                    <span>{new Date(b.nextDueDate).toLocaleDateString()}</span>
+                    <strong>{formatCurrency(b.amount, cfg.currency)}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="muted compactSubtext" style={{ marginTop: 8 }}>
+              Due later this month: {summary.dueLater.length}
+            </div>
+          </section>
+
+          <section className="card section insightCard">
+            <div className="sectionHeader">
+              <div>
+                <h4>Recent Transactions</h4>
+                <div className="muted compactSubtext">Latest synced bank activity from linked accounts.</div>
+              </div>
+              <span className="statusBadge subtle">{summary.recentSyncedTransactions.length}</span>
+            </div>
+            {summary.recentSyncedTransactions.length === 0 ? (
+              <div className="muted">Link an account to see recent bank activity here.</div>
+            ) : (
+              <ul className="cleanList">
+                {summary.recentSyncedTransactions.map((transaction) => (
+                  <li key={transaction.id} className="listRow compactTriplet">
+                    <span>{transaction.merchantName || transaction.payee || transaction.name}</span>
+                    <span>{transaction.date || "-"}</span>
+                    <strong>{formatCurrency(transaction.amount, cfg.currency)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </section>
+
+      <section className="dashboardSection">
+        <div className="sectionHeader">
+          <div>
+            <h3>Operational Snapshot</h3>
+            <div className="muted compactSubtext">Cash flow detail, upcoming events, utilization pressure, and category spend.</div>
+          </div>
+        </div>
+        <div className="twoCol">
+          <section className="card section">
+            <h4>Cashflow Snapshot</h4>
             <ul className="cleanList">
-              {summary.topSpending.map((entry) => (
-                <li key={entry.category} className="listRow compactTriplet">
-                  <span>{entry.category}</span>
-                  <span>This month</span>
-                  <strong>{formatCurrency(entry.amount, cfg.currency)}</strong>
-                </li>
-              ))}
+              <li className="listRow">
+                <span>Income expected</span>
+                <strong>{formatCurrency(summary.cashflow.totalIncomeExpected, cfg.currency)}</strong>
+              </li>
+              <li className="listRow">
+                <span>Income received</span>
+                <strong>{formatCurrency(summary.cashflow.totalIncomeReceived, cfg.currency)}</strong>
+              </li>
+              <li className="listRow">
+                <span>Bills paid</span>
+                <strong>{formatCurrency(summary.cashflow.totalBillsPaid, cfg.currency)}</strong>
+              </li>
+              <li className="listRow">
+                <span>Bills unpaid</span>
+                <strong>{formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)}</strong>
+              </li>
+              <li className="listRow">
+                <span>Remaining from received paychecks</span>
+                <strong>{formatCurrency(summary.cashflow.remainingFromReceived, cfg.currency)}</strong>
+              </li>
+              <li className="listRow">
+                <span>Projected remaining by month end</span>
+                <strong>{formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}</strong>
+              </li>
             </ul>
-          )}
-          <h4 style={{ marginTop: 10 }}>Recurring payment candidates</h4>
-          {summary.recurringActive.length === 0 ? (
-            <div className="muted">Recurring candidates will appear after Plaid transaction syncs.</div>
-          ) : (
-            <ul className="cleanList">
-              {summary.recurringActive.slice(0, 5).map((entry) => (
-                <li key={entry.recurringId || entry.id} className="listRow compactTriplet">
-                  <span>
-                    {entry.displayName || entry.merchantName}
-                    <div className="muted">
-                      {entry.status === "confirmed" ? "Confirmed" : "Suggested"}
-                      {entry.linkedManualType ? ` | linked to ${entry.linkedManualType}` : ""}
-                    </div>
-                  </span>
-                  <span>
-                    {entry.cadenceGuess || getEffectiveTransactionCategory(entry)}
-                    <div className="muted">{entry.typeGuess || "unknown"}</div>
-                  </span>
-                  <strong>
-                    {formatCurrency(entry.averageAmount, cfg.currency)}
-                    {entry.nextExpectedDate?.toDate ? (
-                      <div className="muted">{entry.nextExpectedDate.toDate().toLocaleDateString()}</div>
-                    ) : null}
-                  </strong>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+          </section>
+
+          <section className="card section">
+            <h4>Signals</h4>
+            <h4 style={{ marginTop: 0 }}>Next Events</h4>
+            {summary.cashflow.events.length === 0 ? (
+              <div className="muted">No upcoming events this month.</div>
+            ) : (
+              <ul className="cleanList">
+                {summary.cashflow.events.map((e) => (
+                  <li key={e.id} className="listRow compactTriplet">
+                    <span>{e.type === "income" ? `Paycheck: ${e.label}` : `Bill: ${e.label}`}</span>
+                    <span>{e.date.toLocaleDateString()}</span>
+                    <strong>{formatCurrency(e.amount, cfg.currency)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <h4 style={{ marginTop: 14 }}>Credit Utilization Alerts</h4>
+            {summary.overUtilized.length === 0 ? (
+              <div className="muted">All cards are under the alert threshold.</div>
+            ) : (
+              <ul className="cleanList">
+                {summary.overUtilized.map((c) => (
+                  <li key={c.id} className="listRow compactTriplet">
+                    <span>{c.name}</span>
+                    <span>{formatPercent(c.util)}</span>
+                    <strong>{formatCurrency(c.balance, cfg.currency)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <h4 style={{ marginTop: 14 }}>Top Spending</h4>
+            {summary.topSpending.length === 0 ? (
+              <div className="muted">No synced spending categories for this month yet.</div>
+            ) : (
+              <ul className="cleanList">
+                {summary.topSpending.map((entry) => (
+                  <li key={entry.category} className="listRow compactTriplet">
+                    <span>{entry.category}</span>
+                    <span>This month</span>
+                    <strong>{formatCurrency(entry.amount, cfg.currency)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </section>
     </div>
   );
 }

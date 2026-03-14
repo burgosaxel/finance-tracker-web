@@ -1,8 +1,8 @@
 import React from "react";
 
-export default function StatCard({ label, value, subtitle }) {
+export default function StatCard({ label, value, subtitle, className = "" }) {
   return (
-    <div className="card statCard">
+    <div className={`card statCard ${className}`.trim()}>
       <div className="statMeta">
         <div className="muted statLabel">{label}</div>
         <div className="statValue">{value}</div>
