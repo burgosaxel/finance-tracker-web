@@ -162,7 +162,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
 
   return (
     <div className="page">
-      <section className="dashboard-hero pageHero heroDebt">
+      <section className="dashboard-hero pageHero heroDebt creditCardsHero">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Debt overview</div>
@@ -310,6 +310,4 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
     </div>
   );
 }
-
-
 

@@ -3750,3 +3750,50 @@ button:disabled {
     width: 100%;
   }
 }
+
+/* Credit cards hero action placement */
+.creditCardsHero {
+  grid-template-areas:
+    "header ."
+    "stats actions";
+  align-items: end;
+}
+
+.creditCardsHero .pageHeader {
+  display: contents;
+}
+
+.creditCardsHero .pageHeaderContent {
+  grid-area: header;
+}
+
+.creditCardsHero .statsGrid.compactStats {
+  grid-area: stats;
+}
+
+.creditCardsHero .pageActions {
+  grid-area: actions;
+  align-self: end;
+  justify-self: end;
+  padding-bottom: 6px;
+}
+
+@media (max-width: 720px) {
+  .creditCardsHero {
+    grid-template-areas:
+      "header"
+      "actions"
+      "stats";
+    align-items: start;
+  }
+
+  .creditCardsHero .pageHeader {
+    display: grid;
+  }
+
+  .creditCardsHero .pageActions {
+    justify-self: stretch;
+    padding-bottom: 0;
+  }
+}
+
