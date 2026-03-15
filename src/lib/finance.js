@@ -100,24 +100,6 @@ export function getIncomePayDate(income, now = new Date()) {
   return now;
 }
 
-export function getUpcomingBills(bills, { days = 7, now = new Date() } = {}) {
-  const start = startOfDay(now);
-  const end = new Date(start);
-  end.setDate(end.getDate() + days);
-  return (bills || [])
-    .map((bill) => ({
-      ...bill,
-      nextDueDate: getBillDueDate(bill, now),
-      status: billStatus(bill, now),
-    }))
-    .filter((bill) => bill.status !== "paid")
-    .filter((bill) => {
-      const due = startOfDay(bill.nextDueDate);
-      return due >= start && due <= end;
-    })
-    .sort((a, b) => a.nextDueDate - b.nextDueDate);
-}
-
 export function monthFromMonthId(monthId) {
   const parsed = parseMonthKey(monthId);
   if (!parsed) return null;

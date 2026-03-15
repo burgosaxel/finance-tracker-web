@@ -369,55 +369,6 @@ textarea {
   padding: 6px 4px 8px;
 }
 
-.brandMark {
-  position: relative;
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(98, 168, 255, 0.28), rgba(73, 222, 214, 0.12));
-  border: 1px solid rgba(138, 186, 255, 0.34);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 30px rgba(12, 127, 232, 0.22);
-  overflow: hidden;
-}
-
-.brandMark.compact {
-  width: 38px;
-  height: 38px;
-  border-radius: 14px;
-}
-
-.brandMarkOrb {
-  position: absolute;
-  border-radius: 999px;
-}
-
-.brandMarkOrbPrimary {
-  width: 24px;
-  height: 24px;
-  left: 6px;
-  top: 7px;
-  background: rgba(119, 180, 255, 0.82);
-}
-
-.brandMarkOrbSecondary {
-  width: 18px;
-  height: 18px;
-  right: 6px;
-  bottom: 7px;
-  background: rgba(73, 222, 214, 0.75);
-}
-
-.brandMarkGlyph {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: -0.06em;
-  color: #f2f8ff;
-}
-
 .brandLogo {
   width: auto;
   height: 70px;
@@ -2099,29 +2050,6 @@ tfoot td {
   pointer-events: none;
 }
 
-.dashboard-kicker {
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.74rem;
-  font-weight: 800;
-}
-
-.dashboard-title {
-  margin: 8px 0 10px;
-  font-size: clamp(2rem, 3vw, 3.25rem);
-  line-height: 1.04;
-  font-weight: 900;
-  color: var(--text-primary);
-}
-
-.dashboard-subtitle {
-  max-width: 720px;
-  color: var(--text-secondary);
-  font-size: 1.05rem;
-  line-height: 1.5;
-}
-
 .metric-grid-primary,
 .metric-grid-secondary {
   display: grid;
@@ -2418,14 +2346,6 @@ textarea:focus {
 
   .dashboard-hero {
     padding: 22px 18px 18px;
-  }
-
-  .dashboard-title {
-    font-size: 2.2rem;
-  }
-
-  .dashboard-subtitle {
-    font-size: 0.96rem;
   }
 
   .row-list-item {
@@ -3035,29 +2955,6 @@ button:disabled {
     width: 100%;
   }
 }
-.sidebar-brand,
-.sidebarBrand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: left;
-  gap: 8px;
-}
-
-.sidebar-logo,
-.sidebarLogo {
-  width: 72px;
-  height: 72px;
-  object-fit: contain;
-  margin-bottom: 6px;
-}
-
-.sidebar-subtitle,
-.sidebarSubtitle {
-  max-width: 180px;
-  line-height: 1.45;
-}
-
 .dashboardMetaCell,
 .recurringMetaCell {
   white-space: nowrap;
@@ -3157,264 +3054,6 @@ button:disabled {
   line-height: 1;
 }
 
-.sidebar-brand,
-.sidebarBrand {
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 8px;
-}
-
-.sidebar-logo,
-.brandLogo,
-.sidebarLogo {
-  width: 110px;
-  height: 110px;
-  flex: 0 0 110px;
-  margin-bottom: 10px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 16px rgba(67,216,255,0.18));
-}
-
-.sidebar-logo.compact,
-.brandLogo.compact {
-  width: 42px;
-  height: 42px;
-  flex-basis: 42px;
-  margin-bottom: 0;
-}
-
-.sidebar-kicker,
-.sidebarEyebrow {
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.sidebar-title,
-.sidebarTitle {
-  font-size: 1.9rem;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.sidebar-subtitle,
-.sidebarSubtitle {
-  max-width: 185px;
-  line-height: 1.45;
-  text-align: center;
-}
-
-.dashboard-hero {
-  display: flex;
-  align-items: center;
-  min-height: 150px;
-  padding: 28px 34px;
-}
-
-.dashboard-hero-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  max-width: 720px;
-}
-
-.cashflow-snapshot .row-list-item .primary {
-  width: 170px;
-  min-width: 170px;
-  max-width: 170px;
-}
-
-.signals-card .row-list-item .primary {
-  width: 175px;
-  min-width: 175px;
-  max-width: 175px;
-}
-
-.sidebar-brand,
-.sidebarBrand {
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 8px;
-}
-
-.sidebar-logo,
-.brandLogo,
-.sidebarLogo {
-  width: 135px;
-  height: 135px;
-  flex: 0 0 135px;
-  object-fit: contain;
-  margin-bottom: 10px;
-  filter: drop-shadow(0 0 16px rgba(67,216,255,0.18));
-}
-
-.sidebar-logo.compact,
-.brandLogo.compact {
-  width: 42px;
-  height: 42px;
-  flex-basis: 42px;
-  margin-bottom: 0;
-}
-
-.sidebar-kicker,
-.sidebarEyebrow {
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.sidebar-title,
-.sidebarTitle {
-  font-size: 1.9rem;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.sidebar-subtitle,
-.sidebarSubtitle {
-  max-width: 185px;
-  line-height: 1.45;
-  text-align: center;
-}
-
-.dashboard-hero {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 150px;
-  padding: 28px 34px;
-}
-
-.dashboard-hero-intro {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  max-width: 720px;
-  width: 100%;
-  align-self: center;
-  text-align: center;
-}
-
-.dashboard-title {
-  align-self: flex-start;
-}
-
-.recurring-cadence-label {
-  white-space: nowrap;
-}
-
-.cashflow-snapshot .row-list-item .primary {
-  width: 170px;
-  min-width: 170px;
-  max-width: 170px;
-}
-
-.signals-card .row-list-item .primary {
-  width: 185px;
-  min-width: 185px;
-  max-width: 185px;
-}
-
-/* Targeted dashboard/sidebar alignment fix */
-.sidebar-brand,
-.sidebarBrand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 8px;
-}
-
-.sidebar-logo,
-.brandLogo,
-.sidebarLogo {
-  width: 135px;
-  height: 135px;
-  flex: 0 0 135px;
-  object-fit: contain;
-  margin-bottom: 10px;
-  filter: drop-shadow(0 0 16px rgba(67,216,255,0.18));
-}
-
-.sidebar-logo.compact,
-.brandLogo.compact {
-  width: 42px;
-  height: 42px;
-  flex-basis: 42px;
-  margin-bottom: 0;
-}
-
-.sidebar-kicker,
-.sidebarEyebrow {
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.sidebar-title,
-.sidebarTitle {
-  font-size: 1.9rem;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.sidebar-subtitle,
-.sidebarSubtitle {
-  max-width: 185px;
-  line-height: 1.45;
-  text-align: center;
-}
-
-.dashboard-hero {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 150px;
-  padding: 28px 34px;
-}
-
-.dashboard-hero-intro {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  max-width: 720px;
-  align-self: center;
-  text-align: center;
-}
-
-.dashboard-title {
-  align-self: flex-start;
-  margin-top: 8px;
-}
-
-.dashboard-subtitle,
-.recurring-cadence-label {
-  white-space: nowrap;
-}
-
-.cashflow-snapshot .row-list-item .primary {
-  width: 170px;
-  min-width: 170px;
-  max-width: 170px;
-}
-
-.signals-card .row-list-item .primary {
-  width: 185px;
-  min-width: 185px;
-  max-width: 185px;
-}
-
 /* Cashflow Snapshot pill width matches the wider dashboard pills */
 .cashflow-snapshot .row-list-item {
   grid-template-columns: minmax(0, 1.5fr) 0 110px;
@@ -3441,133 +3080,14 @@ button:disabled {
   max-width: none;
 }
 
-/* Dashboard hero reference alignment */
-.dashboard-hero {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  min-height: 178px;
-  padding: 24px 38px 28px;
-}
-
-.dashboard-title {
-  position: relative;
-  z-index: 1;
-  align-self: flex-start;
-  margin: 0;
-}
-
-.dashboard-hero-intro {
-  position: absolute;
-  left: 50%;
-  bottom: 22px;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: min(820px, calc(100% - 120px));
-  padding: 18px 24px 0;
-  text-align: center;
-}
-
-.dashboard-hero-intro::before,
-.dashboard-hero-intro::after {
-  content: "";
-  position: absolute;
-  top: -18px;
-  width: 184px;
-  height: 74px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(13, 29, 49, 0.52), rgba(8, 18, 33, 0.18));
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-.dashboard-hero-intro::before {
-  left: -110px;
-}
-
-.dashboard-hero-intro::after {
-  right: -110px;
-}
-
-.dashboard-subtitle {
-  white-space: normal;
-  margin: 0;
-}
-
 @media (max-width: 720px) {
-  .budgetHeroHeader {
-    grid-template-columns: 1fr;
-  }
-
-  .budgetHeroActions {
-    justify-content: stretch;
-  }
-
-  .budgetHeroStats {
-    width: 100%;
-  }
-
   .dashboard-hero {
     min-height: 168px;
     padding: 22px 20px 26px;
   }
-
-  .dashboard-hero-intro {
-    position: static;
-    transform: none;
-    width: 100%;
-    padding: 14px 0 0;
-  }
-
-  .dashboard-hero-intro::before,
-  .dashboard-hero-intro::after {
-    display: none;
-  }
-
-  .dashboard-title {
-    margin-bottom: 10px;
-  }
 }
 
-
-
-/* Budget hero layout refinement */
-.budgetHero {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.budgetHeroHeader {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 24px;
-}
-
-.budgetHero .pageHeaderContent {
-  max-width: 720px;
-}
-
-.budgetHeroActions {
-  align-self: start;
-  justify-content: flex-end;
-}
-
-.budgetHeroStats {
-  width: min(860px, 100%);
-  align-self: flex-start;
-}
-
-
-
-
-/* Budget hero screenshot alignment override */
+/* Budget hero layout */
 .budgetHero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -3598,7 +3118,7 @@ button:disabled {
 
 .budgetHeroStats {
   grid-area: stats;
-  width: min(620px, 100%);
+  width: min(760px, 100%);
   align-self: flex-start;
 }
 
@@ -3628,16 +3148,9 @@ button:disabled {
 
 
 
-/* Budget hero action vertical alignment override */
 .budgetHeroActions {
   align-self: end;
   padding-bottom: 6px;
-}
-
-
-/* Budget hero metric label single-line override */
-.budgetHeroStats {
-  width: min(760px, 100%);
 }
 
 .budgetHeroStats .statHeader {
@@ -3658,50 +3171,6 @@ button:disabled {
 
 .budgetHeroStats .statValue {
   margin-top: 4px;
-}
-
-/* Shared page hero margin alignment */
-.pageHero:not(.budgetHero) {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.pageHero:not(.budgetHero) .pageHeader {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 24px 32px;
-}
-
-.pageHero:not(.budgetHero) .pageHeaderContent {
-  max-width: 760px;
-  padding-left: 6px;
-}
-
-.pageHero:not(.budgetHero) .pageActions {
-  align-self: start;
-  justify-content: flex-end;
-  padding-right: 8px;
-}
-
-.pageHero:not(.budgetHero) .statsGrid.compactStats,
-.pageHero:not(.budgetHero) .filtersBar {
-  margin-top: 0;
-}
-
-@media (max-width: 720px) {
-  .pageHero:not(.budgetHero) .pageHeader {
-    grid-template-columns: 1fr;
-  }
-
-  .pageHero:not(.budgetHero) .pageHeaderContent {
-    padding-left: 0;
-  }
-
-  .pageHero:not(.budgetHero) .pageActions {
-    padding-right: 0;
-  }
 }
 
 /* Shared page hero left-edge correction */
@@ -3964,13 +3433,6 @@ button:disabled {
 }
 
 
-/* Transactions filter panel full-width alignment */
-.transactionsHero .transactionsFiltersBar {
-  width: 100%;
-  max-width: none;
-  justify-self: stretch;
-}
-
 /* Settings hero one-line intro */
 .heroSettings .pageHeaderContent {
   width: min(1120px, 100%);
@@ -3985,18 +3447,6 @@ button:disabled {
   .heroSettings .pageIntro {
     white-space: normal;
   }
-}
-
-/* Transactions filter panel full-row stretch override */
-.transactionsHero .transactionsFiltersBar {
-  grid-column: 1 / -1;
-  justify-self: stretch;
-  align-self: stretch;
-  width: 100%;
-  max-width: none;
-  margin-left: 0;
-  margin-right: 0;
-  box-sizing: border-box;
 }
 
 /* Dashboard hero simplified to match settings */
@@ -4026,7 +3476,6 @@ button:disabled {
 }
 
 
-/* Transactions filter container width correction */
 .transactions-card > .filters-wrapper {
   width: 100%;
   display: flex;
@@ -4039,35 +3488,6 @@ button:disabled {
   flex: 1 1 auto;
 }
 
-.transactions-card .filters-row {
-  display: grid;
-  grid-template-columns: 220px 220px 1fr 200px;
-  gap: 16px;
-  width: 100%;
-}
-
-.transactions-card .filters-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  width: 100%;
-  margin-top: 16px;
-}
-
-@media (max-width: 980px) {
-  .transactions-card .filters-row {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 720px) {
-  .transactions-card .filters-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-
-/* Transactions filter panel final width override */
 .transactionsHero .filters-wrapper {
   width: 100%;
   justify-self: stretch;

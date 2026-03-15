@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import Modal from "../components/Modal";
+import SortHeader from "../components/SortHeader";
 import StatCard from "../components/StatCard";
 import { deleteEntity, upsertEntity } from "../lib/db";
 import { DEFAULT_SETTINGS, formatCurrency, formatPercent, safeNumber } from "../lib/finance";
@@ -23,17 +24,6 @@ const SORT_DEFAULTS = {
   apr: "desc",
   minimum: "desc",
 };
-
-function SortHeader({ label, column, sortBy, sortDirection, onSort }) {
-  const active = sortBy === column;
-  const arrow = !active ? "" : sortDirection === "asc" ? "^" : "v";
-  return (
-    <button type="button" className="sortableHeaderButton" onClick={() => onSort(column)}>
-      <span>{label}</span>
-      <span className="sortIndicator" aria-hidden="true">{arrow}</span>
-    </button>
-  );
-}
 
 export default function CreditCardsPage({ uid, cards, settings, onToast, onError }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
