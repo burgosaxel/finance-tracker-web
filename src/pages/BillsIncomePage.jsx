@@ -606,7 +606,7 @@ export default function BillsIncomePage({
 
   return (
     <div className="page">
-      <section className="dashboard-hero pageHero heroOperations">
+      <section className="dashboard-hero pageHero heroOperations billsIncomeHero">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Monthly operations</div>
@@ -845,3 +845,4 @@ export default function BillsIncomePage({
     </div>
   );
 }
+

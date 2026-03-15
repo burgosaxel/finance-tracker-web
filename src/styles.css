@@ -3871,3 +3871,32 @@ button:disabled {
   }
 }
 
+
+/* Bills & Income hero action placement */
+.billsIncomeHero {
+  position: relative;
+  padding-bottom: 28px;
+}
+
+.billsIncomeHero .pageHeaderContent {
+  width: min(760px, 100%);
+  max-width: 760px;
+}
+
+.billsIncomeHero .operationsControls {
+  position: absolute;
+  right: 38px;
+  bottom: 28px;
+  z-index: 1;
+}
+
+@media (max-width: 720px) {
+  .billsIncomeHero {
+    padding-bottom: 26px;
+  }
+
+  .billsIncomeHero .operationsControls {
+    position: static;
+  }
+}
+
