@@ -3807,3 +3807,67 @@ button:disabled {
   }
 }
 
+
+/* Loans hero action placement */
+.loansHero {
+  position: relative;
+  display: block;
+  padding-bottom: 28px;
+}
+
+.loansHeroMain {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.loansHeroContent {
+  width: min(980px, 100%);
+  max-width: 980px;
+  text-align: left;
+}
+
+.loansHeroContent h2,
+.loansHeroContent .pageIntro,
+.loansHeroContent .pageEyebrow {
+  text-align: left;
+}
+
+.loansHeroContent .pageIntro {
+  white-space: nowrap;
+}
+
+.loansHeroStats {
+  width: min(760px, 100%);
+}
+
+.loansHeroActions {
+  position: absolute;
+  right: 38px;
+  bottom: 28px;
+  z-index: 1;
+}
+
+@media (max-width: 720px) {
+  .loansHero {
+    display: grid;
+    padding-bottom: 26px;
+    gap: 20px;
+  }
+
+  .loansHeroContent,
+  .loansHeroStats {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .loansHeroContent .pageIntro {
+    white-space: normal;
+  }
+
+  .loansHeroActions {
+    position: static;
+  }
+}
+

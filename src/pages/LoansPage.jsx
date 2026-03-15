@@ -150,24 +150,24 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
 
   return (
     <div className="page">
-      <section className="dashboard-hero pageHero heroDebt">
-        <div className="pageHeader">
-          <div className="pageHeaderContent">
+      <section className="dashboard-hero pageHero heroDebt loansHero">
+        <div className="loansHeroMain">
+          <div className="pageHeaderContent loansHeroContent">
             <div className="pageEyebrow">Long-term debt tracking</div>
             <h2>Loans</h2>
             <p className="muted pageIntro">
               Track lender balances, monthly obligations, and payoff posture with the same clean structure used across the app.
             </p>
           </div>
-          <div className="pageActions">
-            <button type="button" className="primary" onClick={startAdd}>
-              Add Loan
-            </button>
+          <div className="statsGrid compactStats loansHeroStats">
+            <StatCard className="metric-card red-accent" label="Loan Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
+            <StatCard className="metric-card" label="Monthly Payments" value={formatCurrency(totals.totalMonthlyPayment, cfg.currency)} />
           </div>
         </div>
-        <div className="statsGrid compactStats">
-          <StatCard className="metric-card red-accent" label="Loan Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
-          <StatCard className="metric-card" label="Monthly Payments" value={formatCurrency(totals.totalMonthlyPayment, cfg.currency)} />
+        <div className="pageActions loansHeroActions">
+          <button type="button" className="primary" onClick={startAdd}>
+            Add Loan
+          </button>
         </div>
       </section>
 
@@ -298,6 +298,4 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
     </div>
   );
 }
-
-
 
