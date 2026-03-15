@@ -4066,3 +4066,18 @@ button:disabled {
   }
 }
 
+
+/* Transactions filter panel final width override */
+.transactionsHero .filters-wrapper {
+  width: 100%;
+  justify-self: stretch;
+  align-self: stretch;
+}
+
+.transactionsHero .filtersBar.transactionsFiltersBar {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  justify-self: stretch;
+  align-self: stretch;
+}
