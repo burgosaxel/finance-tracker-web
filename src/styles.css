@@ -3970,3 +3970,19 @@ button:disabled {
   max-width: none;
   justify-self: stretch;
 }
+
+/* Settings hero one-line intro */
+.heroSettings .pageHeaderContent {
+  width: min(1120px, 100%);
+  max-width: 1120px;
+}
+
+.heroSettings .pageIntro {
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .heroSettings .pageIntro {
+    white-space: normal;
+  }
+}
