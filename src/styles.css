@@ -3998,3 +3998,30 @@ button:disabled {
   margin-right: 0;
   box-sizing: border-box;
 }
+
+/* Dashboard hero simplified to match settings */
+.dashboardHeroSimple {
+  min-height: auto;
+  padding: 24px 38px 28px;
+}
+
+.dashboardHeroSimple .pageHeader {
+  display: block;
+}
+
+.dashboardHeroSimple .pageHeaderContent {
+  width: min(1120px, 100%);
+  max-width: 1120px;
+  padding-left: 0;
+}
+
+.dashboardHeroSimple .pageIntro {
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .dashboardHeroSimple .pageIntro {
+    white-space: normal;
+  }
+}
+

@@ -120,14 +120,16 @@ export default function DashboardPage({
 
   return (
     <div className="page">
-      <section className="dashboard-hero">
-        <div className="dashboard-hero-intro">
-          <div className="dashboard-kicker">Financial command center</div>
-          <p className="dashboard-subtitle">
-            A structured view of balance-sheet health, this month's obligations, and the operational signals that need attention.
-          </p>
+      <section className="dashboard-hero pageHero heroOverview dashboardHeroSimple">
+        <div className="pageHeader">
+          <div className="pageHeaderContent">
+            <div className="pageEyebrow">Financial command center</div>
+            <h2>Dashboard</h2>
+            <p className="muted pageIntro">
+              A structured view of balance-sheet health, this month's obligations, and the operational signals that need attention.
+            </p>
+          </div>
         </div>
-        <h2 className="dashboard-title">Dashboard</h2>
       </section>
 
       <section className="section-block dashboardSection dashboardBlock dashboardBlockOverview">
@@ -392,7 +394,4 @@ export default function DashboardPage({
     </div>
   );
 }
-
-
-
 
