@@ -3867,7 +3867,8 @@ button:disabled {
 /* Bills & Income hero action placement */
 .billsIncomeHero {
   position: relative;
-  padding-bottom: 28px;
+  min-height: 168px;
+  padding-bottom: 86px;
 }
 
 .billsIncomeHero .pageHeaderContent {
@@ -3875,15 +3876,20 @@ button:disabled {
   max-width: 760px;
 }
 
+.billsIncomeHero .pageHeader {
+  display: block;
+}
+
 .billsIncomeHero .operationsControls {
   position: absolute;
-  right: 38px;
-  bottom: 28px;
+  right: 20px;
+  bottom: 18px;
   z-index: 1;
 }
 
 @media (max-width: 720px) {
   .billsIncomeHero {
+    min-height: 0;
     padding-bottom: 26px;
   }
 
