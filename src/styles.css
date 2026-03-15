@@ -4025,3 +4025,44 @@ button:disabled {
   }
 }
 
+
+/* Transactions filter container width correction */
+.transactions-card > .filters-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.transactions-filters {
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 auto;
+}
+
+.transactions-card .filters-row {
+  display: grid;
+  grid-template-columns: 220px 220px 1fr 200px;
+  gap: 16px;
+  width: 100%;
+}
+
+.transactions-card .filters-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+@media (max-width: 980px) {
+  .transactions-card .filters-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .transactions-card .filters-row {
+    grid-template-columns: 1fr;
+  }
+}
+

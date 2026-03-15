@@ -300,7 +300,7 @@ export default function TransactionsPage({
 
   return (
     <div className="page">
-      <section className="dashboard-hero pageHero heroActivity transactionsHero">
+      <section className="dashboard-hero pageHero heroActivity transactionsHero transactions-card">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Activity review</div>
@@ -310,8 +310,9 @@ export default function TransactionsPage({
             </p>
           </div>
         </div>
-        <div className="filtersBar transactionsFiltersBar">
-          <div className="transactionsFilterFields">
+        <div className="filters-wrapper">
+          <div className="filtersBar transactionsFiltersBar transactions-filters">
+          <div className="transactionsFilterFields filters-row">
           <label className="fieldGroup compactField">
             <span>Month</span>
             <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
@@ -339,10 +340,11 @@ export default function TransactionsPage({
             </select>
           </label>
           </div>
-          <div className="pageActions transactionsFilterActions">
+          <div className="pageActions transactionsFilterActions filters-actions">
             <button type="button" onClick={runRules}><Settings size={16} /> Apply Rules</button>
             <button type="button" onClick={clearRules}>Clear Rules</button>
             <button type="button" className="primary" onClick={startAdd}><Plus size={16} /> Add Transaction</button>
+          </div>
           </div>
         </div>
       </section>
