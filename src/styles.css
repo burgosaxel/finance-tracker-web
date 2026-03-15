@@ -3703,3 +3703,50 @@ button:disabled {
     padding-right: 0;
   }
 }
+
+/* Shared page hero left-edge correction */
+.pageHero:not(.budgetHero) {
+  display: grid;
+  gap: 24px;
+}
+
+.pageHero:not(.budgetHero) .pageHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 24px 32px;
+}
+
+.pageHero:not(.budgetHero) .pageHeaderContent {
+  justify-self: start;
+  width: min(760px, 100%);
+  max-width: 760px;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.pageHero:not(.budgetHero) .pageActions {
+  justify-self: end;
+  align-self: start;
+  padding-right: 0;
+}
+
+.pageHero:not(.budgetHero) .statsGrid.compactStats,
+.pageHero:not(.budgetHero) .filtersBar {
+  justify-self: start;
+  width: min(1180px, 100%);
+  max-width: 100%;
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .pageHero:not(.budgetHero) .pageHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .pageHero:not(.budgetHero) .pageHeaderContent,
+  .pageHero:not(.budgetHero) .statsGrid.compactStats,
+  .pageHero:not(.budgetHero) .filtersBar {
+    width: 100%;
+  }
+}
