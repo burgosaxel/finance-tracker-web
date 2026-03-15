@@ -3500,29 +3500,12 @@ button:disabled {
 }
 
 @media (max-width: 720px) {
-  .budgetHero {
-    min-height: auto;
-  }
-
-  .budgetHero::before,
-  .budgetHero::after,
-  .budgetHeroActions::before {
-    display: none;
-  }
-
-  .budgetHeroLayout {
+  .budgetHeroHeader {
     grid-template-columns: 1fr;
-    gap: 22px;
-  }
-
-  .budgetHeroMain {
-    gap: 22px;
   }
 
   .budgetHeroActions {
     justify-content: stretch;
-    padding: 0;
-    background: transparent;
   }
 
   .budgetHeroStats {
@@ -3555,90 +3538,29 @@ button:disabled {
 
 /* Budget hero layout refinement */
 .budgetHero {
-  position: relative;
-  overflow: hidden;
-  min-height: 312px;
-}
-
-.budgetHero::before,
-.budgetHero::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(12, 24, 42, 0.52), rgba(8, 18, 33, 0.18));
-  opacity: 0.55;
-}
-
-.budgetHero::before {
-  top: 24px;
-  left: 34px;
-  width: 280px;
-  height: 102px;
-}
-
-.budgetHero::after {
-  top: 86px;
-  right: 136px;
-  width: 480px;
-  height: 46px;
-}
-
-.budgetHeroLayout {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 28px 40px;
-}
-
-.budgetHeroMain {
   display: flex;
   flex-direction: column;
-  gap: 30px;
-  min-width: 0;
+  gap: 24px;
 }
 
-.budgetHeroContent {
-  max-width: 760px;
+.budgetHeroHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 24px;
 }
 
-.budgetHeroContent .pageIntro {
-  max-width: 760px;
+.budgetHero .pageHeaderContent {
+  max-width: 720px;
 }
 
 .budgetHeroActions {
-  position: relative;
-  align-self: end;
+  align-self: start;
   justify-content: flex-end;
-  padding: 14px;
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(14, 28, 48, 0.74), rgba(8, 18, 33, 0.22));
-}
-
-.budgetHeroActions::before {
-  content: "";
-  position: absolute;
-  inset: -14px auto auto -26px;
-  width: 322px;
-  height: 116px;
-  border-radius: 24px;
-  background: linear-gradient(180deg, rgba(12, 24, 42, 0.38), rgba(8, 18, 33, 0.12));
-  pointer-events: none;
-  z-index: -1;
-}
-
-.budgetHeroActions .fieldGroup.compactField {
-  min-width: 205px;
 }
 
 .budgetHeroStats {
   width: min(860px, 100%);
   align-self: flex-start;
-}
-
-.budgetHeroStats .statCard {
-  min-height: 124px;
 }
 
