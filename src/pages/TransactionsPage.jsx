@@ -300,7 +300,7 @@ export default function TransactionsPage({
 
   return (
     <div className="page">
-      <section className="dashboard-hero pageHero heroActivity">
+      <section className="dashboard-hero pageHero heroActivity transactionsHero">
         <div className="pageHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Activity review</div>
@@ -309,13 +309,9 @@ export default function TransactionsPage({
               Review money movement, filter the ledger, and connect Plaid transactions to your manual planner without replacing it.
             </p>
           </div>
-          <div className="pageActions">
-            <button type="button" onClick={runRules}><Settings size={16} /> Apply Rules</button>
-            <button type="button" onClick={clearRules}>Clear Rules</button>
-            <button type="button" className="primary" onClick={startAdd}><Plus size={16} /> Add Transaction</button>
-          </div>
         </div>
-        <div className="filtersBar">
+        <div className="filtersBar transactionsFiltersBar">
+          <div className="transactionsFilterFields">
           <label className="fieldGroup compactField">
             <span>Month</span>
             <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
@@ -342,6 +338,12 @@ export default function TransactionsPage({
               <option value="plaid">Plaid</option>
             </select>
           </label>
+          </div>
+          <div className="pageActions transactionsFilterActions">
+            <button type="button" onClick={runRules}><Settings size={16} /> Apply Rules</button>
+            <button type="button" onClick={clearRules}>Clear Rules</button>
+            <button type="button" className="primary" onClick={startAdd}><Plus size={16} /> Add Transaction</button>
+          </div>
         </div>
       </section>
 
@@ -677,3 +679,4 @@ export default function TransactionsPage({
     </div>
   );
 }
+
