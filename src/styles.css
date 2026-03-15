@@ -4081,21 +4081,3 @@ button:disabled {
   justify-self: stretch;
   align-self: stretch;
 }
-
-/* Bills & Income hero overlap fix */
-.billsIncomeHero .pageHeader {
-  display: block;
-  position: relative;
-}
-
-.billsIncomeHero .pageHeaderContent {
-  width: min(760px, calc(100% - 520px));
-  max-width: calc(100% - 520px);
-}
-
-@media (max-width: 980px) {
-  .billsIncomeHero .pageHeaderContent {
-    width: 100%;
-    max-width: 100%;
-  }
-}
