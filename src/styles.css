@@ -3753,45 +3753,55 @@ button:disabled {
 
 /* Credit cards hero action placement */
 .creditCardsHero {
-  grid-template-areas:
-    "header ."
-    "stats actions";
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
+  column-gap: 40px;
 }
 
-.creditCardsHero .pageHeader {
-  display: contents;
+.creditCardsHeroMain {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
 }
 
-.creditCardsHero .pageHeaderContent {
-  grid-area: header;
+.creditCardsHeroContent {
+  width: min(760px, 100%);
+  max-width: 760px;
+  justify-self: start;
+  text-align: left;
 }
 
-.creditCardsHero .statsGrid.compactStats {
-  grid-area: stats;
+.creditCardsHeroContent h2,
+.creditCardsHeroContent .pageIntro,
+.creditCardsHeroContent .pageEyebrow {
+  text-align: left;
 }
 
-.creditCardsHero .pageActions {
-  grid-area: actions;
+.creditCardsHeroStats {
+  width: min(1180px, 100%);
+}
+
+.creditCardsHeroActions {
   align-self: end;
   justify-self: end;
-  padding-bottom: 6px;
+  padding-bottom: 10px;
 }
 
 @media (max-width: 720px) {
   .creditCardsHero {
-    grid-template-areas:
-      "header"
-      "actions"
-      "stats";
-    align-items: start;
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
-  .creditCardsHero .pageHeader {
-    display: grid;
+  .creditCardsHeroContent,
+  .creditCardsHeroStats {
+    width: 100%;
+    max-width: 100%;
   }
 
-  .creditCardsHero .pageActions {
+  .creditCardsHeroActions {
     justify-self: stretch;
     padding-bottom: 0;
   }

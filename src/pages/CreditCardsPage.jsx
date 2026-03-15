@@ -163,23 +163,23 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
   return (
     <div className="page">
       <section className="dashboard-hero pageHero heroDebt creditCardsHero">
-        <div className="pageHeader">
-          <div className="pageHeaderContent">
+        <div className="creditCardsHeroMain">
+          <div className="pageHeaderContent creditCardsHeroContent">
             <div className="pageEyebrow">Debt overview</div>
             <h2>Credit Cards</h2>
             <p className="muted pageIntro">
               Review balances, utilization, APR, and minimum payments in one place without losing manual control.
             </p>
           </div>
-          <div className="pageActions">
-            <button type="button" className="primary" onClick={startAdd}>Add Card</button>
+          <div className="statsGrid compactStats creditCardsHeroStats">
+            <StatCard className="metric-card" label="Total Limit" value={formatCurrency(totals.totalLimit, cfg.currency)} />
+            <StatCard className="metric-card red-accent" label="Total Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
+            <StatCard className="metric-card" label="Weighted Utilization" value={formatPercent(totals.avgUtil)} />
+            <StatCard className="metric-card red-accent" label="Total Minimums" value={formatCurrency(totals.totalMin, cfg.currency)} />
           </div>
         </div>
-        <div className="statsGrid compactStats">
-          <StatCard className="metric-card" label="Total Limit" value={formatCurrency(totals.totalLimit, cfg.currency)} />
-          <StatCard className="metric-card red-accent" label="Total Balance" value={formatCurrency(totals.totalBalance, cfg.currency)} />
-          <StatCard className="metric-card" label="Weighted Utilization" value={formatPercent(totals.avgUtil)} />
-          <StatCard className="metric-card red-accent" label="Total Minimums" value={formatCurrency(totals.totalMin, cfg.currency)} />
+        <div className="pageActions creditCardsHeroActions">
+          <button type="button" className="primary" onClick={startAdd}>Add Card</button>
         </div>
       </section>
 
