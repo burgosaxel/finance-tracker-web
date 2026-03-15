@@ -3963,3 +3963,10 @@ button:disabled {
   }
 }
 
+
+/* Transactions filter panel full-width alignment */
+.transactionsHero .transactionsFiltersBar {
+  width: 100%;
+  max-width: none;
+  justify-self: stretch;
+}
