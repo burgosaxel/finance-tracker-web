@@ -3986,3 +3986,15 @@ button:disabled {
     white-space: normal;
   }
 }
+
+/* Transactions filter panel full-row stretch override */
+.transactionsHero .transactionsFiltersBar {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  box-sizing: border-box;
+}
