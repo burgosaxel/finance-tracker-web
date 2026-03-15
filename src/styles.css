@@ -4046,12 +4046,17 @@ button:disabled {
 .transactions-card .filters-row,
 .filters-row {
   display: grid;
-  grid-template-columns: 220px 220px minmax(0, 1fr) 160px;
+  grid-template-columns: 220px 220px minmax(220px, 480px) 160px;
   gap: 16px;
   align-items: start;
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+
+.transactionsHero .transactionsFilterFields > label:nth-child(3),
+.transactions-card .filters-row > label:nth-child(3) {
+  justify-self: start;
 }
 
 .transactionsHero .transactionsFilterFields > *,
