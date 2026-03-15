@@ -3475,6 +3475,217 @@ button:disabled {
   }
 }
 
+/* Dashboard parity pass: keep the clean architecture, but restore FIX branch proportions */
+.dashboard-shell {
+  grid-template-columns: 272px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.dashboard-shell .sidebar-brand,
+.dashboard-shell .sidebarBrand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0 16px;
+  text-align: center;
+}
+
+.dashboard-shell .sidebar-logo,
+.dashboard-shell .brandLogo,
+.dashboard-shell .sidebarLogo {
+  width: 132px;
+  height: 132px;
+  flex: 0 0 132px;
+  margin: 0 0 10px;
+}
+
+.dashboard-shell .sidebar-kicker,
+.dashboard-shell .sidebarEyebrow {
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+}
+
+.dashboard-shell .sidebar-title,
+.dashboard-shell .sidebarTitle {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.dashboard-shell .sidebar-subtitle,
+.dashboard-shell .sidebarSubtitle {
+  max-width: 160px;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.dashboardPage {
+  gap: 16px;
+}
+
+.dashboardPage .section-block {
+  margin-top: 14px;
+}
+
+.dashboardPage .sectionHeader {
+  margin-bottom: 10px;
+}
+
+.dashboardPage .section-title {
+  font-size: 1rem;
+}
+
+.dashboardPage .section-copy {
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.dashboardPage .dashboardHeroSimple {
+  min-height: 92px;
+  padding: 14px 18px 14px;
+}
+
+.dashboardPage .dashboardHeroSimple .pageHeaderContent {
+  width: min(980px, 100%);
+  max-width: 980px;
+}
+
+.dashboardPage .dashboardHeroSimple .pageEyebrow {
+  font-size: 0.5rem;
+  letter-spacing: 0.22em;
+}
+
+.dashboardPage .dashboardHeroSimple h2 {
+  font-size: clamp(2rem, 1.75rem + 0.9vw, 2.45rem);
+  line-height: 0.96;
+}
+
+.dashboardPage .dashboardHeroSimple .pageIntro {
+  margin-top: 2px;
+  max-width: 760px;
+  font-size: 0.8rem;
+  white-space: normal;
+}
+
+.dashboardPage .metric-grid-primary,
+.dashboardPage .metric-grid-secondary,
+.dashboardPage .dashboardInsightsGrid,
+.dashboardPage .twoCol {
+  gap: 12px;
+}
+
+.dashboardPage .metric-card,
+.dashboardPage .statCard.metric-card {
+  min-height: 82px;
+  padding: 14px 16px 12px;
+  border-radius: 16px;
+}
+
+.dashboardPage .metric-card .statLabel,
+.dashboardPage .heroStat .statLabel {
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+}
+
+.dashboardPage .metric-card .statValue,
+.dashboardPage .heroStat .statValue,
+.dashboardPage .metric-value {
+  margin-top: 8px;
+  font-size: clamp(1.35rem, 1.15rem + 1vw, 1.95rem);
+}
+
+.dashboardPage .metric-card .statSubtitle,
+.dashboardPage .heroStat .statSubtitle,
+.dashboardPage .metric-meta {
+  margin-top: 8px;
+  font-size: 0.56rem;
+}
+
+.dashboardPage .data-panel {
+  padding: 12px 12px 10px;
+  border-radius: 16px;
+}
+
+.dashboardPage .data-panel .panel-title {
+  font-size: 0.82rem;
+}
+
+.dashboardPage .data-panel .panel-copy {
+  margin-top: 2px;
+  font-size: 0.56rem;
+}
+
+.dashboardPage .data-panel .pill-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 0.5rem;
+}
+
+.dashboardPage .row-list {
+  margin-top: 10px;
+}
+
+.dashboardPage .row-list-item {
+  grid-template-columns: minmax(0, 1.62fr) 88px 74px;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.dashboardPage .row-list-item .primary {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(61, 145, 255, 0.96), rgba(34, 107, 219, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 14px rgba(24, 86, 178, 0.24);
+  font-size: 0.63rem;
+  line-height: 1.2;
+}
+
+.dashboardPage .row-list-item > div:first-child .secondary {
+  margin-top: 4px;
+  padding-left: 8px;
+  font-size: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.dashboardPage .row-list-item > .secondary {
+  justify-self: stretch;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 9px;
+  border: 1px solid rgba(118, 160, 209, 0.14);
+  background: rgba(12, 26, 44, 0.64);
+  font-size: 0.54rem;
+  text-align: center;
+}
+
+.dashboardPage .row-list-item .amount {
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.dashboardPage .cashflow-snapshot .row-list-item {
+  grid-template-columns: minmax(0, 1fr) 0 70px;
+}
+
+.dashboardPage .signals-card .row-list-item {
+  grid-template-columns: minmax(0, 1.62fr) 88px 74px;
+}
+
+.dashboardPage .signals-card > .section-block {
+  gap: 12px;
+}
+
+@media (max-width: 980px) {
+  .dashboard-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 .transactions-card > .filters-wrapper {
   width: 100%;

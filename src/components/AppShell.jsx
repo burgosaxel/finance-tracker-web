@@ -37,6 +37,7 @@ const MOBILE_PRIMARY_NAV = NAV_ITEMS.filter((item) =>
 
 export default function AppShell({ route, user, status, onSignOut, children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const shellClassName = `appShell app-shell${route === "dashboard" ? " dashboard-shell" : ""}`;
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -47,7 +48,7 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
   }
 
   return (
-    <div className="appShell app-shell">
+    <div className={shellClassName}>
       <aside className="sidebar card desktopOnly">
         <div>
           <div className="sidebarBrand sidebar-brand">

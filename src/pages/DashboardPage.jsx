@@ -119,7 +119,7 @@ export default function DashboardPage({
   ]);
 
   return (
-    <div className="page">
+    <div className="page dashboardPage">
       <section className="dashboard-hero pageHero heroOverview dashboardHeroSimple">
         <div className="pageHeader">
           <div className="pageHeaderContent">
