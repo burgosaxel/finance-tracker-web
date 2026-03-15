@@ -3626,3 +3626,11 @@ button:disabled {
   }
 }
 
+
+
+/* Budget hero action vertical alignment override */
+.budgetHeroActions {
+  align-self: end;
+  padding-bottom: 6px;
+}
+
