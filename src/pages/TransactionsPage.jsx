@@ -312,7 +312,7 @@ export default function TransactionsPage({
         </div>
         <div className="filters-wrapper">
           <div className="filtersBar transactionsFiltersBar transactions-filters">
-          <div className="transactionsFilterFields">
+          <div className="transactionsFilterFields filters-row">
           <label className="fieldGroup compactField">
             <span>Month</span>
             <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
@@ -340,7 +340,7 @@ export default function TransactionsPage({
             </select>
           </label>
           </div>
-          <div className="pageActions transactionsFilterActions">
+          <div className="pageActions transactionsFilterActions filters-actions">
             <button type="button" onClick={runRules}><Settings size={16} /> Apply Rules</button>
             <button type="button" onClick={clearRules}>Clear Rules</button>
             <button type="button" className="primary" onClick={startAdd}><Plus size={16} /> Add Transaction</button>
