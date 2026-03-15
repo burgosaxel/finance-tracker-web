@@ -3483,6 +3483,15 @@ button:disabled {
 
 .dashboard-shell .sidebar {
   padding: 22px 18px 16px;
+  background:
+    radial-gradient(150% 140% at 10% 0%, rgba(68, 160, 255, 0.12), transparent 34%),
+    radial-gradient(120% 140% at 100% 12%, rgba(34, 211, 238, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(21, 36, 59, 0.98) 0%, rgba(10, 22, 39, 0.985) 54%, rgba(8, 18, 33, 0.99) 100%);
+  border-color: rgba(86, 121, 176, 0.34);
+  box-shadow:
+    0 24px 48px rgba(1, 7, 16, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(31, 74, 132, 0.18);
 }
 
 .dashboard-shell .sidebar-brand,
@@ -3494,6 +3503,11 @@ button:disabled {
   padding: 8px 4px 18px;
   margin-bottom: 20px;
   text-align: center;
+  border-bottom-color: rgba(88, 119, 170, 0.22);
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(63, 146, 255, 0.14), transparent 46%),
+    linear-gradient(180deg, rgba(20, 37, 63, 0.34), rgba(12, 24, 43, 0.02));
+  border-radius: 18px;
 }
 
 .dashboard-shell .sidebar-logo,
@@ -3549,6 +3563,15 @@ button:disabled {
 .dashboardPage .dashboardHeroSimple {
   min-height: 118px;
   padding: 18px 20px 20px;
+  background:
+    radial-gradient(34% 110% at 88% 32%, rgba(53, 224, 227, 0.16), transparent 0%, transparent 62%),
+    radial-gradient(50% 120% at 100% 8%, rgba(50, 120, 255, 0.14), transparent 0%, transparent 70%),
+    linear-gradient(180deg, rgba(16, 29, 49, 0.985) 0%, rgba(12, 22, 39, 0.992) 100%);
+  border-color: rgba(91, 132, 194, 0.48);
+  box-shadow:
+    0 18px 34px rgba(2, 8, 18, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(37, 76, 130, 0.14);
 }
 
 .dashboardPage .dashboardHeroSimple .pageHeaderContent {
@@ -3572,6 +3595,35 @@ button:disabled {
   font-size: 0.74rem;
   line-height: 1.45;
   white-space: normal;
+}
+
+.dashboard-shell .sidebar-link:hover,
+.dashboard-shell .navLink:hover {
+  background: linear-gradient(180deg, rgba(31, 59, 96, 0.62), rgba(18, 39, 69, 0.56));
+  border-color: rgba(101, 140, 198, 0.22);
+}
+
+.dashboard-shell .sidebar-link.active,
+.dashboard-shell .navLink.active {
+  background:
+    linear-gradient(180deg, rgba(55, 110, 183, 0.76), rgba(31, 67, 119, 0.82)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
+  border-color: rgba(120, 183, 255, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 22px rgba(20, 88, 176, 0.28),
+    0 0 0 1px rgba(32, 99, 188, 0.1);
+}
+
+.dashboard-shell .sidebar-user-card,
+.dashboard-shell .sidebarFooter {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(63, 146, 255, 0.12), transparent 44%),
+    linear-gradient(180deg, rgba(23, 39, 63, 0.94), rgba(14, 27, 46, 0.96));
+  border-color: rgba(87, 119, 170, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(1, 7, 16, 0.18);
 }
 
 .dashboardPage .metric-grid-primary,
