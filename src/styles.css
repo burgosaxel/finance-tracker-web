@@ -3634,3 +3634,19 @@ button:disabled {
   padding-bottom: 6px;
 }
 
+
+/* Budget hero metric label single-line override */
+.budgetHeroStats {
+  width: min(760px, 100%);
+}
+
+.budgetHeroStats .statHeader {
+  flex-wrap: nowrap;
+}
+
+.budgetHeroStats .statLabel {
+  white-space: nowrap;
+  font-size: 0.71rem;
+  letter-spacing: 0.08em;
+}
+
