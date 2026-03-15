@@ -3659,3 +3659,47 @@ button:disabled {
 .budgetHeroStats .statValue {
   margin-top: 4px;
 }
+
+/* Shared page hero margin alignment */
+.pageHero:not(.budgetHero) {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pageHero:not(.budgetHero) .pageHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 24px 32px;
+}
+
+.pageHero:not(.budgetHero) .pageHeaderContent {
+  max-width: 760px;
+  padding-left: 6px;
+}
+
+.pageHero:not(.budgetHero) .pageActions {
+  align-self: start;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+
+.pageHero:not(.budgetHero) .statsGrid.compactStats,
+.pageHero:not(.budgetHero) .filtersBar {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .pageHero:not(.budgetHero) .pageHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .pageHero:not(.budgetHero) .pageHeaderContent {
+    padding-left: 0;
+  }
+
+  .pageHero:not(.budgetHero) .pageActions {
+    padding-right: 0;
+  }
+}
