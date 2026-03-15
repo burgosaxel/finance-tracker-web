@@ -3753,10 +3753,9 @@ button:disabled {
 
 /* Credit cards hero action placement */
 .creditCardsHero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  column-gap: 40px;
+  position: relative;
+  display: block;
+  padding-bottom: 28px;
 }
 
 .creditCardsHeroMain {
@@ -3784,14 +3783,16 @@ button:disabled {
 }
 
 .creditCardsHeroActions {
-  align-self: end;
-  justify-self: end;
-  padding-bottom: 10px;
+  position: absolute;
+  right: 38px;
+  bottom: 28px;
+  z-index: 1;
 }
 
 @media (max-width: 720px) {
   .creditCardsHero {
-    grid-template-columns: 1fr;
+    display: grid;
+    padding-bottom: 26px;
     gap: 20px;
   }
 
@@ -3802,8 +3803,7 @@ button:disabled {
   }
 
   .creditCardsHeroActions {
-    justify-self: stretch;
-    padding-bottom: 0;
+    position: static;
   }
 }
 
