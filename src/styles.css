@@ -3564,3 +3564,65 @@ button:disabled {
   align-self: flex-start;
 }
 
+
+
+
+/* Budget hero screenshot alignment override */
+.budgetHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "header actions"
+    "stats actions";
+  align-items: start;
+  column-gap: 44px;
+  row-gap: 26px;
+}
+
+.budgetHeroHeader {
+  display: contents;
+}
+
+.budgetHero .pageHeaderContent {
+  grid-area: header;
+  max-width: 760px;
+  padding-left: 6px;
+}
+
+.budgetHeroActions {
+  grid-area: actions;
+  align-self: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+
+.budgetHeroStats {
+  grid-area: stats;
+  width: min(620px, 100%);
+  align-self: flex-start;
+}
+
+@media (max-width: 720px) {
+  .budgetHero {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "actions"
+      "stats";
+    gap: 20px;
+  }
+
+  .budgetHero .pageHeaderContent {
+    padding-left: 0;
+  }
+
+  .budgetHeroActions {
+    justify-content: stretch;
+    padding-right: 0;
+  }
+
+  .budgetHeroStats {
+    width: 100%;
+  }
+}
+
