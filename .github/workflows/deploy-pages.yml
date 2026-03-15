@@ -2,7 +2,7 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: ["main", "test", "plaid-match"]
+    branches: ["main", "test", "plaid-match","fix"]
   workflow_dispatch:
 
 permissions:
