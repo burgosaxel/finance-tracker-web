@@ -2489,7 +2489,6 @@ textarea:focus {
   flex-wrap: wrap;
   gap: 12px;
   align-items: end;
-  width: 100%;
 }
 
 .fieldGroup.compactField,
@@ -3036,7 +3035,6 @@ button:disabled {
     width: 100%;
   }
 }
-
 .sidebar-brand,
 .sidebarBrand {
   display: flex;
@@ -3134,7 +3132,6 @@ button:disabled {
     justify-self: start;
   }
 }
-
 .sortableHeaderButton {
   display: inline-flex;
   align-items: center;
@@ -3537,6 +3534,8 @@ button:disabled {
   }
 }
 
+
+
 /* Budget hero layout refinement */
 .budgetHero {
   display: flex;
@@ -3564,6 +3563,9 @@ button:disabled {
   width: min(860px, 100%);
   align-self: flex-start;
 }
+
+
+
 
 /* Budget hero screenshot alignment override */
 .budgetHero {
@@ -3624,11 +3626,14 @@ button:disabled {
   }
 }
 
+
+
 /* Budget hero action vertical alignment override */
 .budgetHeroActions {
   align-self: end;
   padding-bottom: 6px;
 }
+
 
 /* Budget hero metric label single-line override */
 .budgetHeroStats {
@@ -3644,6 +3649,7 @@ button:disabled {
   font-size: 0.71rem;
   letter-spacing: 0.08em;
 }
+
 
 /* Budget hero metric spacing override */
 .budgetHeroStats .statMeta {
@@ -3801,6 +3807,7 @@ button:disabled {
   }
 }
 
+
 /* Loans hero action placement */
 .loansHero {
   position: relative;
@@ -3864,6 +3871,7 @@ button:disabled {
   }
 }
 
+
 /* Bills & Income hero action placement */
 .billsIncomeHero {
   position: relative;
@@ -3891,6 +3899,7 @@ button:disabled {
     position: static;
   }
 }
+
 
 /* Transactions hero filter panel layout */
 .transactionsHero .pageHeaderContent {
@@ -3954,6 +3963,7 @@ button:disabled {
   }
 }
 
+
 /* Transactions filter panel full-width alignment */
 .transactionsHero .transactionsFiltersBar {
   width: 100%;
@@ -3977,132 +3987,97 @@ button:disabled {
   }
 }
 
-/* =========================================================
-   FINAL CLEAN TRANSACTIONS FILTER WIDTH FIX
-   ========================================================= */
-
-.transactionsHero {
+/* Transactions filter panel full-row stretch override */
+.transactionsHero .transactionsFiltersBar {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  align-self: stretch;
   width: 100%;
-  min-width: 0;
-}
-
-.transactionsHero .pageHeader {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 18px;
-  width: 100%;
-  min-width: 0;
-}
-
-.transactionsHero .pageHeaderContent {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.transactionsHero .filters-wrapper,
-.transactions-card > .filters-wrapper {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  display: block;
-  flex: 1 1 auto;
-}
-
-.transactionsHero .transactionsFiltersBar,
-.transactionsHero .filtersBar.transactionsFiltersBar,
-.transactions-filters {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 18px;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
   box-sizing: border-box;
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid var(--border);
 }
 
-.transactionsHero .transactionsFilterFields,
-.transactions-card .filters-row,
-.filters-row {
-  display: grid;
-  grid-template-columns: 220px 220px minmax(0, 1fr) 160px;
-  gap: 16px;
-  align-items: start;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+/* Dashboard hero simplified to match settings */
+.dashboardHeroSimple {
+  min-height: auto;
+  padding: 24px 38px 28px;
 }
 
-.transactionsHero .transactionsFilterFields > *,
-.transactions-card .filters-row > *,
-.filters-row > * {
-  min-width: 0;
-  width: 100%;
+.dashboardHeroSimple .pageHeader {
+  display: block;
 }
 
-.transactionsHero .compactField,
-.transactionsHero .fieldGroup {
-  min-width: 0;
-  width: 100%;
+.dashboardHeroSimple .pageHeaderContent {
+  width: min(1120px, 100%);
+  max-width: 1120px;
+  padding-left: 0;
 }
 
-.transactionsHero .compactField input,
-.transactionsHero .compactField select,
-.transactionsHero .fieldGroup input,
-.transactionsHero .fieldGroup select {
-  width: 100%;
-}
-
-.transactionsHero .transactionsFilterActions,
-.transactions-card .filters-actions,
-.filters-actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  margin-top: 16px;
-  flex-wrap: wrap;
-}
-
-.transactionsHero .transactionsFilterActions > *,
-.transactions-card .filters-actions > *,
-.filters-actions > * {
-  flex: 0 0 auto;
+.dashboardHeroSimple .pageIntro {
+  white-space: nowrap;
 }
 
 @media (max-width: 980px) {
-  .transactionsHero .transactionsFilterFields,
-  .transactions-card .filters-row,
-  .filters-row {
+  .dashboardHeroSimple .pageIntro {
+    white-space: normal;
+  }
+}
+
+
+/* Transactions filter container width correction */
+.transactions-card > .filters-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.transactions-filters {
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 auto;
+}
+
+.transactions-card .filters-row {
+  display: grid;
+  grid-template-columns: 220px 220px 1fr 200px;
+  gap: 16px;
+  width: 100%;
+}
+
+.transactions-card .filters-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+@media (max-width: 980px) {
+  .transactions-card .filters-row {
     grid-template-columns: 1fr 1fr;
   }
 }
 
 @media (max-width: 720px) {
-  .transactionsHero .transactionsFilterFields,
-  .transactions-card .filters-row,
-  .filters-row {
+  .transactions-card .filters-row {
     grid-template-columns: 1fr;
   }
+}
 
-  .transactionsHero .transactionsFilterActions,
-  .transactions-card .filters-actions,
-  .filters-actions {
-    justify-content: stretch;
-  }
 
-  .transactionsHero .transactionsFilterActions > *,
-  .transactions-card .filters-actions > *,
-  .filters-actions > * {
-    flex: 1 1 auto;
-  }
+/* Transactions filter panel final width override */
+.transactionsHero .filters-wrapper {
+  width: 100%;
+  justify-self: stretch;
+  align-self: stretch;
+}
+
+.transactionsHero .filtersBar.transactionsFiltersBar {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  justify-self: stretch;
+  align-self: stretch;
 }
