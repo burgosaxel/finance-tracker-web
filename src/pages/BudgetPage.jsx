@@ -84,8 +84,8 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
 
   return (
     <div className="page">
-      <section className="dashboard-hero pageHero heroPlan">
-        <div className="pageHeader">
+      <section className="dashboard-hero pageHero heroPlan budgetHero">
+        <div className="pageHeader budgetHeroHeader">
           <div className="pageHeaderContent">
             <div className="pageEyebrow">Monthly planning</div>
             <h2>Budget</h2>
@@ -93,7 +93,7 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
               Plan your month by assigning dollars to categories and comparing assigned amounts against activity.
             </p>
           </div>
-          <div className="pageActions">
+          <div className="pageActions budgetHeroActions">
             <label className="fieldGroup compactField">
               <span>Month</span>
               <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
@@ -101,7 +101,7 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
             <button type="button" className="primary" onClick={saveBudget}>Save Month Budget</button>
           </div>
         </div>
-        <div className="statsGrid compactStats">
+        <div className="statsGrid compactStats budgetHeroStats">
           <StatCard icon={PiggyBank} className="metric-card green-accent" label="Month Income" value={formatCurrency(monthIncome, cfg.currency)} />
           <StatCard icon={DollarSign} className="metric-card" label="Total Assigned" value={formatCurrency(totals.totalAssigned, cfg.currency)} />
           <StatCard icon={TrendingUp} className="metric-card green-accent" label="To Be Budgeted" value={formatCurrency(totals.toBeBudgeted, cfg.currency)} />
@@ -194,3 +194,4 @@ export default function BudgetPage({ uid, budgets, bills, income, transactions, 
     </div>
   );
 }
+

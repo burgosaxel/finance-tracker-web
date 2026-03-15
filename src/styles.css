@@ -3500,6 +3500,18 @@ button:disabled {
 }
 
 @media (max-width: 720px) {
+  .budgetHeroHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .budgetHeroActions {
+    justify-content: stretch;
+  }
+
+  .budgetHeroStats {
+    width: 100%;
+  }
+
   .dashboard-hero {
     min-height: 168px;
     padding: 22px 20px 26px;
@@ -3521,3 +3533,34 @@ button:disabled {
     margin-bottom: 10px;
   }
 }
+
+
+
+/* Budget hero layout refinement */
+.budgetHero {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.budgetHeroHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 24px;
+}
+
+.budgetHero .pageHeaderContent {
+  max-width: 720px;
+}
+
+.budgetHeroActions {
+  align-self: start;
+  justify-content: flex-end;
+}
+
+.budgetHeroStats {
+  width: min(860px, 100%);
+  align-self: flex-start;
+}
+
