@@ -399,6 +399,14 @@ export default function SettingsPage({
     return candidate?.label || "";
   }
 
+  function recurringNextExpectedLabel(item) {
+    const value = item?.nextExpectedDate;
+    if (!value) return "-";
+    if (value?.toDate) return value.toDate().toLocaleDateString();
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleDateString();
+  }
+
   return (
     <div className="page">
       <section className="dashboard-hero pageHero heroSettings">
@@ -590,7 +598,7 @@ export default function SettingsPage({
                   <td>{item.displayName || item.merchantName || item.normalizedMerchant || "-"}</td>
                   <td>{item.cadenceGuess || "-"}</td>
                   <td>{formatCurrency(Math.abs(safeNumber(item.averageAmount, 0)), localSettings.currency || "USD")}</td>
-                  <td>{item.nextExpectedDate || "-"}</td>
+                  <td>{recurringNextExpectedLabel(item)}</td>
                   <td>{item.typeGuess || "-"}</td>
                   <td>{item.status || "-"}</td>
                   <td>{recurringManualLabel(item) || "-"}</td>
