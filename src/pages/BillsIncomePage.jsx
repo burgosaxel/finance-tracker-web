@@ -461,6 +461,29 @@ export default function BillsIncomePage({
     }
   }
 
+  function renderTemplateList(rows, options) {
+    const { getPrimary, getSecondary, getAmount, onEdit, onDelete } = options;
+    return (
+      <div className="row-list templateList">
+        {rows.map((item) => (
+          <div key={item.id} className="row-list-item templateListRow">
+            <div>
+              <div className="primary">{getPrimary(item)}</div>
+              <div className="secondary">{getSecondary(item)}</div>
+            </div>
+            <div className="amount negative">{getAmount(item)}</div>
+            <ActionMenu
+              items={[
+                { label: "Edit", onClick: () => onEdit(item) },
+                { label: "Delete", tone: "danger", onClick: () => onDelete(item.id) },
+              ]}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   function renderBillTable(rows, emptyMessage) {
     return (
       <div className="data-panel billListPanel">
@@ -561,12 +584,26 @@ export default function BillsIncomePage({
                 <td>{getIncomePayDate(i).toLocaleDateString()}</td>
                 <td>{i.status || "expected"}</td>
                 <td>{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</td>
-                <td className="row">
-                  <button type="button" onClick={() => toggleReceived(i)}>
-                    {i.status === "received" ? "Mark expected" : "Mark received"}
-                  </button>
-                  <button type="button" onClick={() => startIncomeEdit(i)} disabled={isReadOnly}>Edit</button>
-                  <button type="button" onClick={() => removeIncome(i.id)} disabled={isReadOnly}>Delete</button>
+                <td>
+                  <ActionMenu
+                    items={[
+                      {
+                        label: i.status === "received" ? "Mark expected" : "Mark received",
+                        onClick: () => toggleReceived(i),
+                      },
+                      {
+                        label: "Edit",
+                        disabled: isReadOnly,
+                        onClick: () => startIncomeEdit(i),
+                      },
+                      {
+                        label: "Delete",
+                        tone: "danger",
+                        disabled: isReadOnly,
+                        onClick: () => removeIncome(i.id),
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}
@@ -684,13 +721,14 @@ export default function BillsIncomePage({
           {renderBillCards(activeBills, "No unpaid bills this month.")}
 
           <section className="subsection">
-            <div className="row">
-              <h4>Paid Bills ({paidBills.length})</h4>
-              <div className="spacer" />
-              <button type="button" onClick={() => setPaidBillsCollapsed((value) => !value)}>
-                {paidBillsCollapsed ? ">" : "v"}
-              </button>
-            </div>
+            <button
+              type="button"
+              className="collapseToggle"
+              onClick={() => setPaidBillsCollapsed((value) => !value)}
+            >
+              <span>Paid Bills ({paidBills.length})</span>
+              <span>{paidBillsCollapsed ? ">" : "v"}</span>
+            </button>
             {!paidBillsCollapsed ? (
               <>
                 {renderBillTable(paidBills, "No paid bills for this month.")}
@@ -714,13 +752,14 @@ export default function BillsIncomePage({
           {renderIncomeCards(expectedIncome, "No expected income entries this month.")}
 
           <section className="subsection">
-            <div className="row">
-              <h4>Received Income ({receivedIncome.length})</h4>
-              <div className="spacer" />
-              <button type="button" onClick={() => setReceivedIncomeCollapsed((value) => !value)}>
-                {receivedIncomeCollapsed ? ">" : "v"}
-              </button>
-            </div>
+            <button
+              type="button"
+              className="collapseToggle"
+              onClick={() => setReceivedIncomeCollapsed((value) => !value)}
+            >
+              <span>Received Income ({receivedIncome.length})</span>
+              <span>{receivedIncomeCollapsed ? ">" : "v"}</span>
+            </button>
             {!receivedIncomeCollapsed ? (
               <>
                 {renderIncomeTable(receivedIncome, "No received income for this month.")}
@@ -767,13 +806,14 @@ export default function BillsIncomePage({
       </Modal>
 
       <section className="data-panel section moduleTemplates">
-        <div className="row">
-          <h3>Recurring Templates</h3>
-          <div className="spacer" />
-          <button type="button" onClick={() => setTemplatesCollapsed((v) => !v)}>
-            {templatesCollapsed ? ">" : "v"}
-          </button>
-        </div>
+        <button
+          type="button"
+          className="collapseToggle"
+          onClick={() => setTemplatesCollapsed((v) => !v)}
+        >
+          <span>Recurring Templates</span>
+          <span>{templatesCollapsed ? ">" : "v"}</span>
+        </button>
         {!templatesCollapsed ? (
           <>
             <div className="row" style={{ marginBottom: 8 }}>
@@ -783,35 +823,23 @@ export default function BillsIncomePage({
             <div className="twoCol">
               <div>
                 <div className="muted" style={{ marginBottom: 6 }}>Bills templates</div>
-                <ul className="cleanList">
-                  {billTemplates?.map((t) => (
-                    <li key={t.id} className="listRow">
-                      <span>{t.merchant}</span>
-                      <span>Day {t.dueDay}</span>
-                      <span>{formatCurrency(t.defaultAmount, cfg.currency)}</span>
-                      <span className="row">
-                        <button type="button" onClick={() => startBillTemplateEdit(t)}>Edit</button>
-                        <button type="button" onClick={() => removeBillTemplate(t.id)}>Delete</button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                {renderTemplateList(billTemplates || [], {
+                  getPrimary: (t) => t.merchant,
+                  getSecondary: (t) => `Day ${t.dueDay}`,
+                  getAmount: (t) => formatCurrency(t.defaultAmount, cfg.currency),
+                  onEdit: startBillTemplateEdit,
+                  onDelete: removeBillTemplate,
+                })}
               </div>
               <div>
                 <div className="muted" style={{ marginBottom: 6 }}>Income templates</div>
-                <ul className="cleanList">
-                  {incomeTemplates?.map((t) => (
-                    <li key={t.id} className="listRow">
-                      <span>{t.source}</span>
-                      <span>Day {t.payDay}</span>
-                      <span>{formatCurrency(t.defaultAmount, cfg.currency)}</span>
-                      <span className="row">
-                        <button type="button" onClick={() => startIncomeTemplateEdit(t)}>Edit</button>
-                        <button type="button" onClick={() => removeIncomeTemplate(t.id)}>Delete</button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                {renderTemplateList(incomeTemplates || [], {
+                  getPrimary: (t) => t.source,
+                  getSecondary: (t) => `Day ${t.payDay}`,
+                  getAmount: (t) => formatCurrency(t.defaultAmount, cfg.currency),
+                  onEdit: startIncomeTemplateEdit,
+                  onDelete: removeIncomeTemplate,
+                })}
               </div>
             </div>
           </>

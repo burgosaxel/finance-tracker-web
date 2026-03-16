@@ -212,20 +212,20 @@ async function syncPlaidTransactionsForItem({ uid, plaidItemId, accessToken, cli
   }
 
   await writePlaidItemMetadata(uid, plaidItemId, {
-    status: "synced",
+    status: "Synced",
     lastCursor: cursor || "",
     lastSyncAt: new Date().toISOString(),
   });
   await writePrivateItem(uid, plaidItemId, {
     lastCursor: cursor || "",
     lastSyncAt: new Date().toISOString(),
-    status: "synced",
+    status: "Synced",
   });
 
   await refreshRecurringPayments(uid);
   await setPlaidSyncState(uid, {
     lastGlobalSyncAt: new Date().toISOString(),
-    syncStatus: "synced",
+    syncStatus: "Synced",
     lastError: "",
     itemCount: (await getUserPrivateItems(uid)).length,
     accountCount: await countUserCollection(uid, "linkedAccounts"),
@@ -732,7 +732,7 @@ export const syncPlaidAccounts = onCall(
 
       await setPlaidSyncState(uid, {
         lastGlobalSyncAt: new Date().toISOString(),
-        syncStatus: "synced",
+        syncStatus: "Synced",
         lastError: "",
         itemCount: (await getUserPrivateItems(uid)).length,
         accountCount: await countUserCollection(uid, "linkedAccounts"),
@@ -802,7 +802,7 @@ export const syncPlaidAccountsHttp = onRequest(
         });
         await setPlaidSyncState(uid, {
           lastGlobalSyncAt: new Date().toISOString(),
-          syncStatus: "synced",
+          syncStatus: "Synced",
           lastError: "",
           itemCount: (await getUserPrivateItems(uid)).length,
           accountCount: await countUserCollection(uid, "linkedAccounts"),

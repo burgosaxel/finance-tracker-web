@@ -410,8 +410,8 @@ export default function SettingsPage({
   return (
     <div className="page">
       <section className="dashboard-hero pageHero heroSettings">
-        <div className="pageHeader">
-          <div className="pageHeaderContent">
+        <div className="settingsHeroMain">
+          <div className="pageHeaderContent settingsHeroContent">
             <div className="pageEyebrow">Preferences and integrations</div>
             <h2>Settings</h2>
             <p className="muted pageIntro">
@@ -621,6 +621,83 @@ export default function SettingsPage({
             </tbody>
           </table>
         </div>
+        <div className="listFooter cardSectionFooter">
+          <div className="muted">Showing {visibleRecurringPayments.length} of {recurringPayments.length} recurring items</div>
+          <label className="fieldGroup compactField inlineSelector">
+            <span>Show</span>
+            <select value={recurringVisibleCount} onChange={(e) => setRecurringVisibleCount(e.target.value)}>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="all">All</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section className="data-panel section moduleAccounts">
+        <div className="row">
+          <div>
+            <h3>Accounts</h3>
+            <div className="muted pageIntro">
+              Manage manual cash accounts and optionally link each one to a synced Plaid account.
+            </div>
+          </div>
+          <div className="spacer" />
+          <button type="button" className="primary" onClick={startAddAccount}>Add Account</button>
+        </div>
+        {accounts.length === 0 ? <div className="muted">No manual accounts yet.</div> : null}
+        {accounts.length > 0 ? (
+          <div className="tableWrap premiumTableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Balance</th>
+                  <th>Linked Plaid Account</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {accounts.map((account) => (
+                  <tr key={account.id}>
+                    <td>{account.name || "-"}</td>
+                    <td>{account.type || "-"}</td>
+                    <td>{formatCurrency(account.balance, localSettings.currency || "USD")}</td>
+                    <td>
+                      {account.plaidAccountId
+                        ? linkedAccounts.find((entry) => entry.id === account.plaidAccountId || entry.accountId === account.plaidAccountId)?.name || "Plaid account"
+                        : "-"}
+                    </td>
+                    <td>
+                      <ActionMenu
+                        items={[
+                          { label: "Edit", onClick: () => startEditAccount(account) },
+                          { label: account.plaidAccountId ? "Change Linked Plaid Account" : "Link Plaid Account", onClick: () => openAccountPlaidLink(account) },
+                          {
+                            label: "Unlink Plaid Account",
+                            hidden: !account.plaidAccountId,
+                            onClick: async () => {
+                              try {
+                                await upsertEntity(uid, "accounts", { ...account, plaidAccountId: "" }, account.id);
+                                onToast("Plaid account link removed.");
+                              } catch (error) {
+                                onError?.(error?.message || String(error));
+                                onToast("Failed to remove Plaid account link.", "error");
+                              }
+                            },
+                          },
+                          { label: "Delete", tone: "danger", onClick: () => removeAccount(account.id) },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </section>
 
       <section className="data-panel section moduleTools">

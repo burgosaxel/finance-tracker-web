@@ -174,7 +174,7 @@ export default function LoansPage({ uid, loans, settings, onToast, onError }) {
       <section className="data-panel section moduleAccounts">
         <div className="sectionHeader">
           <div>
-            <h3>Loan accounts</h3>
+            <h3>Loan Accounts</h3>
             <div className="muted compactSubtext">Sort directly from the table headers without a separate sort control.</div>
           </div>
         </div>
