@@ -582,40 +582,29 @@ export default function SettingsPage({
               </tr>
             </thead>
             <tbody>
-              {accounts.length === 0 ? (
-                <tr><td colSpan={5} className="muted">No accounts yet.</td></tr>
+              {visibleRecurringPayments.length === 0 ? (
+                <tr><td colSpan={8} className="muted">No recurring patterns detected yet.</td></tr>
               ) : null}
-              {accounts.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    {a.name}
-                    {a.plaidAccountId ? (
-                      <div className="muted">
-                        Linked to {linkedAccounts.find((account) => account.id === a.plaidAccountId || account.accountId === a.plaidAccountId)?.name || "Plaid account"}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td>{a.type}</td>
-                  <td>{formatCurrency(a.balance, localSettings.currency || "USD")}</td>
+              {visibleRecurringPayments.map((item) => (
+                <tr key={item.id || item.recurringId}>
+                  <td>{item.displayName || item.merchantName || item.normalizedMerchant || "-"}</td>
+                  <td>{item.cadenceGuess || "-"}</td>
+                  <td>{formatCurrency(Math.abs(safeNumber(item.averageAmount, 0)), localSettings.currency || "USD")}</td>
+                  <td>{item.nextExpectedDate || "-"}</td>
+                  <td>{item.typeGuess || "-"}</td>
+                  <td>{item.status || "-"}</td>
+                  <td>{recurringManualLabel(item) || "-"}</td>
                   <td>
                     <ActionMenu
                       items={[
-                        { label: "Edit", onClick: () => startEditAccount(a) },
-                        { label: a.plaidAccountId ? "Change Linked Plaid Account" : "Link Plaid Account", onClick: () => openAccountPlaidLink(a) },
+                        { label: "Confirm", hidden: item.status === "confirmed", onClick: () => confirmRecurring(item) },
+                        { label: recurringManualLabel(item) ? "Change Link" : "Link Item", onClick: () => openRecurringLink(item) },
                         {
-                          label: "Unlink Plaid Account",
-                          hidden: !a.plaidAccountId,
-                          onClick: async () => {
-                            try {
-                              await upsertEntity(uid, "accounts", { ...a, plaidAccountId: "" }, a.id);
-                              onToast("Plaid account link removed.");
-                            } catch (error) {
-                              onError?.(error?.message || String(error));
-                              onToast("Failed to remove Plaid account link.", "error");
-                            }
-                          },
+                          label: "Remove Link",
+                          hidden: !recurringManualLabel(item),
+                          onClick: () => removeRecurringLink(item),
                         },
-                        { label: "Delete", tone: "danger", onClick: () => removeAccount(a.id) },
+                        { label: "Ignore", hidden: item.status === "ignored", onClick: () => ignoreRecurring(item) },
                       ]}
                     />
                   </td>
