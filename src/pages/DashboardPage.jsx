@@ -1,5 +1,11 @@
 import React, { useMemo } from "react";
-import StatCard from "../components/StatCard";
+import { routeHref } from "../lib/hashRouter";
+import PageHeader from "../components/ui/PageHeader";
+import SectionHeader from "../components/ui/SectionHeader";
+import SurfaceCard from "../components/ui/SurfaceCard";
+import InsightCard from "../components/ui/InsightCard";
+import Icon from "../components/ui/Icons";
+import { AccountRow, TransactionRow } from "../components/ui/Rows";
 import {
   computeMonthTotals,
   DEFAULT_SETTINGS,
@@ -16,7 +22,37 @@ import {
   summarizeCashFlowFromTransactions,
   summarizeSpendingByCategory,
 } from "../lib/finance";
-import { TrendingUp, DollarSign, CreditCard, PiggyBank, Calendar, AlertTriangle, BarChart3, Wallet } from "lucide-react";
+
+function formatDayLabel(date) {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+}
+
+function daysUntil(target, now = new Date()) {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  return Math.round((end.getTime() - start.getTime()) / 86400000);
+}
+
+function relativeDue(target, now = new Date()) {
+  const delta = daysUntil(target, now);
+  if (delta === 0) return "today";
+  if (delta === 1) return "tomorrow";
+  if (delta > 1) return `in ${delta} days`;
+  if (delta === -1) return "yesterday";
+  return `${Math.abs(delta)} days ago`;
+}
+
+function makeSparkline(values) {
+  const max = Math.max(...values, 1);
+  return values.map((value, index) => ({
+    id: `${index}-${value}`,
+    height: `${Math.max(18, (value / max) * 100)}%`,
+  }));
+}
 
 export default function DashboardPage({
   data,
@@ -32,366 +68,303 @@ export default function DashboardPage({
   const currentMonth = monthKey(now);
 
   const summary = useMemo(() => {
-    const manualCash = (data.accounts || []).reduce((sum, a) => sum + safeNumber(a.balance, 0), 0);
-    const linkedCash = (data.linkedAccounts || [])
+    const manualAccounts = data.accounts || [];
+    const linkedAccounts = data.linkedAccounts || [];
+    const creditCards = data.creditCards || [];
+    const loans = data.loans || [];
+    const manualCash = manualAccounts.reduce((sum, account) => sum + safeNumber(account.balance, 0), 0);
+    const linkedCash = linkedAccounts
       .filter((account) => account.type !== "credit")
       .reduce((sum, account) => sum + safeNumber(account.currentBalance, 0), 0);
+    const savings = [...manualAccounts, ...linkedAccounts]
+      .filter((account) => String(account.type || "").includes("sav"))
+      .reduce((sum, account) => sum + safeNumber(account.balance ?? account.currentBalance, 0), 0);
+    const investments = [...manualAccounts, ...linkedAccounts]
+      .filter((account) => /invest|broker|ira/i.test(String(account.type || account.subtype || account.name || "")))
+      .reduce((sum, account) => sum + safeNumber(account.balance ?? account.currentBalance, 0), 0);
     const totalCash = manualCash + linkedCash;
-    const creditCardDebt = (data.creditCards || []).reduce(
-      (sum, c) => sum + Math.max(0, safeNumber(c.balance, 0)),
-      0
-    );
-    const loanDebt = (data.loans || []).reduce(
-      (sum, loan) => sum + Math.max(0, safeNumber(loan.balance, 0)),
-      0
-    );
-    const totalDebt = creditCardDebt + loanDebt;
-    const totalLimit = (data.creditCards || []).reduce((sum, c) => sum + Math.max(0, safeNumber(c.limit, 0)), 0);
-    const utilization = totalLimit > 0 ? (creditCardDebt / totalLimit) * 100 : 0;
-    const monthIncome = (incomes || [])
-      .filter((i) => monthKey(getIncomePayDate(i, now)) === currentMonth)
-      .reduce((sum, i) => sum + safeNumber(i.amount ?? i.expectedAmount, 0), 0);
-    const monthBills = (bills || [])
-      .filter((b) => monthKey(getBillDueDate(b, now)) === currentMonth)
-      .reduce((sum, b) => sum + safeNumber(b.amount, 0), 0);
-
-    const pastDue = getPastDueBills(bills, now);
+    const cardBalance = creditCards.reduce((sum, card) => sum + Math.max(0, safeNumber(card.balance, 0)), 0);
+    const loanBalance = loans.reduce((sum, loan) => sum + Math.max(0, safeNumber(loan.balance, 0)), 0);
+    const totalDebt = cardBalance + loanBalance;
+    const cashflow = computeMonthTotals(bills, incomes, { now });
+    const txCashflow = summarizeCashFlowFromTransactions(transactions, currentMonth);
+    const topSpending = summarizeSpendingByCategory(transactions, currentMonth, 4);
+    const recentTransactions = getRecentSyncedTransactions(transactions, 4);
     const dueSoon = getBillsDueWithinDays(bills, 7, now);
     const dueLater = getBillsDueLaterThisMonth(bills, now, 7);
-    const cashflow = computeMonthTotals(bills, incomes, { now });
-    const transactionCashFlow = summarizeCashFlowFromTransactions(transactions, currentMonth);
-    const topSpending = summarizeSpendingByCategory(transactions, currentMonth, 5);
-    const recentSyncedTransactions = getRecentSyncedTransactions(transactions, 5);
-    const recurringActive = (recurringPayments || [])
-      .filter((entry) => entry?.active !== false && entry?.status !== "ignored")
-      .sort((a, b) => {
-        const left = a?.nextExpectedDate?.toDate ? a.nextExpectedDate.toDate().getTime() : Number.MAX_SAFE_INTEGER;
-        const right = b?.nextExpectedDate?.toDate ? b.nextExpectedDate.toDate().getTime() : Number.MAX_SAFE_INTEGER;
-        return left - right;
-      });
-    const recurringConfirmed = recurringActive.filter((entry) => entry.status === "confirmed");
-    const recurringSuggested = recurringActive.filter((entry) => entry.status !== "confirmed");
+    const pastDue = getPastDueBills(bills, now);
+    const nextIncome = cashflow.nextExpectedIncome
+      ? {
+          label: cashflow.nextExpectedIncome.source || cashflow.nextExpectedIncome.name || "Paycheck",
+          date: getIncomePayDate(cashflow.nextExpectedIncome, now),
+          amount: safeNumber(
+            cashflow.nextExpectedIncome.amount ?? cashflow.nextExpectedIncome.expectedAmount,
+            0
+          ),
+        }
+      : null;
+    const nextBill = cashflow.nextDueBill
+      ? {
+          label: cashflow.nextDueBill.merchant || cashflow.nextDueBill.name || "Upcoming bill",
+          date: getBillDueDate(cashflow.nextDueBill, now),
+          amount: safeNumber(cashflow.nextDueBill.amount, 0),
+        }
+      : null;
 
-    const overUtilized = (data.creditCards || [])
-      .map((c) => {
-        const limit = safeNumber(c.limit, 0);
-        const balance = safeNumber(c.balance, 0);
-        return { ...c, util: limit > 0 ? (balance / limit) * 100 : 0 };
-      })
-      .filter((c) => c.util > cfg.utilizationThreshold)
-      .sort((a, b) => b.util - a.util);
+    const monthSpend = txCashflow.outflow;
+    const trendBase = Math.max(txCashflow.inflow || 1, 1);
+    const spendTrend = monthSpend / trendBase;
+    const spark = makeSparkline([
+      txCashflow.inflow * 0.24,
+      monthSpend * 0.46,
+      monthSpend * 0.71,
+      monthSpend * 0.58,
+      monthSpend * 0.82,
+      monthSpend * 0.9,
+      monthSpend || 12,
+    ]);
 
     return {
       totalCash,
-      manualCash,
-      linkedCash,
+      cardBalance,
       totalDebt,
-      creditCardDebt,
-      loanDebt,
-      netWorth: totalCash - totalDebt,
-      monthIncome,
-      monthBills,
-      utilization,
-      pastDue,
+      savings,
+      investments,
+      netCash: totalCash - cardBalance,
       dueSoon,
       dueLater,
+      pastDue,
       cashflow,
-      transactionCashFlow,
+      txCashflow,
       topSpending,
-      recentSyncedTransactions,
-      recurringActive,
-      recurringConfirmed,
-      recurringSuggested,
-      overUtilized,
+      recentTransactions,
+      nextIncome,
+      nextBill,
+      monthSpend,
+      spendTrend,
+      spark,
+      recurringPaymentsPreview: (recurringPayments || []).slice(0, 3),
     };
-  }, [
-    bills,
-    cfg.utilizationThreshold,
-    currentMonth,
-    data.accounts,
-    data.creditCards,
-    data.linkedAccounts,
-    data.loans,
-    incomes,
-    now,
-    recurringPayments,
-    transactions,
-  ]);
+  }, [bills, currentMonth, data.accounts, data.creditCards, data.linkedAccounts, data.loans, incomes, now, recurringPayments, transactions]);
+
+  const accountRows = [
+    { icon: "wallet", label: "Checking", value: formatCurrency(summary.totalCash, cfg.currency), detail: "Manual and linked cash" },
+    { icon: "card", label: "Card Balance", value: formatCurrency(summary.cardBalance, cfg.currency), detail: "Open revolving balances" },
+    { icon: "cash", label: "Net Cash", value: formatCurrency(summary.netCash, cfg.currency), detail: "Cash after card balances" },
+    { icon: "savings", label: "Savings", value: formatCurrency(summary.savings, cfg.currency), detail: "Reserve accounts" },
+    { icon: "investment", label: "Investments", value: formatCurrency(summary.investments, cfg.currency), detail: "Long-term holdings" },
+  ];
+
+  const upcomingCards = [
+    summary.nextIncome && {
+      id: "income",
+      eyebrow: "Next paycheck",
+      title: summary.nextIncome.label,
+      amount: formatCurrency(summary.nextIncome.amount, cfg.currency),
+      detail: relativeDue(summary.nextIncome.date, now),
+      icon: "income",
+    },
+    summary.nextBill && {
+      id: "bill",
+      eyebrow: "Due soon",
+      title: summary.nextBill.label,
+      amount: formatCurrency(summary.nextBill.amount, cfg.currency),
+      detail: relativeDue(summary.nextBill.date, now),
+      icon: "calendar",
+    },
+    summary.pastDue[0] && {
+      id: "past-due",
+      eyebrow: "Needs attention",
+      title: summary.pastDue[0].merchant || summary.pastDue[0].name,
+      amount: formatCurrency(summary.pastDue[0].amount, cfg.currency),
+      detail: `${Math.abs(daysUntil(summary.pastDue[0].nextDueDate, now))} day${Math.abs(daysUntil(summary.pastDue[0].nextDueDate, now)) === 1 ? "" : "s"} overdue`,
+      icon: "warning",
+    },
+  ].filter(Boolean);
 
   return (
     <div className="page">
-      <section className="dashboard-hero pageHero heroOverview dashboardHeroSimple">
-        <div className="pageHeader">
-          <div className="pageHeaderContent">
-            <div className="pageEyebrow">Financial command center</div>
-            <h2>Dashboard</h2>
-            <p className="muted pageIntro">
-              A structured view of balance-sheet health, this month's obligations, and the operational signals that need attention.
-            </p>
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Today"
+        title={formatDayLabel(now)}
+        subtitle="BudgetCommand keeps cash, recurring expenses, and the latest activity in one place."
+        left={
+          <a href={routeHref("settings")} className="iconButton" aria-label="Open more">
+            <Icon name="menu" size={18} />
+          </a>
+        }
+        right={
+          <button type="button" className="iconButton" aria-label="Notifications">
+            <Icon name="bell" size={18} />
+          </button>
+        }
+      />
 
-      <section className="section-block dashboardSection dashboardBlock dashboardBlockOverview">
-        <div className="sectionHeader">
-          <div>
-            <h3 className="section-title">Financial Overview</h3>
-            <div className="section-copy">The highest-value metrics in the workspace, emphasized first.</div>
+      <SurfaceCard className="heroCard">
+        <div className="sectionEyebrow">Monthly Snapshot</div>
+        <div className="heroValue">{formatCurrency(summary.monthSpend, cfg.currency)}</div>
+        <div className="heroSubline">
+          <span className={summary.spendTrend > 0.75 ? "statusPill warning" : "statusPill success"}>
+            {summary.spendTrend > 0.75 ? "Higher spend pace" : "Controlled spend pace"}
+          </span>
+          <span>{formatCurrency(summary.txCashflow.inflow, cfg.currency)} income landed this month</span>
+        </div>
+        <div className="sparkline">
+          {summary.spark.map((bar) => (
+            <div key={bar.id} className="sparkBar" style={{ height: bar.height }} />
+          ))}
+        </div>
+        <div className="heroFooter">
+          <div className="heroFootCell">
+            <div className="sectionEyebrow">Projected month end</div>
+            <strong>{formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}</strong>
+          </div>
+          <div className="heroFootCell">
+            <div className="sectionEyebrow">Payday signal</div>
+            <strong>
+              {summary.nextIncome
+                ? `${summary.nextIncome.label} ${relativeDue(summary.nextIncome.date, now)}`
+                : "No upcoming paycheck found"}
+            </strong>
           </div>
         </div>
-        <div className="metric-grid-primary">
-          <StatCard
-            className="heroStat heroStatPrimary metric-card green-accent"
-            icon={TrendingUp}
-            label="Net Worth"
-            value={formatCurrency(summary.netWorth, cfg.currency)}
-            subtitle={`Cash ${formatCurrency(summary.totalCash, cfg.currency)} | Debt ${formatCurrency(summary.totalDebt, cfg.currency)}`}
-          />
-          <StatCard
-            className="heroStat metric-card"
-            icon={Wallet}
-            label="Total Cash"
-            value={formatCurrency(summary.totalCash, cfg.currency)}
-            subtitle={`Manual ${formatCurrency(summary.manualCash, cfg.currency)} | Linked ${formatCurrency(summary.linkedCash, cfg.currency)}`}
-          />
-          <StatCard
-            className="heroStat heroStatDanger metric-card red-accent"
-            icon={CreditCard}
-            label="Total Debt"
-            value={formatCurrency(summary.totalDebt, cfg.currency)}
-            subtitle={`Cards ${formatCurrency(summary.creditCardDebt, cfg.currency)} | Loans ${formatCurrency(summary.loanDebt, cfg.currency)}`}
-          />
-        </div>
-      </section>
+      </SurfaceCard>
 
-      <section className="section-block dashboardSection dashboardBlock dashboardBlockMonthly">
-        <div className="sectionHeader">
-          <div>
-            <h3 className="section-title">Monthly Overview</h3>
-            <div className="section-copy">This month's income, required bills, and unpaid obligations.</div>
-          </div>
+      <SurfaceCard>
+        <SectionHeader eyebrow="Accounts" title="Money at a glance" subtitle="A grouped summary of core balances across your workspace." />
+        <div className="metricList">
+          {accountRows.map((row) => (
+            <AccountRow key={row.label} {...row} chevron />
+          ))}
         </div>
-        <div className="metric-grid-secondary">
-          <StatCard icon={PiggyBank} className="metric-card green-accent" label="This Month Income" value={formatCurrency(summary.monthIncome, cfg.currency)} />
-          <StatCard icon={Calendar} className="metric-card" label="Bills Due This Month" value={formatCurrency(summary.monthBills, cfg.currency)} />
-          <StatCard icon={AlertTriangle} className="metric-card red-accent" label="Bills Remaining" value={formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)} />
-        </div>
-      </section>
+      </SurfaceCard>
 
-      <section className="section-block dashboardSection dashboardBlock dashboardBlockHealth">
-        <div className="sectionHeader">
-          <div>
-            <h3 className="section-title">Financial Health</h3>
-            <div className="section-copy">Operational metrics that affect leverage and month-end position.</div>
-          </div>
-        </div>
-        <div className="metric-grid-secondary">
-          <StatCard icon={BarChart3} className="metric-card" label="Credit Utilization" value={formatPercent(summary.utilization)} />
-          <StatCard
-            icon={TrendingUp}
-            className="metric-card green-accent"
-            label="Projected Month End Balance"
-            value={formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}
-          />
-          <StatCard
-            icon={DollarSign}
-            className="metric-card"
-            label="Monthly Outflow"
-            value={formatCurrency(summary.transactionCashFlow.outflow, cfg.currency)}
-          />
-        </div>
-      </section>
-
-      <section className="section-block dashboardSection dashboardBlock dashboardBlockInsights">
-        <div className="sectionHeader">
-          <div>
-            <h3 className="section-title">Insights</h3>
-            <div className="section-copy">Recurring patterns, overdue items, upcoming bills, and recent activity.</div>
-          </div>
-        </div>
-        <div className="dashboardInsightsGrid">
-          <section className="data-panel insightCard moduleRecurring">
-            <div className="card-header">
-              <div>
-                <div className="panel-title">Recurring Items Detected</div>
-                <div className="panel-copy">
-                  {summary.recurringConfirmed.length} confirmed | {summary.recurringSuggested.length} suggested
+      <div>
+        <SectionHeader
+          eyebrow="Upcoming"
+          title="What’s next"
+          subtitle="Fast-glance cards for the next money events."
+        />
+        <div className="horizontalScroll">
+          {upcomingCards.length === 0 ? (
+            <SurfaceCard className="miniCard">
+              <div className="sectionEyebrow">Nothing queued</div>
+              <div className="sectionTitle">You’re clear for now</div>
+              <div className="sectionSubtitle">Upcoming paychecks and bills will appear here as your recurring items sync.</div>
+            </SurfaceCard>
+          ) : (
+            upcomingCards.map((card) => (
+              <SurfaceCard key={card.id} className="miniCard">
+                <div className="sectionEyebrow">{card.eyebrow}</div>
+                <div className="sectionTitle" style={{ marginTop: 6 }}>{card.title}</div>
+                <div className="heroSubline" style={{ marginTop: 12 }}>
+                  <span className="upcomingBadge">
+                    <Icon name={card.icon} size={14} />
+                    {card.detail}
+                  </span>
                 </div>
-              </div>
-              <span className="pill-count">{summary.recurringActive.length}</span>
-            </div>
-            {summary.recurringActive.length === 0 ? (
-              <div className="muted">Recurring candidates will appear after Plaid transaction syncs.</div>
-            ) : (
-              <div className="row-list">
-                {summary.recurringActive.slice(0, 4).map((entry) => (
-                  <div key={entry.recurringId || entry.id} className="row-list-item">
-                    <div>
-                      <div className="primary">{entry.displayName || entry.merchantName}</div>
-                      <div className="secondary">
-                        {entry.status === "confirmed" ? "Confirmed" : "Suggested"}
-                        {entry.linkedManualType ? ` | linked to ${entry.linkedManualType}` : ""}
-                      </div>
-                    </div>
-                    <div className="secondary recurring-cadence-label">{`${entry.cadenceGuess || "unknown"} ${entry.typeGuess || "unknown"}`}</div>
-                    <div className="amount">{formatCurrency(entry.averageAmount, cfg.currency)}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="data-panel insightCard moduleAlert">
-            <div className="card-header">
-              <div>
-                <div className="panel-title">Past Due Bills</div>
-                <div className="panel-copy">Unpaid bills already past their due date.</div>
-              </div>
-              <span className={`pill-count ${summary.pastDue.length ? "status-danger" : ""}`}>{summary.pastDue.length}</span>
-            </div>
-            {loadError ? <div className="errorText">{loadError}</div> : null}
-            {summary.pastDue.length === 0 ? <div className="muted">No past-due unpaid bills.</div> : null}
-            {summary.pastDue.length > 0 ? (
-              <div className="row-list">
-                {summary.pastDue.map((b) => (
-                  <div key={b.id} className="row-list-item">
-                    <div className="primary">{b.merchant || b.name}</div>
-                    <div className="secondary">{new Date(b.nextDueDate).toLocaleDateString()}</div>
-                    <div className="amount negative">{formatCurrency(b.amount, cfg.currency)}</div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </section>
-
-          <section className="data-panel insightCard moduleUpcoming">
-            <div className="card-header">
-              <div>
-                <div className="panel-title">Upcoming Bills</div>
-                <div className="panel-copy">Due in the next 7 days, with a look ahead to the rest of the month.</div>
-              </div>
-              <span className="pill-count">{summary.dueSoon.length}</span>
-            </div>
-            {summary.dueSoon.length === 0 ? <div className="muted">No bills due in the next week.</div> : null}
-            {summary.dueSoon.length > 0 ? (
-              <div className="row-list">
-                {summary.dueSoon.map((b) => (
-                  <div key={`soon-${b.id}`} className="row-list-item">
-                    <div className="primary">{b.merchant || b.name}</div>
-                    <div className="secondary">{new Date(b.nextDueDate).toLocaleDateString()}</div>
-                    <div className="amount negative">{formatCurrency(b.amount, cfg.currency)}</div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            <div className="panel-copy" style={{ marginTop: 8 }}>
-              Due later this month: {summary.dueLater.length}
-            </div>
-          </section>
-
-          <section className="data-panel insightCard moduleActivity">
-            <div className="card-header">
-              <div>
-                <div className="panel-title">Recent Transactions</div>
-                <div className="panel-copy">Latest synced bank activity from linked accounts.</div>
-              </div>
-              <span className="pill-count">{summary.recentSyncedTransactions.length}</span>
-            </div>
-            {summary.recentSyncedTransactions.length === 0 ? (
-              <div className="muted">Link an account to see recent bank activity here.</div>
-            ) : (
-              <div className="row-list">
-                {summary.recentSyncedTransactions.map((transaction) => (
-                  <div key={transaction.id} className="row-list-item">
-                    <div className="primary">{transaction.merchantName || transaction.payee || transaction.name}</div>
-                    <div className="secondary">{transaction.date || "-"}</div>
-                    <div className="amount">{formatCurrency(transaction.amount, cfg.currency)}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+                <div className="heroValue" style={{ fontSize: "1.8rem", marginTop: 14 }}>{card.amount}</div>
+              </SurfaceCard>
+            ))
+          )}
         </div>
-      </section>
+      </div>
 
-      <section className="section-block dashboardSection dashboardBlock dashboardBlockSnapshot">
-        <div className="sectionHeader">
-          <div>
-            <h3 className="section-title">Operational Snapshot</h3>
-            <div className="section-copy">Cash flow detail, upcoming events, utilization pressure, and category spend.</div>
+      <div className="stackedList">
+        <InsightCard
+          icon="recurring"
+          tone="accent"
+          eyebrow="Actionable"
+          title="Review subscriptions and recurring charges"
+          body={
+            summary.recurringPaymentsPreview.length > 0
+              ? `${summary.recurringPaymentsPreview.length} recurring merchants are ready for review.`
+              : "Plaid recurring candidates will appear here after sync."
+          }
+          action={<a href={routeHref("bills-income")} className="pillButton">Open recurring</a>}
+        />
+        <InsightCard
+          icon="tag"
+          eyebrow="Clean-up"
+          title="Categorize the latest transactions"
+          body={summary.recentTransactions.length > 0 ? "Stay ahead of merchant cleanup and category drift." : "Link an account or add transactions to begin review."}
+          action={<a href={routeHref("transactions")} className="pillButton">Review</a>}
+        />
+        <InsightCard
+          icon="budget"
+          eyebrow="Planning"
+          title="Budget health and cash flow forecast"
+          body={`You have ${summary.dueSoon.length} bills due in the next 7 days and ${summary.dueLater.length} later this month.`}
+          action={<a href={routeHref("budget")} className="pillButton">See spending</a>}
+        />
+      </div>
+
+      <SurfaceCard>
+        <SectionHeader
+          eyebrow="Recent Activity"
+          title="Latest synced transactions"
+          subtitle="A quick preview before you dive into the full ledger."
+          action={<a href={routeHref("transactions")} className="pillButton">View all</a>}
+        />
+        {summary.recentTransactions.length === 0 ? (
+          <div className="sectionSubtitle">Link an account to see recent bank activity here.</div>
+        ) : (
+          <div className="stackedList">
+            {summary.recentTransactions.map((transaction) => (
+              <TransactionRow
+                key={transaction.id}
+                name={transaction.merchantName || transaction.payee || transaction.name}
+                subtitle={`${transaction.date || "-"} • ${transaction.source || "synced"}`}
+                amount={formatCurrency(transaction.amount, cfg.currency)}
+                amountTone={safeNumber(transaction.amount, 0) < 0 ? "negative" : "positive"}
+                icon="transactions"
+              />
+            ))}
+          </div>
+        )}
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <SectionHeader
+          eyebrow="Spend Focus"
+          title="Top categories and recurring signals"
+          subtitle={loadError || "Consumer-style summaries powered by your current month transactions."}
+        />
+        <div className="overviewGrid">
+          <div className="stackedList">
+            {summary.topSpending.length === 0 ? (
+              <div className="sectionSubtitle">No spending categories for this month yet.</div>
+            ) : (
+              summary.topSpending.map((entry) => (
+                <TransactionRow
+                  key={entry.category}
+                  name={entry.category}
+                  subtitle={`Top category • ${formatPercent((entry.amount / Math.max(summary.monthSpend || 1, 1)) * 100)}`}
+                  amount={formatCurrency(entry.amount, cfg.currency)}
+                  amountTone="negative"
+                  icon="spending"
+                />
+              ))
+            )}
+          </div>
+          <div className="stackedList">
+            {summary.recurringPaymentsPreview.length === 0 ? (
+              <div className="sectionSubtitle">Recurring payment candidates will appear here after synced history builds up.</div>
+            ) : (
+              summary.recurringPaymentsPreview.map((entry) => (
+                <TransactionRow
+                  key={entry.recurringId || entry.id}
+                  name={entry.merchantName}
+                  subtitle={entry.cadenceGuess || "Recurring candidate"}
+                  amount={formatCurrency(entry.averageAmount, cfg.currency)}
+                  amountTone="negative"
+                  icon="recurring"
+                />
+              ))
+            )}
           </div>
         </div>
-        <div className="twoCol">
-          <section className="data-panel cashflow-snapshot">
-            <div className="panel-title">Cashflow Snapshot</div>
-            <div className="row-list">
-              <div className="row-list-item"><div className="primary">Income expected</div><div /><div className="amount positive">{formatCurrency(summary.cashflow.totalIncomeExpected, cfg.currency)}</div></div>
-              <div className="row-list-item"><div className="primary">Income received</div><div /><div className="amount positive">{formatCurrency(summary.cashflow.totalIncomeReceived, cfg.currency)}</div></div>
-              <div className="row-list-item"><div className="primary">Bills paid</div><div /><div className="amount">{formatCurrency(summary.cashflow.totalBillsPaid, cfg.currency)}</div></div>
-              <div className="row-list-item"><div className="primary">Bills unpaid</div><div /><div className="amount negative">{formatCurrency(summary.cashflow.totalBillsUnpaid, cfg.currency)}</div></div>
-              <div className="row-list-item"><div className="primary">Remaining from received paychecks</div><div /><div className="amount positive">{formatCurrency(summary.cashflow.remainingFromReceived, cfg.currency)}</div></div>
-              <div className="row-list-item"><div className="primary">Projected remaining by month end</div><div /><div className="amount positive">{formatCurrency(summary.cashflow.projectedRemaining, cfg.currency)}</div></div>
-            </div>
-          </section>
-
-          <section className="data-panel signals-card">
-            <div className="panel-title">Signals</div>
-            <div className="section-block">
-              <div>
-                <div className="panel-title">Next Events</div>
-                {summary.cashflow.events.length === 0 ? (
-                  <div className="muted">No upcoming events this month.</div>
-                ) : (
-                  <div className="row-list">
-                    {summary.cashflow.events.map((e) => (
-                      <div key={e.id} className="row-list-item">
-                        <div className="primary">{e.type === "income" ? `Paycheck: ${e.label}` : `Bill: ${e.label}`}</div>
-                        <div className="secondary">{e.date.toLocaleDateString()}</div>
-                        <div className={`amount ${e.type === "income" ? "positive" : "negative"}`}>{formatCurrency(e.amount, cfg.currency)}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div className="panel-title">Credit Utilization Alerts</div>
-                {summary.overUtilized.length === 0 ? (
-                  <div className="muted">All cards are under the alert threshold.</div>
-                ) : (
-                  <div className="row-list">
-                    {summary.overUtilized.map((c) => (
-                      <div key={c.id} className="row-list-item">
-                        <div className="primary">{c.name}</div>
-                        <div className="secondary">{formatPercent(c.util)}</div>
-                        <div className="amount negative">{formatCurrency(c.balance, cfg.currency)}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div className="panel-title">Top Spending</div>
-                {summary.topSpending.length === 0 ? (
-                  <div className="muted">No synced spending categories for this month yet.</div>
-                ) : (
-                  <div className="row-list">
-                    {summary.topSpending.map((entry) => (
-                      <div key={entry.label || entry.category} className="row-list-item">
-                        <div className="primary">{entry.label || entry.category}</div>
-                        <div className="secondary">This month</div>
-                        <div className="amount negative">{formatCurrency(entry.amount, cfg.currency)}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        </div>
-      </section>
+      </SurfaceCard>
     </div>
   );
 }
-

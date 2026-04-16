@@ -1,168 +1,75 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { routeHref } from "../lib/hashRouter";
-import { Home, Target, CreditCard, Building2, Receipt, ArrowLeftRight, Settings } from "lucide-react";
-import brandLogo from "../assets/budgetcommand-logo.png";
-
-function NavIcon({ kind }) {
-  const iconMap = {
-    dashboard: Home,
-    budget: Target,
-    cards: CreditCard,
-    loans: Building2,
-    bills: Receipt,
-    transactions: ArrowLeftRight,
-    settings: Settings,
-  };
-  const IconComponent = iconMap[kind] || Home;
-  return (
-    <span className="navIcon" aria-hidden="true">
-      <IconComponent size={20} />
-    </span>
-  );
-}
+import BottomTabBar from "./BottomTabBar";
+import Icon from "./ui/Icons";
 
 const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", shortLabel: "Home", icon: "dashboard" },
-  { id: "budget", label: "Budget", shortLabel: "Plan", icon: "budget" },
-  { id: "credit-cards", label: "Credit Cards", shortLabel: "Cards", icon: "cards" },
-  { id: "loans", label: "Loans", shortLabel: "Loans", icon: "loans" },
-  { id: "bills-income", label: "Bills & Income", shortLabel: "Bills", icon: "bills" },
-  { id: "transactions", label: "Transactions", shortLabel: "Activity", icon: "transactions" },
-  { id: "settings", label: "Settings", shortLabel: "Settings", icon: "settings" },
+  { id: "dashboard", label: "Dashboard", subtitle: "Today and cash pulse", icon: "dashboard" },
+  { id: "bills-income", label: "Recurring", subtitle: "Bills, income, due soon", icon: "recurring" },
+  { id: "budget", label: "Spending", subtitle: "Budget health and breakdown", icon: "spending" },
+  { id: "transactions", label: "Transactions", subtitle: "Search and review activity", icon: "transactions" },
+  { id: "settings", label: "More", subtitle: "Accounts, sync, controls", icon: "more" },
 ];
 
-const MOBILE_PRIMARY_NAV = NAV_ITEMS.filter((item) =>
-  ["dashboard", "budget", "bills-income", "transactions", "settings"].includes(item.id)
-);
+const SECONDARY_ITEMS = [
+  { id: "credit-cards", label: "Credit Cards", icon: "card" },
+  { id: "loans", label: "Loans", icon: "budget" },
+];
 
 export default function AppShell({ route, user, status, onSignOut, children }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [route]);
-
-  function closeMobileMenu() {
-    setMobileMenuOpen(false);
-  }
-
   return (
-    <div className="appShell app-shell">
-      <aside className="sidebar card desktopOnly">
-        <div>
-          <div className="sidebarBrand sidebar-brand">
-            <img src={brandLogo} alt="BudgetCommand" className="brandLogo sidebar-logo" />
-            <div className="sidebarEyebrow sidebar-kicker">Premium Finance Workspace</div>
-            <div className="sidebarTitle sidebar-title">BudgetCommand</div>
-            <div className="sidebarSubtitle sidebar-subtitle">
-              Financial command center for cash, debt, bills, sync, and recurring insight.
-            </div>
-          </div>
-
-          <nav className="sidebarNav sidebar-nav">
-            {NAV_ITEMS.map((item) => (
-              <a
-                key={item.id}
-                className={`navLink sidebar-link ${route === item.id ? "active" : ""}`}
-                href={routeHref(item.id)}
-              >
-                <NavIcon kind={item.icon} />
-                <span className="navTextWrap">
-                  <span className="navLabel label">{item.label}</span>
-                  <span className="navMeta sublabel">{item.shortLabel}</span>
-                </span>
-              </a>
-            ))}
-          </nav>
-        </div>
-
-        <div className="sidebarFooter sidebar-user-card">
-          <div className="sidebarMetaLabel kicker">Workspace owner</div>
-          <div className="sidebarMetaValue email">{user.email}</div>
-          <div className="sidebarFooterActions">
-            {status ? <div className="statusBadge subtle status-pill">{status}</div> : null}
-            <button type="button" className="ghostButton button-secondary secondary" onClick={onSignOut}>Sign out</button>
+    <div className="appShell">
+      <aside className="desktopRail">
+        <div className="railBrand surfaceCard">
+          <div className="railBrandMark">BC</div>
+          <div>
+            <div className="sectionEyebrow">BudgetCommand</div>
+            <div className="railBrandTitle">Command Center</div>
+            <div className="sectionSubtitle">Premium cashflow workspace</div>
           </div>
         </div>
-      </aside>
 
-      <div className="mainPanel main-column">
-        <header className="mobileHeader workspace-bar card">
-          <div className="mobileBrandWrap">
-            <img className="brandLogo compact sidebar-logo" src={brandLogo} alt="BudgetCommand" />
-            <div className="mobileBrand">
-              <div className="sidebarEyebrow sidebar-kicker">Premium Finance Workspace</div>
-              <div className="sidebarTitle sidebar-title">BudgetCommand</div>
-              <div className="mobileBrandMeta">Cash, debt, bills, sync, and recurring insight.</div>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="menuButton"
-            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={mobileMenuOpen}
-            aria-controls="mobile-nav-menu"
-            onClick={() => setMobileMenuOpen((v) => !v)}
-          >
-            <span className={`menuIcon ${mobileMenuOpen ? "open" : ""}`} aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </span>
-          </button>
-        </header>
-
-        {mobileMenuOpen ? <button type="button" className="menuBackdrop" aria-label="Close menu" onClick={closeMobileMenu} /> : null}
-
-        <aside id="mobile-nav-menu" className={`mobileMenu card ${mobileMenuOpen ? "open" : ""}`}>
-          <div className="mobileMenuHeader">
-            <div>
-              <div className="sidebarEyebrow sidebar-kicker">Workspace</div>
-              <div className="mobileMenuTitle">BudgetCommand</div>
-            </div>
-            {status ? <div className="statusBadge subtle status-pill">{status}</div> : null}
-          </div>
-          <nav className="mobileNav">
-            {NAV_ITEMS.map((item) => (
-              <a
-                key={item.id}
-                className={`navLink sidebar-link ${route === item.id ? "active" : ""}`}
-                href={routeHref(item.id)}
-                onClick={closeMobileMenu}
-              >
-                <NavIcon kind={item.icon} />
-                <span className="navTextWrap">
-                  <span className="navLabel label">{item.label}</span>
-                  <span className="navMeta sublabel">{item.shortLabel}</span>
-                </span>
-              </a>
-            ))}
-          </nav>
-          <div className="mobileMenuFooter sidebar-user-card">
-            <div>
-              <div className="sidebarMetaLabel kicker">Workspace owner</div>
-              <div className="sidebarMetaValue email">{user.email}</div>
-            </div>
-            <button type="button" className="button-primary primary" onClick={onSignOut}>Sign out</button>
-          </div>
-        </aside>
-
-
-
-        <main className="pageContent">{children}</main>
-
-        <nav className="mobileBottomNav card" aria-label="Primary">
-          {MOBILE_PRIMARY_NAV.map((item) => (
+        <nav className="railNav surfaceCard" aria-label="Primary navigation">
+          {NAV_ITEMS.map((item) => (
             <a
               key={item.id}
-              className={`bottomNavLink ${route === item.id ? "active" : ""}`}
               href={routeHref(item.id)}
+              className={`railLink ${route === item.id ? "active" : ""}`.trim()}
             >
-              <NavIcon kind={item.icon} />
-              <span>{item.shortLabel}</span>
+              <Icon name={item.icon} size={18} />
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.subtitle}</small>
+              </span>
             </a>
           ))}
         </nav>
+
+        <div className="surfaceCard railSection">
+          <div className="sectionEyebrow">Workspace</div>
+          {SECONDARY_ITEMS.map((item) => (
+            <a key={item.id} href={routeHref(item.id)} className={`railLink secondary ${route === item.id ? "active" : ""}`.trim()}>
+              <Icon name={item.icon} size={18} />
+              <span>
+                <strong>{item.label}</strong>
+              </span>
+            </a>
+          ))}
+        </div>
+
+        <div className="surfaceCard railFooter">
+          <div className="metricRowLabel">{user.email}</div>
+          <div className="metricRowDetail">{status || "Synced and ready"}</div>
+          <button type="button" className="ghostButton" onClick={onSignOut}>
+            <Icon name="logout" size={16} />
+            <span>Sign out</span>
+          </button>
+        </div>
+      </aside>
+
+      <div className="shellViewport">
+        <main className="shellContent">{children}</main>
+        <BottomTabBar route={route} />
       </div>
     </div>
   );

@@ -1,8 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import Modal from "../components/Modal";
-import ActionMenu from "../components/ActionMenu";
-import { CalendarDays } from "lucide-react";
+import PageHeader from "../components/ui/PageHeader";
+import SectionHeader from "../components/ui/SectionHeader";
+import SurfaceCard from "../components/ui/SurfaceCard";
+import ChipTabs from "../components/ui/ChipTabs";
+import InsightCard from "../components/ui/InsightCard";
+import Icon from "../components/ui/Icons";
+import { RecurringRow, MenuRow } from "../components/ui/Rows";
+import { routeHref } from "../lib/hashRouter";
 import {
   deleteStatementItem,
   deleteTemplate,
@@ -55,6 +61,21 @@ const EMPTY_INCOME_TEMPLATE = {
   isActive: true,
 };
 
+function relativeLabel(date, now = new Date()) {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.round((end.getTime() - start.getTime()) / 86400000);
+  if (diff === 0) return "today";
+  if (diff === 1) return "tomorrow";
+  if (diff === -1) return "yesterday";
+  if (diff > 1) return `in ${diff} days`;
+  return `${Math.abs(diff)} days ago`;
+}
+
+function monthTitle(date) {
+  return new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(date);
+}
+
 export default function BillsIncomePage({
   uid,
   bills,
@@ -69,6 +90,9 @@ export default function BillsIncomePage({
   setSelectedMonth,
 }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
+  const [viewMode, setViewMode] = useState("upcoming");
+  const [paydayView, setPaydayView] = useState(true);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [billOpen, setBillOpen] = useState(false);
   const [billForm, setBillForm] = useState(EMPTY_BILL);
   const [billEditingId, setBillEditingId] = useState(null);
@@ -81,24 +105,6 @@ export default function BillsIncomePage({
   const [incomeTemplateOpen, setIncomeTemplateOpen] = useState(false);
   const [incomeTemplateForm, setIncomeTemplateForm] = useState(EMPTY_INCOME_TEMPLATE);
   const [incomeTemplateEditingId, setIncomeTemplateEditingId] = useState(null);
-  const [forecastCollapsed, setForecastCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const saved = window.localStorage.getItem("ft_cashflow_collapsed");
-    if (saved !== null) return saved === "true";
-    return window.matchMedia("(max-width: 768px)").matches;
-  });
-  const [paidBillsCollapsed, setPaidBillsCollapsed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.localStorage.getItem("ft_paid_bills_collapsed") !== "false";
-  });
-  const [receivedIncomeCollapsed, setReceivedIncomeCollapsed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.localStorage.getItem("ft_received_income_collapsed") !== "false";
-  });
-  const [templatesCollapsed, setTemplatesCollapsed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.localStorage.getItem("ft_templates_collapsed") !== "false";
-  });
 
   const now = new Date();
   const currentMonth = selectedMonth || monthKey(now);
@@ -107,74 +113,51 @@ export default function BillsIncomePage({
   const isReadOnly = !isCurrentMonth;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("ft_cashflow_collapsed", String(forecastCollapsed));
-  }, [forecastCollapsed]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("ft_paid_bills_collapsed", String(paidBillsCollapsed));
-  }, [paidBillsCollapsed]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("ft_received_income_collapsed", String(receivedIncomeCollapsed));
-  }, [receivedIncomeCollapsed]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("ft_templates_collapsed", String(templatesCollapsed));
-  }, [templatesCollapsed]);
+    if (typeof document !== "undefined") {
+      document.title = `BudgetCommand • Recurring • ${monthTitle(viewDate)}`;
+    }
+  }, [viewDate]);
 
   const dueSoon = useMemo(() => getBillsDueWithinDays(bills, 7, now), [bills, now]);
   const dueLater = useMemo(() => getBillsDueLaterThisMonth(bills, now, 7), [bills, now]);
   const cashflow = useMemo(() => computeMonthTotals(bills, income, { now }), [bills, income, now]);
 
-  const billRows = useMemo(() => {
-    return [...(bills || [])].sort((a, b) => {
-      const ad = a.dueDate?.toDate ? a.dueDate.toDate().getTime() : 0;
-      const bd = b.dueDate?.toDate ? b.dueDate.toDate().getTime() : 0;
-      return ad - bd;
-    });
-  }, [bills]);
-
-  const incomeRows = useMemo(() => {
-    return [...(income || [])].sort((a, b) => getIncomePayDate(a).getTime() - getIncomePayDate(b).getTime());
-  }, [income]);
-
+  const billRows = useMemo(
+    () =>
+      [...(bills || [])].sort((a, b) => {
+        const ad = a.dueDate?.toDate ? a.dueDate.toDate().getTime() : 0;
+        const bd = b.dueDate?.toDate ? b.dueDate.toDate().getTime() : 0;
+        return ad - bd;
+      }),
+    [bills]
+  );
+  const incomeRows = useMemo(
+    () => [...(income || [])].sort((a, b) => getIncomePayDate(a).getTime() - getIncomePayDate(b).getTime()),
+    [income]
+  );
+  const recentCharges = useMemo(
+    () => billRows.filter((bill) => bill.status === "paid").slice(-5).reverse(),
+    [billRows]
+  );
   const accountOptions = useMemo(
     () => [...(accounts || [])].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))),
     [accounts]
   );
-
-  const accountNameById = useMemo(() => {
-    return accountOptions.reduce((map, account) => {
-      map[account.id] = account.name || account.institution || account.id;
-      return map;
-    }, {});
-  }, [accountOptions]);
-
-  const activeBills = useMemo(
-    () => billRows.filter((bill) => (bill.status || "unpaid") !== "paid"),
-    [billRows]
+  const accountNameById = useMemo(
+    () =>
+      accountOptions.reduce((map, account) => {
+        map[account.id] = account.name || account.institution || account.id;
+        return map;
+      }, {}),
+    [accountOptions]
   );
-  const paidBills = useMemo(
-    () => billRows.filter((bill) => bill.status === "paid"),
-    [billRows]
-  );
-  const expectedIncome = useMemo(
-    () => incomeRows.filter((item) => (item.status || "expected") !== "received"),
-    [incomeRows]
-  );
-  const receivedIncome = useMemo(
-    () => incomeRows.filter((item) => item.status === "received"),
-    [incomeRows]
-  );
-
-  const monthIncomeTotal = useMemo(
-    () => incomeRows.reduce((sum, i) => sum + safeNumber(i.amount ?? i.expectedAmount, 0), 0),
-    [incomeRows]
-  );
+  const nextPaycheck = cashflow.nextExpectedIncome
+    ? {
+        label: cashflow.nextExpectedIncome.source || cashflow.nextExpectedIncome.name || "Next paycheck",
+        date: getIncomePayDate(cashflow.nextExpectedIncome, now),
+        amount: safeNumber(cashflow.nextExpectedIncome.amount ?? cashflow.nextExpectedIncome.expectedAmount, 0),
+      }
+    : null;
 
   function goMonth(step) {
     const next = new Date(viewDate.getFullYear(), viewDate.getMonth() + step, 1);
@@ -187,6 +170,15 @@ export default function BillsIncomePage({
     const max = new Date(year, monthIndex + 1, 0).getDate();
     const clamped = Math.min(Math.max(1, Number(day) || 1), max);
     return Timestamp.fromDate(new Date(year, monthIndex, clamped));
+  }
+
+  function setBillAccount(accountId) {
+    const selected = accountOptions.find((account) => account.id === accountId);
+    setBillForm((prev) => ({
+      ...prev,
+      accountId,
+      paidFrom: selected?.name || "",
+    }));
   }
 
   function startBillAdd() {
@@ -202,11 +194,7 @@ export default function BillsIncomePage({
 
   function startBillEdit(bill) {
     const resolvedAccountId = accountNameById[bill.accountId] ? bill.accountId : "";
-    const resolvedPaidFrom =
-      bill.paidFrom ||
-      accountNameById[bill.accountId] ||
-      bill.accountId ||
-      "";
+    const resolvedPaidFrom = bill.paidFrom || accountNameById[bill.accountId] || bill.accountId || "";
     setBillEditingId(bill.id);
     setBillForm({
       merchant: bill.merchant || bill.name || "",
@@ -219,22 +207,8 @@ export default function BillsIncomePage({
     setBillOpen(true);
   }
 
-  function resolveBillFromLabel(bill) {
-    return bill.paidFrom || accountNameById[bill.accountId] || bill.accountId || "-";
-  }
-
-  function setBillAccount(accountId) {
-    const selected = accountOptions.find((account) => account.id === accountId);
-    setBillForm((prev) => ({
-      ...prev,
-      accountId,
-      paidFrom: selected?.name || "",
-    }));
-  }
-
   async function saveBill() {
-    if (isReadOnly) return;
-    if (!billForm.merchant.trim()) return;
+    if (isReadOnly || !billForm.merchant.trim()) return;
     try {
       await upsertStatementItem(
         uid,
@@ -254,10 +228,10 @@ export default function BillsIncomePage({
         billEditingId || undefined
       );
       setBillOpen(false);
-      onToast("Bill saved.");
+      onToast("Recurring bill saved.");
     } catch (error) {
       onError?.(error?.message || String(error));
-      onToast("Failed to save bill.", "error");
+      onToast("Failed to save recurring bill.", "error");
     }
   }
 
@@ -265,7 +239,7 @@ export default function BillsIncomePage({
     if (isReadOnly) return;
     try {
       await deleteStatementItem(uid, currentMonth, "bills", id);
-      onToast("Bill deleted.");
+      onToast("Recurring bill deleted.");
     } catch (error) {
       onError?.(error?.message || String(error));
       onToast("Failed to delete bill.", "error");
@@ -276,10 +250,10 @@ export default function BillsIncomePage({
     if (isReadOnly) return;
     try {
       await markStatementBillPaid(uid, currentMonth, bill.id, bill.status !== "paid");
-      onToast(`Updated ${bill.merchant || bill.name} payment status.`);
+      onToast(`Updated ${bill.merchant || bill.name}.`);
     } catch (error) {
       onError?.(error?.message || String(error));
-      onToast("Failed to update paid status.", "error");
+      onToast("Failed to update bill status.", "error");
     }
   }
 
@@ -301,8 +275,7 @@ export default function BillsIncomePage({
   }
 
   async function saveIncome() {
-    if (isReadOnly) return;
-    if (!incomeForm.source.trim()) return;
+    if (isReadOnly || !incomeForm.source.trim()) return;
     try {
       await upsertStatementItem(
         uid,
@@ -321,21 +294,10 @@ export default function BillsIncomePage({
         incomeEditingId || undefined
       );
       setIncomeOpen(false);
-      onToast("Income entry saved.");
+      onToast("Paycheck saved.");
     } catch (error) {
       onError?.(error?.message || String(error));
       onToast("Failed to save income entry.", "error");
-    }
-  }
-
-  async function removeIncome(id) {
-    if (isReadOnly) return;
-    try {
-      await deleteStatementItem(uid, currentMonth, "incomes", id);
-      onToast("Income entry deleted.");
-    } catch (error) {
-      onError?.(error?.message || String(error));
-      onToast("Failed to delete income entry.", "error");
     }
   }
 
@@ -343,7 +305,7 @@ export default function BillsIncomePage({
     if (isReadOnly) return;
     try {
       await markStatementIncomeReceived(uid, currentMonth, item.id, item.status !== "received");
-      onToast(`Updated ${item.source || item.name} status.`);
+      onToast(`Updated ${item.source || item.name}.`);
     } catch (error) {
       onError?.(error?.message || String(error));
       onToast("Failed to update income status.", "error");
@@ -353,7 +315,7 @@ export default function BillsIncomePage({
   async function syncMonth() {
     try {
       await syncRecurringItemsForMonth(uid, currentMonth);
-      onToast("Recurring items synced for this month.");
+      onToast("Recurring items synced.");
     } catch (error) {
       onError?.(error?.message || String(error));
       onToast("Failed to sync recurring items.", "error");
@@ -397,7 +359,7 @@ export default function BillsIncomePage({
       onToast("Recurring bill template saved.");
     } catch (error) {
       onError?.(error?.message || String(error));
-      onToast("Failed to save recurring bill template.", "error");
+      onToast("Failed to save bill template.", "error");
     }
   }
 
@@ -407,7 +369,7 @@ export default function BillsIncomePage({
       onToast("Recurring bill template deleted.");
     } catch (error) {
       onError?.(error?.message || String(error));
-      onToast("Failed to delete recurring bill template.", "error");
+      onToast("Failed to delete bill template.", "error");
     }
   }
 
@@ -447,7 +409,7 @@ export default function BillsIncomePage({
       onToast("Recurring income template saved.");
     } catch (error) {
       onError?.(error?.message || String(error));
-      onToast("Failed to save recurring income template.", "error");
+      onToast("Failed to save income template.", "error");
     }
   }
 
@@ -457,281 +419,220 @@ export default function BillsIncomePage({
       onToast("Recurring income template deleted.");
     } catch (error) {
       onError?.(error?.message || String(error));
-      onToast("Failed to delete recurring income template.", "error");
+      onToast("Failed to delete income template.", "error");
     }
   }
 
-  function renderBillTable(rows, emptyMessage) {
-    return (
-      <div className="data-panel billListPanel">
-        {rows.length === 0 ? <div className="muted">{emptyMessage}</div> : null}
-        {rows.length > 0 ? (
-          <div className="row-list">
-            {rows.map((b) => (
-              <div key={b.id} className="row-list-item billListRow">
-                <div>
-                  <div className="primary">{b.merchant || b.name}</div>
-                  <div className="secondary">
-                    Due {(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()} | From {resolveBillFromLabel(b)}
-                  </div>
-                  <div className="secondary">
-                    Status: <span className={b.status === "paid" ? "value-neutral" : "value-negative"}>{b.status || "unpaid"}</span>
-                    {b.paidAt?.toDate ? ` | Paid ${b.paidAt.toDate().toLocaleString()}` : ""}
-                  </div>
-                </div>
-                <div className={`amount ${b.status === "paid" ? "" : "negative"}`}>{formatCurrency(b.amount, cfg.currency)}</div>
-                <ActionMenu
-                  items={[
-                    {
-                      label: b.status === "paid" ? "Mark unpaid" : "Mark paid",
-                      onClick: () => paid(b),
-                    },
-                    {
-                      label: "Edit",
-                      disabled: isReadOnly,
-                      onClick: () => startBillEdit(b),
-                    },
-                    {
-                      label: "Delete",
-                      tone: "danger",
-                      disabled: isReadOnly,
-                      onClick: () => removeBill(b.id),
-                    },
-                  ]}
-                />
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
-  function renderBillCards(rows, emptyMessage) {
-    return (
-      <div className="mobileDataList">
-        {rows.length === 0 ? <div className="data-panel muted">{emptyMessage}</div> : null}
-        {rows.map((b) => (
-          <article key={`mobile-bill-${b.id}`} className="data-panel dataItem">
-            <div className="dataItemHeader">
-              <h3 className="dataItemTitle">{b.merchant || b.name}</h3>
-              <span className="pill">{b.status || "unpaid"}</span>
-            </div>
-            <div className="summaryGrid two">
-              <div className="summaryCell"><span className="dataLabel">Amount</span><strong>{formatCurrency(b.amount, cfg.currency)}</strong></div>
-              <div className="summaryCell"><span className="dataLabel">Due Date</span><strong>{(b.dueDate?.toDate ? b.dueDate.toDate() : new Date()).toLocaleDateString()}</strong></div>
-              <div className="summaryCell"><span className="dataLabel">From</span><strong>{resolveBillFromLabel(b)}</strong></div>
-              <div className="summaryCell"><span className="dataLabel">Paid At</span><strong>{b.paidAt?.toDate ? b.paidAt.toDate().toLocaleString() : "-"}</strong></div>
-            </div>
-            <div className="row dataActions">
-              <button type="button" onClick={() => paid(b)}>
-                {b.status === "paid" ? "Mark unpaid" : "Mark paid"}
-              </button>
-              <button type="button" onClick={() => startBillEdit(b)} disabled={isReadOnly}>Edit</button>
-              <button type="button" onClick={() => removeBill(b.id)} disabled={isReadOnly}>Delete</button>
-            </div>
-          </article>
-        ))}
-      </div>
-    );
-  }
-
-  function renderIncomeTable(rows, emptyMessage) {
-    return (
-      <div className="tableWrap desktopDataTable premiumTableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Source</th>
-              <th>Amount</th>
-              <th>Pay Date</th>
-              <th>Status</th>
-              <th>Received At</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={6} className="muted">{emptyMessage}</td></tr>
-            ) : null}
-            {rows.map((i) => (
-              <tr key={i.id}>
-                <td>{i.source || i.name}</td>
-                <td>{formatCurrency(i.amount ?? i.expectedAmount, cfg.currency)}</td>
-                <td>{getIncomePayDate(i).toLocaleDateString()}</td>
-                <td>{i.status || "expected"}</td>
-                <td>{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</td>
-                <td className="row">
-                  <button type="button" onClick={() => toggleReceived(i)}>
-                    {i.status === "received" ? "Mark expected" : "Mark received"}
-                  </button>
-                  <button type="button" onClick={() => startIncomeEdit(i)} disabled={isReadOnly}>Edit</button>
-                  <button type="button" onClick={() => removeIncome(i.id)} disabled={isReadOnly}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  function renderIncomeCards(rows, emptyMessage) {
-    return (
-      <div className="mobileDataList">
-        {rows.length === 0 ? <div className="data-panel muted">{emptyMessage}</div> : null}
-        {rows.map((i) => (
-          <article key={`mobile-income-${i.id}`} className="data-panel dataItem">
-            <div className="dataItemHeader">
-              <h3 className="dataItemTitle">{i.source || i.name}</h3>
-              <span className="pill">{i.status || "expected"}</span>
-            </div>
-            <div className="summaryGrid two">
-              <div className="summaryCell"><span className="dataLabel">Amount</span><strong>{formatCurrency(i.amount ?? i.expectedAmount, cfg.currency)}</strong></div>
-              <div className="summaryCell"><span className="dataLabel">Pay Date</span><strong>{getIncomePayDate(i).toLocaleDateString()}</strong></div>
-              <div className="summaryCell"><span className="dataLabel">Received At</span><strong>{i.receivedAt?.toDate ? i.receivedAt.toDate().toLocaleString() : "-"}</strong></div>
-            </div>
-            <div className="row dataActions">
-              <button type="button" onClick={() => toggleReceived(i)}>
-                {i.status === "received" ? "Mark expected" : "Mark received"}
-              </button>
-              <button type="button" onClick={() => startIncomeEdit(i)} disabled={isReadOnly}>Edit</button>
-              <button type="button" onClick={() => removeIncome(i.id)} disabled={isReadOnly}>Delete</button>
-            </div>
-          </article>
-        ))}
-      </div>
-    );
-  }
+  const visibleDueSoon = viewMode === "upcoming" ? dueSoon : billRows.filter((bill) => bill.status !== "paid");
+  const visibleDueLater = viewMode === "upcoming" ? dueLater : [];
 
   return (
     <div className="page">
-      <section className="dashboard-hero pageHero heroOperations billsIncomeHero">
-        <div className="pageHeader">
-          <div className="pageHeaderContent">
-            <div className="pageEyebrow">Monthly operations</div>
-            <h2>Bills & Income</h2>
-            <p className="muted pageIntro">
-              Manage the current month's obligations and incoming cash while keeping recurring templates and statement history intact.
-            </p>
-          </div>
-          <div className="pageActions operationsControls">
-            <div className="actionCluster operationsControlRow">
-              <button type="button" className="button-secondary secondary" onClick={() => goMonth(-1)}>Prev</button>
-              <label className="fieldGroup compactField monthPickerField">
-                <span>Month</span>
-                <div className="monthPickerInputWrap">
-                  <CalendarDays size={16} />
-                  <input type="month" value={currentMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
-                </div>
-              </label>
-              <button type="button" className="button-secondary secondary" onClick={() => goMonth(1)}>Next</button>
-              <button type="button" className="button-secondary secondary" onClick={syncMonth}>Sync now</button>
-            </div>
-          </div>
+      <PageHeader
+        eyebrow="Recurring"
+        title="Bills, paydays, and the next moves"
+        subtitle={isReadOnly ? `Viewing ${currentMonth} in read-only mode.` : `${monthTitle(viewDate)} recurring timeline.`}
+        left={
+          <button type="button" className="iconButton" onClick={() => goMonth(-1)} aria-label="Previous month">
+            <Icon name="chevronRight" size={18} style={{ transform: "rotate(180deg)" }} />
+          </button>
+        }
+        right={
+          <button type="button" className="iconButton" onClick={() => goMonth(1)} aria-label="Next month">
+            <Icon name="chevronRight" size={18} />
+          </button>
+        }
+      >
+        <div className="row" style={{ justifyContent: "center" }}>
+          <ChipTabs
+            items={[
+              { id: "upcoming", label: "Upcoming" },
+              { id: "all", label: "All" },
+            ]}
+            value={viewMode}
+            onChange={setViewMode}
+          />
+          <button type="button" className="pillButton" onClick={syncMonth}>
+            <Icon name="sync" size={16} />
+            Sync now
+          </button>
         </div>
-        {!isCurrentMonth ? <div className="muted">Viewing historical month {currentMonth} (read-only).</div> : null}
-        <div className="muted">Recurring sync runs automatically. Use "Sync now" only if needed.</div>
-      </section>
+      </PageHeader>
 
-      <section className="data-panel section moduleForecast">
-        <button
-          type="button"
-          className="collapseToggle"
-          onClick={() => setForecastCollapsed((value) => !value)}
-          aria-expanded={!forecastCollapsed}
-        >
-          <span>Cashflow Forecast</span>
-          <span className="muted">{forecastCollapsed ? ">" : "v"}</span>
-        </button>
-        {!forecastCollapsed ? (
-          <div className="statsGrid forecastGrid">
-            <div className="data-panel inlineMetric"><strong>Bills remaining:</strong> {formatCurrency(cashflow.totalBillsUnpaid, cfg.currency)}</div>
-            <div className="data-panel inlineMetric"><strong>Due next 7 days:</strong> {dueSoon.length}</div>
-            <div className="data-panel inlineMetric"><strong>Due later this month:</strong> {dueLater.length}</div>
-            <div className="data-panel inlineMetric"><strong>Income expected:</strong> {formatCurrency(cashflow.totalIncomeExpected, cfg.currency)}</div>
-            <div className="data-panel inlineMetric"><strong>Income received:</strong> {formatCurrency(cashflow.totalIncomeReceived, cfg.currency)}</div>
-            <div className="data-panel inlineMetric"><strong>Bills paid:</strong> {formatCurrency(cashflow.totalBillsPaid, cfg.currency)}</div>
-            <div className="data-panel inlineMetric"><strong>Remaining from received:</strong> {formatCurrency(cashflow.remainingFromReceived, cfg.currency)}</div>
-            <div className="data-panel inlineMetric"><strong>Projected month end:</strong> {formatCurrency(cashflow.projectedRemaining, cfg.currency)}</div>
-            <div className="data-panel inlineMetric"><strong>Total bills:</strong> {formatCurrency(cashflow.totalBills, cfg.currency)}</div>
-          </div>
-        ) : null}
-      </section>
+      <SurfaceCard>
+        <SectionHeader eyebrow="Coming Up" title="This pay cycle" subtitle="A clean calendar-style overview of what’s hitting soon." />
+        <div className="heroSubline" style={{ marginTop: 0, marginBottom: 14 }}>
+          <span className="upcomingBadge">
+            <Icon name="calendar" size={14} />
+            {dueSoon.length} due soon
+          </span>
+          <span className="upcomingBadge">
+            <Icon name="income" size={14} />
+            {nextPaycheck ? `${nextPaycheck.label} ${relativeLabel(nextPaycheck.date, now)}` : "No paycheck scheduled"}
+          </span>
+        </div>
+        <div className="timelineStrip">
+          {Array.from({ length: 7 }).map((_, index) => {
+            const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + index);
+            const active = dueSoon.some((bill) => bill.nextDueDate.toDateString() === day.toDateString());
+            return (
+              <div key={day.toISOString()} className={`timelineDot ${active ? "active" : ""}`.trim()}>
+                <div className="sectionEyebrow">{day.toLocaleDateString(undefined, { weekday: "short" })}</div>
+                <div className="sectionTitle" style={{ marginTop: 4 }}>{day.getDate()}</div>
+              </div>
+            );
+          })}
+        </div>
+      </SurfaceCard>
 
-      <div className="twoCol">
-        <section className="data-panel section moduleBills">
-          <div className="row">
-            <h2>Bills</h2>
-            <div className="spacer" />
-            <button type="button" className="primary" onClick={startBillAdd} disabled={isReadOnly}>Add Bill</button>
-          </div>
-          <div className="muted compactSubtext">Track what is still due, what has been paid, and which account each payment comes from.</div>
-
-          <h4>Due next 7 days</h4>
-          {dueSoon.length === 0 ? <div className="muted">No bills due in next 7 days.</div> : null}
-          <ul className="cleanList">
-            {dueSoon.map((b) => (
-              <li key={`soon-${b.id}`} className="listRow">
-                <span>{b.merchant || b.name}</span>
-                <span>{b.nextDueDate.toLocaleDateString()}</span>
-                <strong>{formatCurrency(b.amount, cfg.currency)}</strong>
-              </li>
-            ))}
-          </ul>
-
-          {renderBillTable(activeBills, "No unpaid bills this month.")}
-          {renderBillCards(activeBills, "No unpaid bills this month.")}
-
-          <section className="subsection">
-            <div className="row">
-              <h4>Paid Bills ({paidBills.length})</h4>
-              <div className="spacer" />
-              <button type="button" onClick={() => setPaidBillsCollapsed((value) => !value)}>
-                {paidBillsCollapsed ? ">" : "v"}
-              </button>
-            </div>
-            {!paidBillsCollapsed ? (
-              <>
-                {renderBillTable(paidBills, "No paid bills for this month.")}
-                {renderBillCards(paidBills, "No paid bills for this month.")}
-              </>
-            ) : null}
-          </section>
-        </section>
-
-        <section className="data-panel section moduleIncome">
-          <div className="row">
-            <h2>Income</h2>
-            <div className="spacer" />
-            <button type="button" className="primary" onClick={startIncomeAdd} disabled={isReadOnly}>Add Income</button>
-          </div>
-          <div className="muted compactSubtext">Monitor expected paychecks, received income, and monthly cash entering your plan.</div>
-          <div className="muted" style={{ marginBottom: 10 }}>
-            This month total: {formatCurrency(monthIncomeTotal, cfg.currency)}
-          </div>
-          {renderIncomeTable(expectedIncome, "No expected income entries this month.")}
-          {renderIncomeCards(expectedIncome, "No expected income entries this month.")}
-
-          <section className="subsection">
-            <div className="row">
-              <h4>Received Income ({receivedIncome.length})</h4>
-              <div className="spacer" />
-              <button type="button" onClick={() => setReceivedIncomeCollapsed((value) => !value)}>
-                {receivedIncomeCollapsed ? ">" : "v"}
-              </button>
-            </div>
-            {!receivedIncomeCollapsed ? (
-              <>
-                {renderIncomeTable(receivedIncome, "No received income for this month.")}
-                {renderIncomeCards(receivedIncome, "No received income for this month.")}
-              </>
-            ) : null}
-          </section>
-        </section>
+      <div className="stackedList">
+        <InsightCard
+          icon="income"
+          tone="success"
+          eyebrow="Payday View"
+          title={paydayView ? "Payday-first forecasting is on" : "Payday-first forecasting is off"}
+          body={
+            nextPaycheck
+              ? `${nextPaycheck.label} lands ${relativeLabel(nextPaycheck.date, now)} for ${formatCurrency(nextPaycheck.amount, cfg.currency)}.`
+              : "Add or sync an income source to anchor the next paycheck."
+          }
+          action={
+            <button type="button" className="pillButton" onClick={() => setPaydayView((value) => !value)}>
+              {paydayView ? "Enabled" : "Enable"}
+            </button>
+          }
+        />
+        <InsightCard
+          icon="spark"
+          eyebrow="Insight"
+          title="Recurring health"
+          body={`Projected remaining after all bills this month: ${formatCurrency(cashflow.projectedRemaining, cfg.currency)}.`}
+          action={<a href={routeHref("dashboard")} className="pillButton">Dashboard</a>}
+        />
       </div>
 
-      <Modal title={billEditingId ? "Edit Bill" : "Add Bill"} open={billOpen} onClose={() => setBillOpen(false)}>
+      <SurfaceCard>
+        <SectionHeader
+          eyebrow="Due Soon"
+          title="Immediate recurring items"
+          subtitle="Compact merchant rows for the next week."
+          action={!isReadOnly ? <button type="button" className="pillButton" onClick={startBillAdd}>Add bill</button> : null}
+        />
+        {visibleDueSoon.length === 0 ? (
+          <div className="sectionSubtitle">No unpaid bills in the current view.</div>
+        ) : (
+          <div className="stackedList">
+            {visibleDueSoon.map((bill) => (
+              <RecurringRow
+                key={bill.id}
+                name={bill.merchant || bill.name}
+                subtitle={`${relativeLabel(bill.nextDueDate || bill.dueDate?.toDate?.() || now, now)} • ${bill.paidFrom || accountNameById[bill.accountId] || "Unassigned account"}`}
+                amount={formatCurrency(bill.amount, cfg.currency)}
+                badge={bill.status === "paid" ? { label: "Paid", tone: "success" } : { label: relativeLabel(bill.nextDueDate, now), tone: "warning" }}
+                icon="recurring"
+                action={
+                  <div className="row">
+                    <button type="button" className="iconButton" onClick={() => paid(bill)} aria-label="Toggle paid">
+                      <Icon name={bill.status === "paid" ? "sync" : "check"} size={16} />
+                    </button>
+                    <button type="button" className="iconButton" onClick={() => startBillEdit(bill)} aria-label="Edit bill" disabled={isReadOnly}>
+                      <Icon name="dots" size={16} />
+                    </button>
+                  </div>
+                }
+              />
+            ))}
+          </div>
+        )}
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <SectionHeader eyebrow="Coming Later" title="Later this month" subtitle="Everything beyond the next week stays grouped here." />
+        {visibleDueLater.length === 0 ? (
+          <div className="sectionSubtitle">Nothing later in this month yet.</div>
+        ) : (
+          <div className="stackedList">
+            {visibleDueLater.map((bill) => (
+              <RecurringRow
+                key={bill.id}
+                name={bill.merchant || bill.name}
+                subtitle={`${relativeLabel(bill.nextDueDate, now)} • ${bill.paidFrom || accountNameById[bill.accountId] || "Unassigned account"}`}
+                amount={formatCurrency(bill.amount, cfg.currency)}
+                badge={{ label: relativeLabel(bill.nextDueDate, now) }}
+                icon="calendar"
+              />
+            ))}
+          </div>
+        )}
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <SectionHeader
+          eyebrow="Recent Charges"
+          title="Recent completed recurring charges"
+          subtitle="A clean paid history instead of a noisy admin table."
+          action={!isReadOnly ? <button type="button" className="pillButton" onClick={startIncomeAdd}>Add paycheck</button> : null}
+        />
+        {recentCharges.length === 0 ? (
+          <div className="sectionSubtitle">No recent paid recurring charges yet.</div>
+        ) : (
+          <div className="stackedList">
+            {recentCharges.map((bill) => (
+              <RecurringRow
+                key={bill.id}
+                name={bill.merchant || bill.name}
+                subtitle={`${relativeLabel(bill.paidAt?.toDate ? bill.paidAt.toDate() : bill.dueDate?.toDate?.() || now, now)} • ${bill.paidFrom || accountNameById[bill.accountId] || "Unassigned account"}`}
+                amount={formatCurrency(bill.amount, cfg.currency)}
+                badge={{ label: "Paid", tone: "success" }}
+                icon="cash"
+              />
+            ))}
+          </div>
+        )}
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <SectionHeader
+          eyebrow="Templates"
+          title="Recurring templates and automation"
+          subtitle="Keep the page focused by tucking setup controls under one grouped card."
+          action={
+            <button type="button" className="pillButton" onClick={() => setShowTemplates((value) => !value)}>
+              {showTemplates ? "Hide" : "Show"}
+            </button>
+          }
+        />
+        {showTemplates ? (
+          <div className="menuList">
+            <MenuRow icon="plus" title="Add recurring bill template" subtitle="Create a reusable monthly bill" onClick={startBillTemplateAdd} />
+            <MenuRow icon="income" title="Add recurring income template" subtitle="Create a reusable paycheck template" onClick={startIncomeTemplateAdd} />
+            {billTemplates?.map((template) => (
+              <MenuRow
+                key={template.id}
+                icon="recurring"
+                title={template.merchant}
+                subtitle={`Due day ${template.dueDay} • ${formatCurrency(template.defaultAmount, cfg.currency)}`}
+                onClick={() => startBillTemplateEdit(template)}
+                actionLabel="Bill"
+              />
+            ))}
+            {incomeTemplates?.map((template) => (
+              <MenuRow
+                key={template.id}
+                icon="income"
+                title={template.source}
+                subtitle={`Pay day ${template.payDay} • ${formatCurrency(template.defaultAmount, cfg.currency)}`}
+                onClick={() => startIncomeTemplateEdit(template)}
+                actionLabel="Income"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="sectionSubtitle">Templates stay hidden until you want to manage the recurring setup layer.</div>
+        )}
+      </SurfaceCard>
+
+      <Modal title={billEditingId ? "Edit Recurring Bill" : "Add Recurring Bill"} open={billOpen} onClose={() => setBillOpen(false)}>
         <div className="formGrid">
           <label>Merchant<input value={billForm.merchant} onChange={(e) => setBillForm({ ...billForm, merchant: e.target.value })} /></label>
           <label>Amount<input type="number" value={billForm.amount} onChange={(e) => setBillForm({ ...billForm, amount: e.target.value })} /></label>
@@ -748,101 +649,62 @@ export default function BillsIncomePage({
             </select>
           </label>
         </div>
-        <div className="row" style={{ marginTop: 12 }}>
-          <div className="spacer" />
+        <div className="row" style={{ marginTop: 12, justifyContent: "space-between" }}>
+          {billEditingId ? (
+            <button type="button" onClick={() => removeBill(billEditingId)}>
+              Delete
+            </button>
+          ) : <span />}
           <button type="button" className="primary" onClick={saveBill}>Save</button>
         </div>
       </Modal>
 
-      <Modal title={incomeEditingId ? "Edit Income" : "Add Income"} open={incomeOpen} onClose={() => setIncomeOpen(false)}>
+      <Modal title={incomeEditingId ? "Edit Paycheck" : "Add Paycheck"} open={incomeOpen} onClose={() => setIncomeOpen(false)}>
         <div className="formGrid">
           <label>Source<input value={incomeForm.source} onChange={(e) => setIncomeForm({ ...incomeForm, source: e.target.value })} /></label>
           <label>Amount<input type="number" value={incomeForm.amount} onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })} /></label>
           <label>Pay Day<input type="number" min="1" max="31" value={incomeForm.payDay} onChange={(e) => setIncomeForm({ ...incomeForm, payDay: e.target.value })} /></label>
+          <label>
+            Status
+            <select value={incomeForm.status} onChange={(e) => setIncomeForm({ ...incomeForm, status: e.target.value })}>
+              <option value="expected">Expected</option>
+              <option value="received">Received</option>
+            </select>
+          </label>
         </div>
-        <div className="row" style={{ marginTop: 12 }}>
-          <div className="spacer" />
+        <div className="row" style={{ marginTop: 12, justifyContent: "flex-end" }}>
           <button type="button" className="primary" onClick={saveIncome}>Save</button>
         </div>
       </Modal>
 
-      <section className="data-panel section moduleTemplates">
-        <div className="row">
-          <h3>Recurring Templates</h3>
-          <div className="spacer" />
-          <button type="button" onClick={() => setTemplatesCollapsed((v) => !v)}>
-            {templatesCollapsed ? ">" : "v"}
-          </button>
-        </div>
-        {!templatesCollapsed ? (
-          <>
-            <div className="row" style={{ marginBottom: 8 }}>
-              <button type="button" onClick={startBillTemplateAdd}>Add Recurring Bill</button>
-              <button type="button" onClick={startIncomeTemplateAdd}>Add Recurring Income</button>
-            </div>
-            <div className="twoCol">
-              <div>
-                <div className="muted" style={{ marginBottom: 6 }}>Bills templates</div>
-                <ul className="cleanList">
-                  {billTemplates?.map((t) => (
-                    <li key={t.id} className="listRow">
-                      <span>{t.merchant}</span>
-                      <span>Day {t.dueDay}</span>
-                      <span>{formatCurrency(t.defaultAmount, cfg.currency)}</span>
-                      <span className="row">
-                        <button type="button" onClick={() => startBillTemplateEdit(t)}>Edit</button>
-                        <button type="button" onClick={() => removeBillTemplate(t.id)}>Delete</button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <div className="muted" style={{ marginBottom: 6 }}>Income templates</div>
-                <ul className="cleanList">
-                  {incomeTemplates?.map((t) => (
-                    <li key={t.id} className="listRow">
-                      <span>{t.source}</span>
-                      <span>Day {t.payDay}</span>
-                      <span>{formatCurrency(t.defaultAmount, cfg.currency)}</span>
-                      <span className="row">
-                        <button type="button" onClick={() => startIncomeTemplateEdit(t)}>Edit</button>
-                        <button type="button" onClick={() => removeIncomeTemplate(t.id)}>Delete</button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </>
-        ) : null}
-      </section>
-
-      <Modal title={billTemplateEditingId ? "Edit Recurring Bill" : "Add Recurring Bill"} open={billTemplateOpen} onClose={() => setBillTemplateOpen(false)}>
+      <Modal title={billTemplateEditingId ? "Edit Recurring Bill Template" : "Add Recurring Bill Template"} open={billTemplateOpen} onClose={() => setBillTemplateOpen(false)}>
         <div className="formGrid">
           <label>Merchant<input value={billTemplateForm.merchant} onChange={(e) => setBillTemplateForm({ ...billTemplateForm, merchant: e.target.value })} /></label>
           <label>Due Day<input type="number" min="1" max="31" value={billTemplateForm.dueDay} onChange={(e) => setBillTemplateForm({ ...billTemplateForm, dueDay: e.target.value })} /></label>
           <label>Default Amount<input type="number" value={billTemplateForm.defaultAmount} onChange={(e) => setBillTemplateForm({ ...billTemplateForm, defaultAmount: e.target.value })} /></label>
           <label>Default Paid From<input value={billTemplateForm.defaultPaidFrom} onChange={(e) => setBillTemplateForm({ ...billTemplateForm, defaultPaidFrom: e.target.value })} /></label>
         </div>
-        <div className="row" style={{ marginTop: 12 }}>
-          <div className="spacer" />
+        <div className="row" style={{ marginTop: 12, justifyContent: "space-between" }}>
+          {billTemplateEditingId ? (
+            <button type="button" onClick={() => removeBillTemplate(billTemplateEditingId)}>Delete</button>
+          ) : <span />}
           <button type="button" className="primary" onClick={saveBillTemplate}>Save</button>
         </div>
       </Modal>
 
-      <Modal title={incomeTemplateEditingId ? "Edit Recurring Income" : "Add Recurring Income"} open={incomeTemplateOpen} onClose={() => setIncomeTemplateOpen(false)}>
+      <Modal title={incomeTemplateEditingId ? "Edit Recurring Income Template" : "Add Recurring Income Template"} open={incomeTemplateOpen} onClose={() => setIncomeTemplateOpen(false)}>
         <div className="formGrid">
           <label>Source<input value={incomeTemplateForm.source} onChange={(e) => setIncomeTemplateForm({ ...incomeTemplateForm, source: e.target.value })} /></label>
           <label>Pay Day<input type="number" min="1" max="31" value={incomeTemplateForm.payDay} onChange={(e) => setIncomeTemplateForm({ ...incomeTemplateForm, payDay: e.target.value })} /></label>
           <label>Default Amount<input type="number" value={incomeTemplateForm.defaultAmount} onChange={(e) => setIncomeTemplateForm({ ...incomeTemplateForm, defaultAmount: e.target.value })} /></label>
         </div>
-        <div className="row" style={{ marginTop: 12 }}>
-          <div className="spacer" />
+        <div className="row" style={{ marginTop: 12, justifyContent: "space-between" }}>
+          {incomeTemplateEditingId ? (
+            <button type="button" onClick={() => removeIncomeTemplate(incomeTemplateEditingId)}>Delete</button>
+          ) : <span />}
           <button type="button" className="primary" onClick={saveIncomeTemplate}>Save</button>
         </div>
       </Modal>
     </div>
   );
 }
-

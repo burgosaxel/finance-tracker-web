@@ -1,25 +1,27 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Modal from "../components/Modal";
-import ActionMenu from "../components/ActionMenu";
+import PageHeader from "../components/ui/PageHeader";
+import SectionHeader from "../components/ui/SectionHeader";
+import SurfaceCard from "../components/ui/SurfaceCard";
+import InsightCard from "../components/ui/InsightCard";
+import Icon from "../components/ui/Icons";
+import { MenuRow, TransactionRow } from "../components/ui/Rows";
+import { routeHref } from "../lib/hashRouter";
 import {
-  createManualItem,
   deleteEntity,
   exportAllUserData,
   importAllUserData,
   importExistingBillsAsRecurringTemplates,
   importLegacySnapshot,
-  linkRecurringPayment,
   saveSettings,
-  unlinkRecurringPayment,
-  updateRecurringPaymentStatus,
   upsertEntity,
 } from "../lib/db";
-import { DEFAULT_SETTINGS, formatCurrency, getManualMatchCandidates, safeNumber } from "../lib/finance";
+import { DEFAULT_SETTINGS, formatCurrency, safeNumber } from "../lib/finance";
 import {
-  analyzeRecurringPayments,
-  createLinkToken,
-  exchangePublicToken,
+  createPlaidLinkToken,
+  exchangePlaidPublicToken,
   openPlaidLink,
+  syncPlaidAccounts,
   syncPlaidTransactions,
 } from "../lib/plaid";
 
@@ -29,14 +31,6 @@ const EMPTY_ACCOUNT = {
   balance: 0,
 };
 
-const EMPTY_CREATE_ITEM = {
-  manualType: "bill",
-  name: "",
-  amount: 0,
-  dueDay: 1,
-  payDay: 1,
-};
-
 export default function SettingsPage({
   uid,
   settings,
@@ -44,52 +38,19 @@ export default function SettingsPage({
   linkedAccounts = [],
   plaidItems = [],
   plaidSyncState = null,
-  recurringPayments = [],
-  bills = [],
-  income = [],
-  loans = [],
-  creditCards = [],
   onToast,
   onError,
   selectedMonth,
+  onSignOut,
 }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [localSettings, setLocalSettings] = useState(cfg);
-  const [preferencesCollapsed, setPreferencesCollapsed] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
   const [accountForm, setAccountForm] = useState(EMPTY_ACCOUNT);
   const [editingId, setEditingId] = useState(null);
   const [plaidLoading, setPlaidLoading] = useState(false);
   const [plaidMessage, setPlaidMessage] = useState("");
-  const [recurringLinkOpen, setRecurringLinkOpen] = useState(false);
-  const [selectedRecurring, setSelectedRecurring] = useState(null);
-  const [selectedRecurringTarget, setSelectedRecurringTarget] = useState("");
-  const [recurringVisibleCount, setRecurringVisibleCount] = useState("20");
-  const [createRecurringItemMode, setCreateRecurringItemMode] = useState(false);
-  const [createRecurringItemForm, setCreateRecurringItemForm] = useState(EMPTY_CREATE_ITEM);
-  const [accountPlaidLinkOpen, setAccountPlaidLinkOpen] = useState(false);
-  const [selectedManualAccount, setSelectedManualAccount] = useState(null);
-  const [selectedPlaidAccountId, setSelectedPlaidAccountId] = useState("");
   const fileRef = useRef(null);
-
-  const recurringCandidates = useMemo(
-    () =>
-      getManualMatchCandidates({
-        bills,
-        income,
-        loans,
-        creditCards,
-        selectedMonth,
-      }),
-    [bills, income, loans, creditCards, selectedMonth]
-  );
-
-  const recurringCandidateByKey = useMemo(() => {
-    return recurringCandidates.reduce((map, candidate) => {
-      map.set([candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|"), candidate);
-      return map;
-    }, new Map());
-  }, [recurringCandidates]);
 
   useEffect(() => {
     setLocalSettings(cfg);
@@ -143,27 +104,6 @@ export default function SettingsPage({
     }
   }
 
-  async function saveManualAccountPlaidLink() {
-    if (!selectedManualAccount) return;
-    try {
-      await upsertEntity(
-        uid,
-        "accounts",
-        {
-          ...selectedManualAccount,
-          plaidAccountId: selectedPlaidAccountId || "",
-        },
-        selectedManualAccount.id
-      );
-      onToast(selectedPlaidAccountId ? "Plaid account linked." : "Plaid account link removed.");
-      setAccountPlaidLinkOpen(false);
-      setSelectedManualAccount(null);
-      setSelectedPlaidAccountId("");
-    } catch (error) {
-      onError?.(error?.message || String(error));
-      onToast("Failed to update Plaid account link.", "error");
-    }
-  }
   async function removeAccount(id) {
     try {
       await deleteEntity(uid, "accounts", id);
@@ -179,11 +119,12 @@ export default function SettingsPage({
       const payload = await exportAllUserData(uid);
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `budgetcommand-export-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `budgetcommand-export-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
       URL.revokeObjectURL(url);
+      onToast("Data export ready.");
     } catch (error) {
       onError?.(error?.message || String(error));
       onToast("Failed to export data.", "error");
@@ -205,7 +146,7 @@ export default function SettingsPage({
   async function runLegacyImport() {
     try {
       await importLegacySnapshot(uid);
-      onToast("Legacy snapshot imported (idempotent).");
+      onToast("Legacy snapshot imported.");
     } catch (error) {
       onError?.(error?.message || String(error));
       onToast("Failed to import legacy snapshot.", "error");
@@ -215,10 +156,10 @@ export default function SettingsPage({
   async function runRecurringMigration() {
     try {
       await importExistingBillsAsRecurringTemplates(uid, selectedMonth);
-      onToast("Imported existing bills/income into recurring templates.");
+      onToast("Imported existing bills as recurring templates.");
     } catch (error) {
       onError?.(error?.message || String(error));
-      onToast("Failed to import existing data as recurring templates.", "error");
+      onToast("Failed to import recurring templates.", "error");
     }
   }
 
@@ -226,26 +167,12 @@ export default function SettingsPage({
     setPlaidLoading(true);
     setPlaidMessage("Creating secure Plaid link session...");
     try {
-      const { linkToken } = await createLinkToken();
+      const { linkToken } = await createPlaidLinkToken();
       const { publicToken, metadata } = await openPlaidLink(linkToken);
-      setPlaidMessage("Exchanging token securely...");
-      const result = await exchangePublicToken(publicToken, metadata);
-      const institution = result?.institutionName || metadata?.institution?.name || "Bank account";
-      const accountMessage = result?.accountSync?.success
-        ? `${result.accountSync.accountCount} account${result.accountSync.accountCount === 1 ? "" : "s"} synced`
-        : `account sync failed: ${result?.accountSync?.error || "unknown error"}`;
-      const transactionMessage = result?.transactionSync?.success
-        ? `${result.transactionSync.added} added, ${result.transactionSync.modified} modified, ${result.transactionSync.removed} removed`
-        : `transaction sync failed: ${result?.transactionSync?.error || "unknown error"}`;
-      if (!result?.accountSync?.success || !result?.transactionSync?.success) {
-        onToast("Bank account linked, but sync is incomplete.", "error");
-        setPlaidMessage(`${institution} linked. ${accountMessage}. ${transactionMessage}.`);
-      } else {
-        onToast("Bank account connected successfully.");
-        setPlaidMessage(
-          `${institution} connected successfully. ${accountMessage}. ${transactionMessage}.`
-        );
-      }
+      setPlaidMessage("Exchanging token and running first sync...");
+      await exchangePlaidPublicToken(publicToken, metadata);
+      onToast("Bank account linked and synced.");
+      setPlaidMessage("Linked account successfully.");
     } catch (error) {
       setPlaidMessage("");
       onError?.(error?.message || String(error));
@@ -255,399 +182,199 @@ export default function SettingsPage({
     }
   }
 
-  async function handleManualSync() {
+  async function handleSyncAll() {
     setPlaidLoading(true);
     setPlaidMessage("Syncing linked accounts and transactions...");
     try {
-      const result = await syncPlaidTransactions();
-      const itemCount = result?.items?.length || 0;
-      const transactionCount = result?.items?.reduce(
-        (sum, item) => sum + Number(item.added || 0) + Number(item.modified || 0),
-        0
-      ) || 0;
-      const removalCount = result?.items?.reduce((sum, item) => sum + Number(item.removed || 0), 0) || 0;
-      onToast("Linked data synced.");
-      setPlaidMessage(
-        `Synced ${itemCount} linked item${itemCount === 1 ? "" : "s"} and processed ${transactionCount} transaction update${transactionCount === 1 ? "" : "s"} (${removalCount} removed).`
-      );
-    } catch (error) {
-      setPlaidMessage("");
-      onError?.(error?.message || String(error));
-      onToast("Failed to sync linked data.", "error");
-    } finally {
-      setPlaidLoading(false);
-    }
-  }
-
-  async function handleRecurringAnalysis() {
-    setPlaidLoading(true);
-    setPlaidMessage("Analyzing recurring transaction patterns...");
-    try {
-      const result = await analyzeRecurringPayments();
-      onToast("Recurring analysis complete.");
-      setPlaidMessage(
-        `Detected ${result?.detectedCount || 0} recurring pattern${result?.detectedCount === 1 ? "" : "s"} across ${result?.recurringTransactionCount || 0} transaction${result?.recurringTransactionCount === 1 ? "" : "s"}.`
-      );
-    } catch (error) {
-      setPlaidMessage("");
-      onError?.(error?.message || String(error));
-      onToast("Failed to analyze recurring payments.", "error");
-    } finally {
-      setPlaidLoading(false);
-    }
-  }
-
-  const visibleRecurringPayments = useMemo(() => {
-    const scoped = (recurringPayments || [])
-      .filter((item) => item.status !== "ignored")
-      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-    if (recurringVisibleCount === "all") return scoped;
-    return scoped.slice(0, Number(recurringVisibleCount));
-  }, [recurringPayments, recurringVisibleCount]);
-
-  function openAccountPlaidLink(account) {
-    setSelectedManualAccount(account);
-    setSelectedPlaidAccountId(account.plaidAccountId || "");
-    setAccountPlaidLinkOpen(true);
-  }
-  function openRecurringLink(recurringItem) {
-    setSelectedRecurring(recurringItem);
-    setSelectedRecurringTarget(
-      recurringItem?.linkedManualType && recurringItem?.linkedManualId
-        ? [recurringItem.linkedManualType, recurringItem.linkedManualId, recurringItem.linkedManualMonthId || ""].join("|")
-        : ""
-    );
-    setCreateRecurringItemMode(false);
-    setCreateRecurringItemForm({
-      manualType: recurringItem?.typeGuess === "income" ? "income" : "bill",
-      name: recurringItem?.displayName || recurringItem?.merchantName || recurringItem?.normalizedMerchant || "",
-      amount: Math.abs(safeNumber(recurringItem?.averageAmount, 0)),
-      dueDay: 1,
-      payDay: 1,
-    });
-    setRecurringLinkOpen(true);
-  }
-
-  function closeRecurringLink() {
-    setRecurringLinkOpen(false);
-    setSelectedRecurring(null);
-    setSelectedRecurringTarget("");
-    setCreateRecurringItemMode(false);
-  }
-
-  async function confirmRecurring(recurringItem) {
-    try {
-      await updateRecurringPaymentStatus(uid, recurringItem.id || recurringItem.recurringId, "confirmed");
-      onToast("Recurring item confirmed.");
-    } catch (error) {
-      onError?.(error?.message || String(error));
-      onToast("Failed to confirm recurring item.", "error");
-    }
-  }
-
-  async function ignoreRecurring(recurringItem) {
-    try {
-      await updateRecurringPaymentStatus(uid, recurringItem.id || recurringItem.recurringId, "ignored");
-      onToast("Recurring item ignored.");
-    } catch (error) {
-      onError?.(error?.message || String(error));
-      onToast("Failed to ignore recurring item.", "error");
-    }
-  }
-
-  async function saveRecurringLink() {
-    if (!selectedRecurring) return;
-    try {
-      if (createRecurringItemMode) {
-        const created = await createManualItem(uid, {
-          ...createRecurringItemForm,
-          monthId: selectedMonth,
-          amount: Math.abs(safeNumber(createRecurringItemForm.amount, 0)),
-        });
-        await linkRecurringPayment(uid, selectedRecurring, created);
-      } else {
-        const target = recurringCandidateByKey.get(selectedRecurringTarget);
-        if (!target) return;
-        await linkRecurringPayment(uid, selectedRecurring, target);
+      for (const item of plaidItems) {
+        await syncPlaidAccounts(item.plaidItemId || item.itemId);
       }
-      onToast("Recurring item linked.");
-      closeRecurringLink();
+      await syncPlaidTransactions();
+      onToast("Plaid data synced.");
+      setPlaidMessage("Sync complete.");
     } catch (error) {
+      setPlaidMessage("");
       onError?.(error?.message || String(error));
-      onToast("Failed to link recurring item.", "error");
+      onToast("Failed to sync Plaid data.", "error");
+    } finally {
+      setPlaidLoading(false);
     }
-  }
-
-  async function removeRecurringLink(recurringItem) {
-    try {
-      await unlinkRecurringPayment(uid, recurringItem);
-      onToast("Recurring link removed.");
-    } catch (error) {
-      onError?.(error?.message || String(error));
-      onToast("Failed to unlink recurring item.", "error");
-    }
-  }
-
-  function recurringManualLabel(item) {
-    if (!item?.linkedManualType || !item?.linkedManualId) return "";
-    const candidate = recurringCandidates.find(
-      (entry) =>
-        entry.manualType === item.linkedManualType
-        && entry.manualId === item.linkedManualId
-        && (entry.monthId || "") === (item.linkedManualMonthId || "")
-    );
-    return candidate?.label || "";
   }
 
   return (
     <div className="page">
-      <section className="dashboard-hero pageHero heroSettings">
-        <div className="pageHeader">
-          <div className="pageHeaderContent">
-            <div className="pageEyebrow">Preferences and integrations</div>
-            <h2>Settings</h2>
-            <p className="muted pageIntro">
-              Configure app defaults, manage linked accounts, review sync health, and control recurring detection from one place.
-            </p>
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="More"
+        title="Manage the workspace"
+        subtitle="Profile, linked accounts, settings, and premium-style controls."
+        left={<div className="iconButton"><Icon name="more" size={18} /></div>}
+        right={<a href={routeHref("dashboard")} className="iconButton" aria-label="Back to dashboard"><Icon name="dashboard" size={18} /></a>}
+      />
 
-      <section className="data-panel section moduleSettings">
-        <button type="button" className="collapseToggle" onClick={() => setPreferencesCollapsed((value) => !value)}>
-          <span>App Preferences</span>
-          <span className="muted">{preferencesCollapsed ? ">" : "v"}</span>
-        </button>
-        {!preferencesCollapsed ? (
-          <>
-            <div className="formGrid">
-              <label>
-                Utilization Threshold (%)
-                <input
-                  type="number"
-                  value={localSettings.utilizationThreshold}
-                  onChange={(e) => setLocalSettings({ ...localSettings, utilizationThreshold: e.target.value })}
-                />
-              </label>
-              <label>
-                Currency
-                <select
-                  value={localSettings.currency}
-                  onChange={(e) => setLocalSettings({ ...localSettings, currency: e.target.value })}
-                >
-                  <option value="USD">USD</option>
-                </select>
-              </label>
-              <label>
-                Month Start Day
-                <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={localSettings.monthStartDay}
-                  onChange={(e) => setLocalSettings({ ...localSettings, monthStartDay: e.target.value })}
-                />
-              </label>
-              <label>
-                Recommended Credit Card Payment Rate
-                <input
-                  type="number"
-                  step="0.01"
-                  value={localSettings.recommendedPaymentRate}
-                  onChange={(e) => setLocalSettings({ ...localSettings, recommendedPaymentRate: e.target.value })}
-                />
-              </label>
-            </div>
-            <div className="row" style={{ marginTop: 12 }}>
-              <button type="button" className="primary" onClick={persistSettings}>Save Settings</button>
-            </div>
-          </>
-        ) : null}
-      </section>
-      <section className="data-panel section moduleConnections">
-        <div className="row">
-          <div>
-            <h3>Linked Bank Accounts</h3>
-            <div className="muted pageIntro">
-              Connect a bank account with Plaid, sync balances and transactions, and review linked account health.
-            </div>
-          </div>
-          <div className="spacer" />
-          <button
-            type="button"
-            onClick={handleManualSync}
-            disabled={plaidLoading || plaidItems.length === 0}
-          >
-            Sync Linked Accounts
-          </button>
-          <button
-            type="button"
-            onClick={handleRecurringAnalysis}
-            disabled={plaidLoading || linkedAccounts.length === 0}
-          >
-            Analyze Recurring
-          </button>
-          <button type="button" className="primary" onClick={handleLinkAccount} disabled={plaidLoading}>
-            Connect Bank Account
-          </button>
+      <InsightCard
+        icon="crown"
+        tone="accent"
+        eyebrow="BudgetCommand Plus"
+        title="Command your money with fewer loose ends"
+        body="Review linked account health, recurring automation, and premium-style insights from one More tab."
+        action={<a href={routeHref("bills-income")} className="pillButton">Review recurring</a>}
+      />
+
+      <SurfaceCard>
+        <SectionHeader eyebrow="Profile" title="Your workspace" subtitle="Quick entry points for the areas people expect under More." />
+        <div className="menuList">
+          <MenuRow icon="user" title="Profile" subtitle="Private Firebase-authenticated workspace" actionLabel="Connected" onClick={persistSettings} />
+          <MenuRow icon="budget" title="Manage Budget" subtitle="Open spending plans and budget health" href={routeHref("budget")} />
+          <MenuRow icon="tag" title="Categories, Tags & Rules" subtitle="Category overrides live on transactions today" href={routeHref("transactions")} />
+          <MenuRow icon="link" title="Linked Accounts" subtitle="Plaid institutions, account health, and sync status" onClick={handleSyncAll} actionLabel={plaidItems.length ? `${plaidItems.length} linked` : "None"} />
+          <MenuRow icon="bell" title="Notifications & Alerts" subtitle="Utilization threshold and finance nudges" onClick={persistSettings} />
+          <MenuRow icon="palette" title="App Appearance" subtitle="Dark mode is the default command center look" onClick={persistSettings} />
+          <MenuRow icon="crown" title="Premium Membership" subtitle="Actionable cards and command-center workflows" onClick={persistSettings} />
+          <MenuRow icon="help" title="Help & Privacy" subtitle="Export, import, or keep your data close" onClick={exportJson} />
+          <MenuRow icon="card" title="Credit Cards" subtitle="Manage revolving balances and utilization" href={routeHref("credit-cards")} />
+          <MenuRow icon="budget" title="Loans" subtitle="Track balances and monthly obligations" href={routeHref("loans")} />
         </div>
-        {plaidMessage ? <div className="muted">{plaidMessage}</div> : null}
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <SectionHeader
+          eyebrow="Linked Accounts"
+          title="Bank connections"
+          subtitle="Grouped account health with one-tap sync actions."
+          action={
+            <div className="row">
+              <button type="button" className="pillButton" onClick={handleLinkAccount} disabled={plaidLoading}>
+                <Icon name="link" size={16} />
+                Link
+              </button>
+              <button type="button" className="pillButton" onClick={handleSyncAll} disabled={plaidLoading || plaidItems.length === 0}>
+                <Icon name="sync" size={16} />
+                Sync
+              </button>
+            </div>
+          }
+        />
+        {plaidMessage ? <div className="sectionSubtitle" style={{ marginBottom: 14 }}>{plaidMessage}</div> : null}
         {plaidSyncState ? (
-          <div className="statsGrid compactStats summaryStrip" style={{ marginTop: 8 }}>
-            <div className="data-panel inlineMetric">
-              <span className="dataLabel">Status</span>
-              <strong>{plaidSyncState.syncStatus || "idle"}</strong>
-            </div>
-            <div className="data-panel inlineMetric">
-              <span className="dataLabel">Last sync</span>
-              <strong>{plaidSyncState.lastGlobalSyncAt || "-"}</strong>
-            </div>
-            <div className="data-panel inlineMetric">
-              <span className="dataLabel">Accounts</span>
-              <strong>{plaidSyncState.accountCount || 0}</strong>
-            </div>
-            <div className="data-panel inlineMetric">
-              <span className="dataLabel">Transactions</span>
-              <strong>{plaidSyncState.transactionCount || 0}</strong>
-            </div>
+          <div className="summaryGrid three" style={{ marginBottom: 16 }}>
+            <div className="summaryCell"><span className="dataLabel">Status</span><strong>{plaidSyncState.syncStatus || "idle"}</strong></div>
+            <div className="summaryCell"><span className="dataLabel">Last sync</span><strong>{plaidSyncState.lastGlobalSyncAt || "-"}</strong></div>
+            <div className="summaryCell"><span className="dataLabel">Transactions</span><strong>{plaidSyncState.transactionCount || 0}</strong></div>
           </div>
         ) : null}
-        {plaidSyncState?.lastError ? <div className="errorText">{plaidSyncState.lastError}</div> : null}
-
-        <div className="twoCol">
-          <div className="data-panel">
-            <h4>Linked Institutions</h4>
-            {plaidItems.length === 0 ? <div className="muted">No Plaid items linked yet.</div> : null}
-            <ul className="cleanList">
-              {plaidItems.map((item) => (
-                <li key={item.plaidItemId || item.itemId} className="listRow compactTriplet">
-                  <span>{item.institutionName || item.institution || "Linked institution"}</span>
-                  <span>{item.status || "linked"}</span>
-                  <strong>{item.lastSyncAt ? new Date(item.lastSyncAt).toLocaleString() : item.linkedAt ? new Date(item.linkedAt).toLocaleDateString() : "-"}</strong>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="data-panel">
-            <h4>Linked Accounts</h4>
-            {linkedAccounts.length === 0 ? <div className="muted">No synced linked accounts yet.</div> : null}
-            <ul className="cleanList">
-              {linkedAccounts.map((account) => (
-                <li key={account.id || account.accountId} className="listRow compactTriplet">
-                  <span>
-                    {account.institutionName ? `${account.institutionName} - ` : ""}
-                    {account.name}
-                    {account.mask ? ` ****${account.mask}` : ""}
-                  </span>
-                  <span>{account.subtype || account.type || "account"}</span>
-                  <strong>
-                    {account.availableBalance === null || account.availableBalance === undefined
-                      ? formatCurrency(account.currentBalance, localSettings.currency || "USD")
-                      : `${formatCurrency(account.availableBalance, localSettings.currency || "USD")} avail`}
-                  </strong>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {plaidSyncState?.lastError ? <div className="errorText" style={{ marginBottom: 12 }}>{plaidSyncState.lastError}</div> : null}
+        <div className="stackedList">
+          {linkedAccounts.length === 0 ? (
+            <div className="sectionSubtitle">Linked accounts will appear here after sync.</div>
+          ) : (
+            linkedAccounts.map((account) => (
+              <TransactionRow
+                key={account.accountId || account.id}
+                name={`${account.institutionName ? `${account.institutionName} • ` : ""}${account.name}`}
+                subtitle={`${account.type || "-"}${account.mask ? ` • ${account.mask}` : ""}`}
+                amount={formatCurrency(account.currentBalance ?? account.availableBalance ?? 0, cfg.currency)}
+                amountTone={(account.currentBalance ?? account.availableBalance ?? 0) < 0 ? "negative" : "positive"}
+                icon="wallet"
+              />
+            ))
+          )}
         </div>
-      </section>
+      </SurfaceCard>
 
-      <section className="data-panel section moduleRecurring">
-        <div className="row">
-          <div>
-            <h3>Detected Recurring</h3>
-            <div className="muted pageIntro">
-              Repeated Plaid transactions are grouped into likely subscriptions, bills, payments, and income so you can confirm or link them to manual items.
-            </div>
-          </div>
-          <div className="spacer" />
-          <div className="data-panel">
-            <strong>Active:</strong> {(recurringPayments || []).filter((item) => item.status !== "ignored" && item.active !== false).length}
-          </div>
+      <SurfaceCard>
+        <SectionHeader eyebrow="Preferences" title="App settings" subtitle="Keep the real controls available inside the new More page." />
+        <div className="formGrid">
+          <label>
+            Utilization Threshold (%)
+            <input
+              type="number"
+              value={localSettings.utilizationThreshold}
+              onChange={(e) => setLocalSettings({ ...localSettings, utilizationThreshold: e.target.value })}
+            />
+          </label>
+          <label>
+            Currency
+            <select value={localSettings.currency} onChange={(e) => setLocalSettings({ ...localSettings, currency: e.target.value })}>
+              <option value="USD">USD</option>
+            </select>
+          </label>
+          <label>
+            Month Start Day
+            <input
+              type="number"
+              min="1"
+              max="31"
+              value={localSettings.monthStartDay}
+              onChange={(e) => setLocalSettings({ ...localSettings, monthStartDay: e.target.value })}
+            />
+          </label>
+          <label>
+            Recommended Credit Card Payment Rate
+            <input
+              type="number"
+              step="0.01"
+              value={localSettings.recommendedPaymentRate}
+              onChange={(e) => setLocalSettings({ ...localSettings, recommendedPaymentRate: e.target.value })}
+            />
+          </label>
         </div>
-        {recurringPayments.length === 0 ? <div className="muted">No recurring patterns detected yet.</div> : null}
-        <div className="tableWrap premiumTableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Cadence</th>
-                <th>Average</th>
-                <th>Next expected</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Linked</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {accounts.length === 0 ? (
-                <tr><td colSpan={5} className="muted">No accounts yet.</td></tr>
-              ) : null}
-              {accounts.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    {a.name}
-                    {a.plaidAccountId ? (
-                      <div className="muted">
-                        Linked to {linkedAccounts.find((account) => account.id === a.plaidAccountId || account.accountId === a.plaidAccountId)?.name || "Plaid account"}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td>{a.type}</td>
-                  <td>{formatCurrency(a.balance, localSettings.currency || "USD")}</td>
-                  <td>
-                    <ActionMenu
-                      items={[
-                        { label: "Edit", onClick: () => startEditAccount(a) },
-                        { label: a.plaidAccountId ? "Change Linked Plaid Account" : "Link Plaid Account", onClick: () => openAccountPlaidLink(a) },
-                        {
-                          label: "Unlink Plaid Account",
-                          hidden: !a.plaidAccountId,
-                          onClick: async () => {
-                            try {
-                              await upsertEntity(uid, "accounts", { ...a, plaidAccountId: "" }, a.id);
-                              onToast("Plaid account link removed.");
-                            } catch (error) {
-                              onError?.(error?.message || String(error));
-                              onToast("Failed to remove Plaid account link.", "error");
-                            }
-                          },
-                        },
-                        { label: "Delete", tone: "danger", onClick: () => removeAccount(a.id) },
-                      ]}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="row" style={{ marginTop: 12, justifyContent: "flex-end" }}>
+          <button type="button" className="primary" onClick={persistSettings}>Save Settings</button>
         </div>
-      </section>
+      </SurfaceCard>
 
-      <section className="data-panel section moduleTools">
-        <h3>Data Tools</h3>
-        <div className="row">
-          <button type="button" onClick={runRecurringMigration}>Import existing bills as recurring templates</button>
-          <button type="button" onClick={runLegacyImport}>Import legacy snapshot</button>
-          <button type="button" onClick={exportJson}>Export data (JSON)</button>
-          <button type="button" onClick={() => fileRef.current?.click()}>Import data (JSON)</button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                handleImportFile(file);
-              }
-              e.target.value = "";
-            }}
-          />
+      <SurfaceCard>
+        <SectionHeader eyebrow="Manual Accounts" title="Editable account cards" subtitle="Touch-friendly rows for your manual balances." action={<button type="button" className="pillButton" onClick={startAddAccount}>Add account</button>} />
+        <div className="stackedList">
+          {accounts.length === 0 ? (
+            <div className="sectionSubtitle">No manual accounts yet.</div>
+          ) : (
+            accounts.map((account) => (
+              <TransactionRow
+                key={account.id}
+                name={account.name}
+                subtitle={account.type}
+                amount={formatCurrency(account.balance, cfg.currency)}
+                amountTone={safeNumber(account.balance, 0) < 0 ? "negative" : "positive"}
+                icon="wallet"
+                action={
+                  <button type="button" className="iconButton" onClick={() => startEditAccount(account)} aria-label="Edit account">
+                    <Icon name="dots" size={16} />
+                  </button>
+                }
+              />
+            ))
+          )}
         </div>
-      </section>
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <SectionHeader eyebrow="Tools" title="Data tools" subtitle="Export, import, or run migrations without leaving the app." />
+        <div className="menuList">
+          <MenuRow icon="sync" title="Import existing bills as recurring templates" subtitle="Move historical bills into recurring setup" onClick={runRecurringMigration} />
+          <MenuRow icon="sync" title="Import legacy snapshot" subtitle="Idempotent legacy import from prior data" onClick={runLegacyImport} />
+          <MenuRow icon="help" title="Export data (JSON)" subtitle="Download a full local snapshot" onClick={exportJson} />
+          <MenuRow icon="help" title="Import data (JSON)" subtitle="Restore data from a previous export" onClick={() => fileRef.current?.click()} />
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleImportFile(file);
+            e.target.value = "";
+          }}
+        />
+      </SurfaceCard>
+
+      <div style={{ paddingBottom: 10 }}>
+        <button type="button" className="ghostButton" style={{ width: "100%" }} onClick={onSignOut}>
+          <Icon name="logout" size={16} />
+          Log Out
+        </button>
+      </div>
 
       <Modal title={editingId ? "Edit Account" : "Add Account"} open={accountOpen} onClose={() => setAccountOpen(false)}>
         <div className="formGrid">
@@ -663,122 +390,13 @@ export default function SettingsPage({
           </label>
           <label>Balance<input type="number" value={accountForm.balance} onChange={(e) => setAccountForm({ ...accountForm, balance: e.target.value })} /></label>
         </div>
-        <div className="row" style={{ marginTop: 12 }}>
-          <div className="spacer" />
+        <div className="row" style={{ marginTop: 12, justifyContent: "space-between" }}>
+          {editingId ? (
+            <button type="button" onClick={() => removeAccount(editingId)}>Delete</button>
+          ) : <span />}
           <button type="button" className="primary" onClick={saveAccount}>Save</button>
-        </div>
-      </Modal>
-
-      <Modal title="Link Recurring Item" open={recurringLinkOpen} onClose={closeRecurringLink}>
-        <div className="formGrid">
-          <label className="checkboxRow">
-            <input type="checkbox" checked={createRecurringItemMode} onChange={(e) => setCreateRecurringItemMode(e.target.checked)} />
-            Create new manual item instead of linking to an existing one
-          </label>
-          {!createRecurringItemMode ? (
-            <label>
-              Manual item
-              <select value={selectedRecurringTarget} onChange={(e) => setSelectedRecurringTarget(e.target.value)}>
-                <option value="">Select an item</option>
-                <optgroup label="Bills">
-                  {recurringCandidates.filter((candidate) => candidate.manualType === "bill").map((candidate) => {
-                    const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
-                    return <option key={key} value={key}>{candidate.label}</option>;
-                  })}
-                </optgroup>
-                <optgroup label="Income">
-                  {recurringCandidates.filter((candidate) => candidate.manualType === "income").map((candidate) => {
-                    const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
-                    return <option key={key} value={key}>{candidate.label}</option>;
-                  })}
-                </optgroup>
-                <optgroup label="Loans">
-                  {recurringCandidates.filter((candidate) => candidate.manualType === "loan").map((candidate) => {
-                    const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
-                    return <option key={key} value={key}>{candidate.label}</option>;
-                  })}
-                </optgroup>
-                <optgroup label="Credit Cards">
-                  {recurringCandidates.filter((candidate) => candidate.manualType === "creditCard").map((candidate) => {
-                    const key = [candidate.manualType, candidate.manualId, candidate.monthId || ""].join("|");
-                    return <option key={key} value={key}>{candidate.label}</option>;
-                  })}
-                </optgroup>
-              </select>
-            </label>
-          ) : (
-            <>
-              <label>
-                Type
-                <select value={createRecurringItemForm.manualType} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, manualType: e.target.value })}>
-                  <option value="bill">Bill</option>
-                  <option value="income">Income</option>
-                  <option value="loan">Loan</option>
-                  <option value="creditCard">Credit Card</option>
-                  <option value="account">Account</option>
-                </select>
-              </label>
-              <label>
-                Name
-                <input value={createRecurringItemForm.name} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, name: e.target.value })} />
-              </label>
-              <label>
-                Amount
-                <input type="number" value={createRecurringItemForm.amount} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, amount: e.target.value })} />
-              </label>
-              {createRecurringItemForm.manualType === "income" ? (
-                <label>
-                  Pay Day
-                  <input type="number" min="1" max="31" value={createRecurringItemForm.payDay} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, payDay: e.target.value })} />
-                </label>
-              ) : (
-                <label>
-                  Due Day
-                  <input type="number" min="1" max="31" value={createRecurringItemForm.dueDay} onChange={(e) => setCreateRecurringItemForm({ ...createRecurringItemForm, dueDay: e.target.value })} />
-                </label>
-              )}
-            </>
-          )}
-          {selectedRecurring ? (
-            <div className="data-panel">
-              <strong>{selectedRecurring.displayName || selectedRecurring.merchantName || selectedRecurring.normalizedMerchant}</strong>
-              <div className="muted">
-                {selectedRecurring.cadenceGuess || "unknown"} - {formatCurrency(selectedRecurring.averageAmount, localSettings.currency || "USD")}
-              </div>
-            </div>
-          ) : null}
-        </div>
-        <div className="row" style={{ marginTop: 12 }}>
-          <div className="spacer" />
-          <button type="button" className="primary" onClick={saveRecurringLink}>Save Link</button>
-        </div>
-      </Modal>
-
-      <Modal title="Link Plaid Account" open={accountPlaidLinkOpen} onClose={() => { setAccountPlaidLinkOpen(false); setSelectedManualAccount(null); setSelectedPlaidAccountId(""); }}>
-        <div className="formGrid">
-          <label>
-            Manual account
-            <input value={selectedManualAccount?.name || ""} disabled />
-          </label>
-          <label>
-            Plaid account
-            <select value={selectedPlaidAccountId} onChange={(e) => setSelectedPlaidAccountId(e.target.value)}>
-              <option value="">No linked Plaid account</option>
-              {linkedAccounts.map((account) => (
-                <option key={account.id || account.accountId} value={account.id || account.accountId}>
-                  {(account.institutionName ? account.institutionName + " - " : "") + account.name + (account.mask ? " ****" + account.mask : "")}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="row" style={{ marginTop: 12 }}>
-          <div className="spacer" />
-          <button type="button" className="primary" onClick={saveManualAccountPlaidLink}>Save Link</button>
         </div>
       </Modal>
     </div>
   );
 }
-
-

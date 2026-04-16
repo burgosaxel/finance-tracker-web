@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import AppShell from "./components/AppShell";
 import Toast from "./components/Toast";
-import brandLogo from "./assets/budgetcommand-logo.png";
 import DashboardPage from "./pages/DashboardPage";
 import BudgetPage from "./pages/BudgetPage";
 import CreditCardsPage from "./pages/CreditCardsPage";
@@ -20,7 +19,7 @@ import {
   subscribeTemplates,
   subscribeUserDoc,
 } from "./lib/db";
-import { auth, googleProvider } from "./lib/firebase";
+import { auth, firebaseInitError, googleProvider } from "./lib/firebase";
 import { DEFAULT_SETTINGS, monthKey } from "./lib/finance";
 import { getRouteFromHash } from "./lib/hashRouter";
 
@@ -28,7 +27,6 @@ const EMPTY_DATA = {
   accounts: [],
   linkedAccounts: [],
   plaidItems: [],
-  matchingRules: [],
   recurringPayments: [],
   creditCards: [],
   loans: [],
@@ -70,24 +68,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const root = document.documentElement;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const applyTheme = () => {
-      root.setAttribute("data-theme", media.matches ? "dark" : "light");
-    };
-
-    applyTheme();
-    const onThemeChange = () => applyTheme();
-    if (media.addEventListener) {
-      media.addEventListener("change", onThemeChange);
-      return () => media.removeEventListener("change", onThemeChange);
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", "dark");
     }
-    media.addListener(onThemeChange);
-    return () => media.removeListener(onThemeChange);
   }, []);
 
   useEffect(() => {
+    if (!auth) return undefined;
     const unsub = onAuthStateChanged(auth, (u) => {
       setAuthError("");
       if (!u) {
@@ -127,7 +114,6 @@ export default function App() {
     bind("accounts", "accounts", "name");
     bind("linkedAccounts", "linkedAccounts", "name");
     bind("plaidItems", "plaidItems", "institutionName");
-    bind("matchingRules", "matchingRules", "createdAt");
     bind("recurringPayments", "recurringPayments", "merchantName");
     bind("creditCards", "creditCards", "name");
     bind("loans", "loans", "lender");
@@ -256,6 +242,10 @@ export default function App() {
   }, []);
 
   async function handleLogin() {
+    if (!auth || !googleProvider) {
+      setAuthError(firebaseInitError || "Firebase is not configured.");
+      return;
+    }
     setAuthError("");
     setStatus("Signing in...");
     try {
@@ -288,6 +278,7 @@ export default function App() {
       onError: (message) => setAuthError(message),
       selectedMonth,
       setSelectedMonth,
+      onSignOut: handleLogout,
     };
     if (route === "dashboard")
       return (
@@ -332,11 +323,6 @@ export default function App() {
           {...shared}
           transactions={data.transactions}
           accounts={[...(data.accounts || []), ...(data.linkedAccounts || [])]}
-          bills={data.statementBills}
-          income={data.statementIncomes}
-          loans={data.loans}
-          creditCards={data.creditCards}
-          matchingRules={data.matchingRules}
         />
       );
     if (route === "settings")
@@ -348,23 +334,30 @@ export default function App() {
           linkedAccounts={data.linkedAccounts}
           plaidItems={data.plaidItems}
           plaidSyncState={data.plaidSyncState}
-          recurringPayments={data.recurringPayments}
-          bills={data.statementBills}
-          income={data.statementIncomes}
-          loans={data.loans}
-          creditCards={data.creditCards}
         />
       );
     return <DashboardPage data={data} settings={settings} />;
   }, [data, route, selectedMonth, settings, user]);
 
+  if (firebaseInitError) {
+    return (
+      <div className="container">
+        <div className="card signInCard">
+          <h1>BudgetCommand</h1>
+          <p className="muted">Firebase setup is required before the command center can start.</p>
+          <div className="errorText">{firebaseInitError}</div>
+          <p className="muted">Add the real values to <code>.env.local</code>, then restart Vite and open <code>http://localhost:5173/</code>.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="container">
         <div className="card signInCard">
-          <img className="signInLogo" src={brandLogo} alt="BudgetCommand" />
           <h1>BudgetCommand</h1>
-          <p className="muted">Private budgeting app with Firebase Auth + Firestore.</p>
+          <p className="muted">A dark, mobile-first finance workspace powered by Firebase and your linked accounts.</p>
           <button type="button" className="primary" onClick={handleLogin}>Sign in with Google</button>
           {authError ? <div className="errorText">{authError}</div> : null}
         </div>
