@@ -314,7 +314,8 @@ export default function App() {
           income={data.statementIncomes}
           billTemplates={data.billTemplates}
           incomeTemplates={data.incomeTemplates}
-          accounts={data.accounts}
+          accounts={[...(data.accounts || []), ...(data.linkedAccounts || [])]}
+          transactions={data.transactions}
         />
       );
     if (route === "transactions")

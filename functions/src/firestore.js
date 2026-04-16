@@ -1,5 +1,10 @@
 import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
 import {
+  buildLinkedCreditCardPayload,
+  normalizeTransactionRecord,
+  runAutomationEngine,
+} from "./automation.js";
+import {
   guessCadence,
   normalizeInstitutionName,
   normalizeMerchantKey,
@@ -134,6 +139,33 @@ export async function syncLinkedAccounts(uid, plaidItemId, institution, accounts
       },
       { merge: true }
     );
+
+    if (account.type === "credit") {
+      const cardRef = userDoc(uid, "creditCards", `plaid-card-${account.account_id}`);
+      batch.set(
+        cardRef,
+        {
+          ...buildLinkedCreditCardPayload(
+            {
+              accountId: account.account_id,
+              plaidAccountId: account.account_id,
+              institutionName: normalizeInstitutionName(institution),
+              name: account.name || account.official_name || "Linked card",
+              officialName: account.official_name || "",
+              currentBalance: Number(account.balances?.current ?? 0),
+              creditLimit:
+                account.balances?.limit === null || account.balances?.limit === undefined
+                  ? 0
+                  : Number(account.balances.limit),
+            },
+            normalizeInstitutionName(institution)
+          ),
+          createdAt: now,
+          updatedAt: now,
+        },
+        { merge: true }
+      );
+    }
   }
 
   await batch.commit();
@@ -147,38 +179,45 @@ export async function syncTransactionsPage(uid, plaidItemId, accountMap, page) {
     const docRef = userDoc(uid, "transactions", transaction.transaction_id);
     const account = accountMap.get(transaction.account_id) || {};
     const categoryFields = pickCategoryFields(transaction);
-    const effectiveCategory =
-      categoryFields.categoryDetailed ||
-      categoryFields.categoryPrimary ||
-      transaction.personal_finance_category?.detailed ||
-      transaction.personal_finance_category?.primary ||
-      transaction.category?.[transaction.category?.length - 1] ||
-      transaction.category?.[0] ||
-      "Uncategorized";
-    batch.set(
-      docRef,
+    const normalized = normalizeTransactionRecord(
       {
+        id: transaction.transaction_id,
         transactionId: transaction.transaction_id,
         plaidTransactionId: transaction.transaction_id,
         accountId: transaction.account_id,
         itemId: plaidItemId,
         institutionName: account.institutionName || "",
+        accountName: account.name || "",
+        accountType: account.type || "",
+        accountSubtype: account.subtype || "",
         date: transaction.date || "",
+        postedDate: transaction.date || "",
         authorizedDate: transaction.authorized_date || "",
         name: transaction.name || "",
+        originalName: transaction.original_description || transaction.name || "",
         merchantName: normalizeMerchantName(transaction),
         amount: plaidAmountToSignedAmount(transaction),
         isoCurrencyCode: transaction.iso_currency_code || "USD",
         pending: Boolean(transaction.pending),
         source: "plaid",
-        userCategoryOverride: null,
-        effectiveCategory,
+        sourceType: "plaid",
         notes: "",
+        recurringCandidate: false,
+        removed: false,
+        paymentChannel: transaction.payment_channel || "",
+        ...categoryFields,
+      },
+      new Map([[transaction.account_id, account]])
+    );
+    batch.set(
+      docRef,
+      {
+        ...normalized,
+        userCategoryOverride: null,
         recurringCandidate: false,
         removed: false,
         createdAt: now,
         updatedAt: now,
-        ...categoryFields,
       },
       { merge: true }
     );
@@ -186,29 +225,41 @@ export async function syncTransactionsPage(uid, plaidItemId, accountMap, page) {
 
   for (const transaction of page.modified || []) {
     const docRef = userDoc(uid, "transactions", transaction.transaction_id);
+    const account = accountMap.get(transaction.account_id) || {};
     const categoryFields = pickCategoryFields(transaction);
-    const effectiveCategory =
-      categoryFields.categoryDetailed ||
-      categoryFields.categoryPrimary ||
-      transaction.personal_finance_category?.detailed ||
-      transaction.personal_finance_category?.primary ||
-      transaction.category?.[transaction.category?.length - 1] ||
-      transaction.category?.[0] ||
-      "Uncategorized";
-    batch.set(
-      docRef,
+    const normalized = normalizeTransactionRecord(
       {
+        id: transaction.transaction_id,
+        transactionId: transaction.transaction_id,
+        plaidTransactionId: transaction.transaction_id,
+        accountId: transaction.account_id,
+        itemId: plaidItemId,
+        institutionName: account.institutionName || "",
+        accountName: account.name || "",
+        accountType: account.type || "",
+        accountSubtype: account.subtype || "",
         date: transaction.date || "",
+        postedDate: transaction.date || "",
         authorizedDate: transaction.authorized_date || "",
         name: transaction.name || "",
+        originalName: transaction.original_description || transaction.name || "",
         merchantName: normalizeMerchantName(transaction),
         amount: plaidAmountToSignedAmount(transaction),
         isoCurrencyCode: transaction.iso_currency_code || "USD",
         pending: Boolean(transaction.pending),
-        effectiveCategory,
+        source: "plaid",
+        sourceType: "plaid",
+        paymentChannel: transaction.payment_channel || "",
+        ...categoryFields,
+      },
+      new Map([[transaction.account_id, account]])
+    );
+    batch.set(
+      docRef,
+      {
+        ...normalized,
         removed: false,
         updatedAt: now,
-        ...categoryFields,
       },
       { merge: true }
     );
@@ -237,6 +288,104 @@ export async function updateSyncState(uid, payload) {
     },
     { merge: true }
   );
+}
+
+async function loadStatementCollections(uid) {
+  const statementsSnapshot = await db().collection(`users/${uid}/statements`).get();
+  const billsByMonth = new Map();
+  const incomesByMonth = new Map();
+
+  for (const statementDoc of statementsSnapshot.docs) {
+    const monthId = statementDoc.id;
+    const [billSnapshot, incomeSnapshot] = await Promise.all([
+      statementDoc.ref.collection("bills").get(),
+      statementDoc.ref.collection("incomes").get(),
+    ]);
+    billsByMonth.set(
+      monthId,
+      billSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    );
+    incomesByMonth.set(
+      monthId,
+      incomeSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    );
+  }
+
+  return { billsByMonth, incomesByMonth };
+}
+
+export async function runAutomationForUser(uid) {
+  const [transactionSnapshot, linkedAccountSnapshot, manualAccountSnapshot, creditCardSnapshot, statementState] =
+    await Promise.all([
+      userCollection(uid, "transactions").get(),
+      userCollection(uid, "linkedAccounts").get(),
+      userCollection(uid, "accounts").get(),
+      userCollection(uid, "creditCards").get(),
+      loadStatementCollections(uid),
+    ]);
+
+  const linkedAccounts = linkedAccountSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const manualAccounts = manualAccountSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const creditCards = creditCardSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const transactions = transactionSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+  const automation = runAutomationEngine({
+    transactions,
+    billsByMonth: statementState.billsByMonth,
+    incomesByMonth: statementState.incomesByMonth,
+    cards: creditCards,
+    accounts: [...linkedAccounts, ...manualAccounts],
+  });
+
+  const writer = recurringBatchWriter();
+  const now = FieldValue.serverTimestamp();
+
+  for (const transaction of automation.transactions) {
+    writer.queueSet(
+      userDoc(uid, "transactions", transaction.id),
+      {
+        ...transaction.patch,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  }
+
+  for (const bill of automation.statements.bills) {
+    writer.queueSet(
+      db().doc(`users/${uid}/statements/${bill.monthId}/bills/${bill.id}`),
+      {
+        ...bill.patch,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  }
+
+  for (const income of automation.statements.incomes) {
+    writer.queueSet(
+      db().doc(`users/${uid}/statements/${income.monthId}/incomes/${income.id}`),
+      {
+        ...income.patch,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  }
+
+  for (const card of automation.cards) {
+    writer.queueSet(
+      userDoc(uid, "creditCards", card.id),
+      {
+        ...card.patch,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  }
+
+  await writer.flush();
+  return automation.summary;
 }
 
 export async function refreshRecurringPayments(uid) {

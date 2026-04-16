@@ -6,6 +6,7 @@ import SurfaceCard from "../components/ui/SurfaceCard";
 import InsightCard from "../components/ui/InsightCard";
 import Icon from "../components/ui/Icons";
 import { AccountRow, TransactionRow } from "../components/ui/Rows";
+import { getAutomationReviewSummary, getTransactionDisplayName } from "../lib/automation";
 import {
   computeMonthTotals,
   DEFAULT_SETTINGS,
@@ -90,6 +91,7 @@ export default function DashboardPage({
     const txCashflow = summarizeCashFlowFromTransactions(transactions, currentMonth);
     const topSpending = summarizeSpendingByCategory(transactions, currentMonth, 4);
     const recentTransactions = getRecentSyncedTransactions(transactions, 4);
+    const automationReview = getAutomationReviewSummary({ bills, income: incomes, transactions });
     const dueSoon = getBillsDueWithinDays(bills, 7, now);
     const dueLater = getBillsDueLaterThisMonth(bills, now, 7);
     const pastDue = getPastDueBills(bills, now);
@@ -138,6 +140,7 @@ export default function DashboardPage({
       txCashflow,
       topSpending,
       recentTransactions,
+      automationReview,
       nextIncome,
       nextBill,
       monthSpend,
@@ -287,7 +290,13 @@ export default function DashboardPage({
           icon="tag"
           eyebrow="Clean-up"
           title="Categorize the latest transactions"
-          body={summary.recentTransactions.length > 0 ? "Stay ahead of merchant cleanup and category drift." : "Link an account or add transactions to begin review."}
+          body={
+            summary.automationReview.totalReviews > 0
+              ? `${summary.automationReview.totalReviews} items need review across recurring, transfers, or category cleanup.`
+              : summary.recentTransactions.length > 0
+                ? "Stay ahead of merchant cleanup and category drift."
+                : "Link an account or add transactions to begin review."
+          }
           action={<a href={routeHref("transactions")} className="pillButton">Review</a>}
         />
         <InsightCard
@@ -313,7 +322,7 @@ export default function DashboardPage({
             {summary.recentTransactions.map((transaction) => (
               <TransactionRow
                 key={transaction.id}
-                name={transaction.merchantName || transaction.payee || transaction.name}
+                name={getTransactionDisplayName(transaction)}
                 subtitle={`${transaction.date || "-"} • ${transaction.source || "synced"}`}
                 amount={formatCurrency(transaction.amount, cfg.currency)}
                 amountTone={safeNumber(transaction.amount, 0) < 0 ? "negative" : "positive"}

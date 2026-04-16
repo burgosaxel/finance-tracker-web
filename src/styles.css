@@ -286,6 +286,11 @@ a:focus-visible {
   margin-bottom: 14px;
 }
 
+.sectionHeader > :first-child {
+  min-width: 0;
+  flex: 1;
+}
+
 .sectionTitle {
   font-size: 1.05rem;
   font-weight: 700;
@@ -406,6 +411,11 @@ a:focus-visible {
   flex: 1;
 }
 
+.metricRowLead > div {
+  min-width: 0;
+  flex: 1;
+}
+
 .rowAvatar {
   width: 42px;
   height: 42px;
@@ -423,6 +433,16 @@ a:focus-visible {
 .metricRowLabel {
   font-weight: 650;
   line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.metricRowDetail,
+.sectionSubtitle,
+.pageSubtitle,
+.pageIntro {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .metricRowValueWrap,

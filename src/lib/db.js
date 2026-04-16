@@ -693,6 +693,18 @@ export async function upsertStatementItem(uid, monthId, kind, payload, id = payl
       {
         ...payload,
         id,
+        monthKey: payload?.monthKey || monthId,
+        sourceType: payload?.sourceType || "manual",
+        automationStatus: payload?.automationStatus || (kind === "bills" ? "unmatched" : "unmatched"),
+        matchConfidence: payload?.matchConfidence || "low",
+        matchedTransactionId: payload?.matchedTransactionId || null,
+        matchedAccountId: payload?.matchedAccountId || null,
+        matchedTransactionIds: payload?.matchedTransactionIds || [],
+        reviewRequired: Boolean(payload?.reviewRequired),
+        manualOverride: Boolean(payload?.manualOverride),
+        overrideReason: payload?.overrideReason || "",
+        ignoredFromAutomation: Boolean(payload?.ignoredFromAutomation),
+        manuallyAdjusted: Boolean(payload?.manuallyAdjusted),
         updatedAt: serverTimestamp(),
         createdAt: payload?.createdAt || serverTimestamp(),
       },
@@ -728,6 +740,12 @@ export async function markStatementBillPaid(uid, monthId, billId, isPaid) {
     await updateDoc(ref, {
       status: isPaid ? "paid" : "unpaid",
       paidAt: isPaid ? serverTimestamp() : null,
+      automationStatus: isPaid ? "paid" : "unmatched",
+      manualOverride: true,
+      manuallyAdjusted: true,
+      isAutoMatched: false,
+      reviewRequired: false,
+      overrideReason: "manual_status_change",
       updatedAt: serverTimestamp(),
     });
     emitMutation("success");
@@ -746,8 +764,226 @@ export async function markStatementIncomeReceived(uid, monthId, incomeId, isRece
     await updateDoc(ref, {
       status: isReceived ? "received" : "expected",
       receivedAt: isReceived ? serverTimestamp() : null,
+      automationStatus: isReceived ? "received" : "unmatched",
+      manualOverride: true,
+      manuallyAdjusted: true,
+      isAutoMatched: false,
+      reviewRequired: false,
+      overrideReason: "manual_status_change",
       updatedAt: serverTimestamp(),
     });
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function confirmStatementBillMatch(uid, monthId, bill, transaction) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
+  emitMutation("start");
+  try {
+    const billRef = doc(db, "users", uid, "statements", monthId, "bills", bill.id);
+    const transactionRef = userDoc(uid, "transactions", transaction.id);
+    await setDoc(
+      billRef,
+      {
+        status: "paid",
+        sourceType:
+          bill?.sourceType === "manual" && transaction?.source === "plaid"
+            ? "hybrid"
+            : transaction?.source || bill?.sourceType || "manual",
+        automationStatus: "paid",
+        matchConfidence: bill?.matchConfidence || "medium",
+        matchedTransactionId: transaction.id,
+        matchedAccountId: transaction.accountId || "",
+        matchedTransactionIds: [transaction.id],
+        lastMatchedAt: serverTimestamp(),
+        paidAt: transaction?.date ? Timestamp.fromDate(new Date(transaction.date)) : serverTimestamp(),
+        paidAmount: Math.abs(safeNumber(transaction?.amount, 0)),
+        paidFromAccountId: transaction?.accountId || "",
+        isAutoMatched: false,
+        reviewRequired: false,
+        manualOverride: true,
+        manuallyAdjusted: true,
+        overrideReason: "confirmed_suggestion",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    await setDoc(
+      transactionRef,
+      {
+        linkedBillId: bill.id,
+        linkedManualType: "bill",
+        linkedManualId: bill.id,
+        linkedManualMonthId: monthId,
+        matchStatus: "matched",
+        reviewRequired: false,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function dismissStatementBillMatch(uid, monthId, billId, options = {}) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
+  emitMutation("start");
+  try {
+    await setDoc(
+      doc(db, "users", uid, "statements", monthId, "bills", billId),
+      {
+        automationStatus: options.ignore ? "ignored" : "unmatched",
+        ignoredFromAutomation: Boolean(options.ignore),
+        matchedTransactionId: null,
+        matchedAccountId: null,
+        matchedTransactionIds: [],
+        lastMatchedAt: null,
+        reviewRequired: false,
+        manualOverride: Boolean(options.manualOverride ?? true),
+        overrideReason: options.ignore ? "ignored_suggestion" : "dismissed_suggestion",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    if (options.matchedTransactionId) {
+      await setDoc(
+        userDoc(uid, "transactions", options.matchedTransactionId),
+        {
+          linkedBillId: null,
+          linkedManualType: null,
+          linkedManualId: null,
+          linkedManualMonthId: null,
+          matchStatus: options.ignore ? "ignored" : "unmatched",
+          reviewRequired: false,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function confirmStatementIncomeMatch(uid, monthId, income, transaction) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
+  emitMutation("start");
+  try {
+    const incomeRef = doc(db, "users", uid, "statements", monthId, "incomes", income.id);
+    const transactionRef = userDoc(uid, "transactions", transaction.id);
+    await setDoc(
+      incomeRef,
+      {
+        status: "received",
+        sourceType:
+          income?.sourceType === "manual" && transaction?.source === "plaid"
+            ? "hybrid"
+            : transaction?.source || income?.sourceType || "manual",
+        automationStatus: "received",
+        matchConfidence: income?.matchConfidence || "medium",
+        matchedTransactionId: transaction.id,
+        matchedAccountId: transaction.accountId || "",
+        matchedTransactionIds: [transaction.id],
+        lastMatchedAt: serverTimestamp(),
+        receivedAt: transaction?.date ? Timestamp.fromDate(new Date(transaction.date)) : serverTimestamp(),
+        receivedAmount: Math.abs(safeNumber(transaction?.amount, 0)),
+        receivedAccountId: transaction?.accountId || "",
+        isAutoMatched: false,
+        reviewRequired: false,
+        manualOverride: true,
+        manuallyAdjusted: true,
+        overrideReason: "confirmed_suggestion",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    await setDoc(
+      transactionRef,
+      {
+        linkedIncomeId: income.id,
+        linkedManualType: "income",
+        linkedManualId: income.id,
+        linkedManualMonthId: monthId,
+        matchStatus: "matched",
+        reviewRequired: false,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function dismissStatementIncomeMatch(uid, monthId, incomeId, options = {}) {
+  requireUid(uid);
+  if (!monthId) throw new Error("Month is required.");
+  emitMutation("start");
+  try {
+    await setDoc(
+      doc(db, "users", uid, "statements", monthId, "incomes", incomeId),
+      {
+        automationStatus: options.ignore ? "ignored" : "unmatched",
+        ignoredFromAutomation: Boolean(options.ignore),
+        matchedTransactionId: null,
+        matchedAccountId: null,
+        matchedTransactionIds: [],
+        lastMatchedAt: null,
+        reviewRequired: false,
+        manualOverride: Boolean(options.manualOverride ?? true),
+        overrideReason: options.ignore ? "ignored_suggestion" : "dismissed_suggestion",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    if (options.matchedTransactionId) {
+      await setDoc(
+        userDoc(uid, "transactions", options.matchedTransactionId),
+        {
+          linkedIncomeId: null,
+          linkedManualType: null,
+          linkedManualId: null,
+          linkedManualMonthId: null,
+          matchStatus: options.ignore ? "ignored" : "unmatched",
+          reviewRequired: false,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+    emitMutation("success");
+  } catch (error) {
+    emitMutation("error", error);
+    throw error;
+  }
+}
+
+export async function updateTransactionOverrides(uid, transactionId, payload) {
+  requireUid(uid);
+  emitMutation("start");
+  try {
+    await setDoc(
+      userDoc(uid, "transactions", transactionId),
+      {
+        ...payload,
+        reviewRequired: Boolean(payload?.reviewRequired),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
     emitMutation("success");
   } catch (error) {
     emitMutation("error", error);

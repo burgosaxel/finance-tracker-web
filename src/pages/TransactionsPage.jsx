@@ -8,7 +8,13 @@ import InsightCard from "../components/ui/InsightCard";
 import ChipTabs from "../components/ui/ChipTabs";
 import Icon from "../components/ui/Icons";
 import { MenuRow, TransactionRow } from "../components/ui/Rows";
-import { deleteEntity, upsertEntity } from "../lib/db";
+import { deleteEntity, updateTransactionOverrides, upsertEntity } from "../lib/db";
+import {
+  getAutomationReviewSummary,
+  getTransactionDisplayName,
+  isTransactionCardPayment,
+  isTransactionTransfer,
+} from "../lib/automation";
 import {
   DEFAULT_SETTINGS,
   formatCurrency,
@@ -24,6 +30,8 @@ const EMPTY_TX = {
   amount: 0,
   accountId: "",
   notes: "",
+  userMerchantRename: "",
+  ignoredFromAnalytics: false,
 };
 
 export default function TransactionsPage({ uid, transactions, accounts, settings, onToast, onError }) {
@@ -49,7 +57,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
         .filter((transaction) => !accountFilter || transaction.accountId === accountFilter)
         .filter((transaction) => !categoryFilter || getEffectiveTransactionCategory(transaction) === categoryFilter)
         .filter((transaction) => {
-          const haystack = `${transaction.payee || ""} ${transaction.notes || ""} ${getEffectiveTransactionCategory(transaction)}`.toLowerCase();
+          const haystack = `${getTransactionDisplayName(transaction)} ${transaction.notes || ""} ${getEffectiveTransactionCategory(transaction)}`.toLowerCase();
           return haystack.includes(query.toLowerCase());
         })
         .sort((a, b) => new Date(b.date) - new Date(a.date)),
@@ -85,7 +93,11 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
     [accounts]
   );
 
-  const reviewCount = rows.filter((transaction) => !transaction.userCategoryOverride).length;
+  const automationReview = useMemo(
+    () => getAutomationReviewSummary({ transactions: rows }),
+    [rows]
+  );
+  const reviewCount = automationReview.transactionReviews.length;
 
   function startAdd() {
     setEditingId(null);
@@ -110,6 +122,8 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
           payee: form.payee.trim(),
           amount: safeNumber(form.amount, 0),
           source: form.source || "manual",
+          sourceType: form.sourceType || form.source || "manual",
+          reviewRequired: false,
         },
         editingId || undefined
       );
@@ -128,6 +142,19 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
     } catch (error) {
       onError?.(error?.message || String(error));
       onToast("Failed to delete transaction.", "error");
+    }
+  }
+
+  async function markTransactionIgnored(transaction, ignoredFromAnalytics = true) {
+    try {
+      await updateTransactionOverrides(uid, transaction.id, {
+        ignoredFromAnalytics,
+        reviewRequired: false,
+      });
+      onToast(ignoredFromAnalytics ? "Transaction ignored from analytics." : "Transaction restored.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to update transaction override.", "error");
     }
   }
 
@@ -199,6 +226,50 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
         action={<button type="button" className="pillButton" onClick={() => setShowFilters(true)}>Open filters</button>}
       />
 
+      <SurfaceCard>
+        <SectionHeader
+          eyebrow="Automation Review"
+          title="Transfers, card payments, and uncategorized items"
+          subtitle={
+            automationReview.transactionReviews.length
+              ? "Only low-confidence items are surfaced here."
+              : "This filter has no pending automation review."
+          }
+        />
+        {automationReview.transactionReviews.length === 0 ? (
+          <div className="sectionSubtitle">No ambiguous transfers, uncategorized activity, or card payment reviews here.</div>
+        ) : (
+          <div className="stackedList">
+            {automationReview.transactionReviews.slice(0, 6).map((transaction) => (
+              <TransactionRow
+                key={`review-${transaction.id}`}
+                name={getTransactionDisplayName(transaction)}
+                subtitle={
+                  isTransactionTransfer(transaction)
+                    ? "Transfer review required"
+                    : isTransactionCardPayment(transaction)
+                      ? "Card payment review"
+                      : `Needs category or merchant cleanup • ${accountNameById[transaction.accountId] || "Unassigned"}`
+                }
+                amount={formatCurrency(transaction.amount, cfg.currency)}
+                amountTone={safeNumber(transaction.amount, 0) < 0 ? "negative" : "positive"}
+                icon="transactions"
+                action={
+                  <div className="row">
+                    <button type="button" className="iconButton" onClick={() => startEdit(transaction)} aria-label="Edit transaction">
+                      <Icon name="dots" size={16} />
+                    </button>
+                    <button type="button" className="iconButton" onClick={() => markTransactionIgnored(transaction, true)} aria-label="Ignore transaction">
+                      <Icon name="close" size={16} />
+                    </button>
+                  </div>
+                }
+              />
+            ))}
+          </div>
+        )}
+      </SurfaceCard>
+
       {groups.length === 0 ? (
         <SurfaceCard>
           <div className="sectionTitle">No transactions for this filter</div>
@@ -219,8 +290,8 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
               {group.rows.map((transaction) => (
                 <TransactionRow
                   key={transaction.id}
-                  name={transaction.payee}
-                  subtitle={`${transaction.date || "-"} • ${getEffectiveTransactionCategory(transaction)} • ${accountNameById[transaction.accountId] || "Unassigned"}`}
+                  name={getTransactionDisplayName(transaction)}
+                  subtitle={`${transaction.date || "-"} • ${getEffectiveTransactionCategory(transaction)} • ${accountNameById[transaction.accountId] || "Unassigned"}${isTransactionTransfer(transaction) ? " • Transfer" : isTransactionCardPayment(transaction) ? " • Card payment" : ""}`}
                   amount={formatCurrency(transaction.amount, cfg.currency)}
                   amountTone={safeNumber(transaction.amount, 0) < 0 ? "negative" : "positive"}
                   icon="transactions"
@@ -251,6 +322,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
           <label>Payee<input value={form.payee} onChange={(e) => setForm({ ...form, payee: e.target.value })} /></label>
           <label>Category<input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></label>
           <label>Category Override<input value={form.userCategoryOverride || ""} onChange={(e) => setForm({ ...form, userCategoryOverride: e.target.value })} /></label>
+          <label>Merchant Rename<input value={form.userMerchantRename || ""} onChange={(e) => setForm({ ...form, userMerchantRename: e.target.value })} /></label>
           <label>Amount<input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
           <label>
             Account
@@ -261,6 +333,13 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
                   {account.name}
                 </option>
               ))}
+            </select>
+          </label>
+          <label>
+            Ignore from analytics
+            <select value={form.ignoredFromAnalytics ? "yes" : "no"} onChange={(e) => setForm({ ...form, ignoredFromAnalytics: e.target.value === "yes" })}>
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
             </select>
           </label>
           <label style={{ gridColumn: "1 / -1" }}>Notes<textarea value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>

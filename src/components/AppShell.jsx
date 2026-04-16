@@ -69,8 +69,9 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
 
       <div className="shellViewport">
         <main className="shellContent">{children}</main>
-        <BottomTabBar route={route} />
       </div>
+
+      <BottomTabBar route={route} />
     </div>
   );
 }

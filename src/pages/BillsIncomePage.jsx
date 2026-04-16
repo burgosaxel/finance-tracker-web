@@ -10,7 +10,11 @@ import Icon from "../components/ui/Icons";
 import { RecurringRow, MenuRow } from "../components/ui/Rows";
 import { routeHref } from "../lib/hashRouter";
 import {
+  confirmStatementBillMatch,
+  confirmStatementIncomeMatch,
   deleteStatementItem,
+  dismissStatementBillMatch,
+  dismissStatementIncomeMatch,
   deleteTemplate,
   markStatementBillPaid,
   markStatementIncomeReceived,
@@ -29,6 +33,7 @@ import {
   monthKey,
   safeNumber,
 } from "../lib/finance";
+import { getAutomationReviewSummary, getTransactionDisplayName } from "../lib/automation";
 
 const EMPTY_BILL = {
   merchant: "",
@@ -83,6 +88,7 @@ export default function BillsIncomePage({
   billTemplates,
   incomeTemplates,
   accounts,
+  transactions = [],
   settings,
   onToast,
   onError,
@@ -158,6 +164,10 @@ export default function BillsIncomePage({
         amount: safeNumber(cashflow.nextExpectedIncome.amount ?? cashflow.nextExpectedIncome.expectedAmount, 0),
       }
     : null;
+  const automationReview = useMemo(
+    () => getAutomationReviewSummary({ bills, income, transactions }),
+    [bills, income, transactions]
+  );
 
   function goMonth(step) {
     const next = new Date(viewDate.getFullYear(), viewDate.getMonth() + step, 1);
@@ -319,6 +329,56 @@ export default function BillsIncomePage({
     } catch (error) {
       onError?.(error?.message || String(error));
       onToast("Failed to sync recurring items.", "error");
+    }
+  }
+
+  async function confirmBillSuggestion(bill) {
+    const transaction = (transactions || []).find((entry) => entry.id === bill.matchedTransactionId);
+    if (!transaction) return;
+    try {
+      await confirmStatementBillMatch(uid, currentMonth, bill, transaction);
+      onToast(`Confirmed ${bill.merchant || bill.name}.`);
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to confirm bill match.", "error");
+    }
+  }
+
+  async function dismissBillSuggestion(bill, ignore = false) {
+    try {
+      await dismissStatementBillMatch(uid, currentMonth, bill.id, {
+        ignore,
+        matchedTransactionId: bill.matchedTransactionId,
+      });
+      onToast(ignore ? "Bill suggestion ignored." : "Bill suggestion cleared.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to update bill suggestion.", "error");
+    }
+  }
+
+  async function confirmIncomeSuggestion(item) {
+    const transaction = (transactions || []).find((entry) => entry.id === item.matchedTransactionId);
+    if (!transaction) return;
+    try {
+      await confirmStatementIncomeMatch(uid, currentMonth, item, transaction);
+      onToast(`Confirmed ${item.source || item.name}.`);
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to confirm income match.", "error");
+    }
+  }
+
+  async function dismissIncomeSuggestion(item, ignore = false) {
+    try {
+      await dismissStatementIncomeMatch(uid, currentMonth, item.id, {
+        ignore,
+        matchedTransactionId: item.matchedTransactionId,
+      });
+      onToast(ignore ? "Income suggestion ignored." : "Income suggestion cleared.");
+    } catch (error) {
+      onError?.(error?.message || String(error));
+      onToast("Failed to update income suggestion.", "error");
     }
   }
 
@@ -510,6 +570,70 @@ export default function BillsIncomePage({
           action={<a href={routeHref("dashboard")} className="pillButton">Dashboard</a>}
         />
       </div>
+
+      <SurfaceCard>
+        <SectionHeader
+          eyebrow="Automation Review"
+          title="Suggested bill and income matches"
+          subtitle={
+            automationReview.billSuggestions.length || automationReview.incomeSuggestions.length
+              ? "High-confidence items auto-complete. The rest stay here for review."
+              : "No recurring match suggestions need review right now."
+          }
+        />
+        {automationReview.billSuggestions.length === 0 && automationReview.incomeSuggestions.length === 0 ? (
+          <div className="sectionSubtitle">You do not have any pending recurring suggestions in this month.</div>
+        ) : (
+          <div className="stackedList">
+            {automationReview.billSuggestions.map((bill) => {
+              const transaction = (transactions || []).find((entry) => entry.id === bill.matchedTransactionId);
+              return (
+                <RecurringRow
+                  key={`bill-review-${bill.id}`}
+                  name={bill.merchant || bill.name}
+                  subtitle={`${transaction ? getTransactionDisplayName(transaction) : "Suggested transaction"} • ${bill.matchConfidence || "medium"} confidence`}
+                  amount={formatCurrency(bill.amount, cfg.currency)}
+                  badge={{ label: "Bill review", tone: "warning" }}
+                  icon="recurring"
+                  action={
+                    <div className="row">
+                      <button type="button" className="iconButton" onClick={() => confirmBillSuggestion(bill)} aria-label="Confirm bill suggestion">
+                        <Icon name="check" size={16} />
+                      </button>
+                      <button type="button" className="iconButton" onClick={() => dismissBillSuggestion(bill, false)} aria-label="Dismiss bill suggestion">
+                        <Icon name="close" size={16} />
+                      </button>
+                    </div>
+                  }
+                />
+              );
+            })}
+            {automationReview.incomeSuggestions.map((item) => {
+              const transaction = (transactions || []).find((entry) => entry.id === item.matchedTransactionId);
+              return (
+                <RecurringRow
+                  key={`income-review-${item.id}`}
+                  name={item.source || item.name}
+                  subtitle={`${transaction ? getTransactionDisplayName(transaction) : "Suggested deposit"} • ${item.matchConfidence || "medium"} confidence`}
+                  amount={formatCurrency(item.amount ?? item.expectedAmount, cfg.currency)}
+                  badge={{ label: "Income review", tone: "warning" }}
+                  icon="income"
+                  action={
+                    <div className="row">
+                      <button type="button" className="iconButton" onClick={() => confirmIncomeSuggestion(item)} aria-label="Confirm income suggestion">
+                        <Icon name="check" size={16} />
+                      </button>
+                      <button type="button" className="iconButton" onClick={() => dismissIncomeSuggestion(item, false)} aria-label="Dismiss income suggestion">
+                        <Icon name="close" size={16} />
+                      </button>
+                    </div>
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
+      </SurfaceCard>
 
       <SurfaceCard>
         <SectionHeader

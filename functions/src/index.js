@@ -11,6 +11,7 @@ import {
   getUserPrivateItems,
   loadPrivateItem,
   refreshRecurringPayments,
+  runAutomationForUser,
   syncLinkedAccounts,
   syncTransactionsPage,
   updateSyncState,
@@ -223,6 +224,7 @@ async function syncPlaidTransactionsForItem({ uid, plaidItemId, accessToken, cli
   });
 
   await refreshRecurringPayments(uid);
+  const automationSummary = await runAutomationForUser(uid);
   await setPlaidSyncState(uid, {
     lastGlobalSyncAt: new Date().toISOString(),
     syncStatus: "synced",
@@ -240,11 +242,13 @@ async function syncPlaidTransactionsForItem({ uid, plaidItemId, accessToken, cli
     lastCursor: cursor || "",
     transactionPath: `users/${uid}/transactions/{transactionId}`,
     syncStatePath: `users/${uid}/syncState/plaid`,
+    automationSummary,
   });
 
   return {
     institutionName: linkedAccountDocs.institutionName,
     accountCount: linkedAccountDocs.accountCount,
+    automationSummary,
     ...totals,
   };
 }

@@ -12,6 +12,7 @@ const EMPTY_CARD = {
   apr: 0,
   minimumPayment: 0,
   dueDay: "",
+  sourceType: "manual",
 };
 
 const SORT_DEFAULTS = {
@@ -50,6 +51,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
       const minimum = safeNumber(c.minimumPayment, 0);
       return {
         ...c,
+        sourceType: c.sourceType || "manual",
         limit,
         balance,
         minimumPayment: minimum,
@@ -121,6 +123,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
       apr: card.apr || 0,
       minimumPayment: card.minimumPayment || 0,
       dueDay: card.dueDay || "",
+      sourceType: card.sourceType || "manual",
     });
     setOpen(true);
   }
@@ -134,6 +137,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
         {
           ...form,
           name: form.name.trim(),
+          sourceType: form.sourceType || "manual",
           limit: safeNumber(form.limit, 0),
           balance: safeNumber(form.balance, 0),
           apr: safeNumber(form.apr, 0),
@@ -210,7 +214,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
               {rows.length === 0 ? <tr><td colSpan={10} className="muted">No credit cards yet.</td></tr> : null}
               {rows.map((card) => (
                 <tr key={card.id}>
-                  <td>{card.name}</td>
+                  <td>{card.name} {card.sourceType === "plaid" ? <span className="pill">Synced</span> : null}</td>
                   <td>{card.issuer || "-"}</td>
                   <td>{formatCurrency(card.limit, cfg.currency)}</td>
                   <td className="value-negative">{formatCurrency(card.balance, cfg.currency)}</td>
@@ -254,7 +258,7 @@ export default function CreditCardsPage({ uid, cards, settings, onToast, onError
             <div className="dataItemHeader">
               <div>
                 <h3 className="dataItemTitle">{card.name}</h3>
-                <div className="muted compactSubtext">{card.issuer || "No issuer"}</div>
+                <div className="muted compactSubtext">{card.issuer || "No issuer"}{card.sourceType === "plaid" ? " • Synced via Plaid" : ""}</div>
               </div>
               <span className={card.utilization > cfg.utilizationThreshold ? "pill danger" : "pill"}>
                 {formatPercent(card.utilization)}

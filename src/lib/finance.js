@@ -1,3 +1,8 @@
+import {
+  shouldExcludeFromIncome,
+  shouldExcludeFromSpending,
+} from "./automation";
+
 export const DEFAULT_SETTINGS = {
   utilizationThreshold: 30,
   currency: "USD",
@@ -331,8 +336,10 @@ export function summarizeCashFlowFromTransactions(transactions, month = monthKey
     (summary, transaction) => {
       const amount = safeNumber(transaction.amount, 0);
       if (amount >= 0) {
+        if (shouldExcludeFromIncome(transaction)) return summary;
         summary.inflow += amount;
       } else {
+        if (shouldExcludeFromSpending(transaction)) return summary;
         summary.outflow += Math.abs(amount);
       }
       return summary;
@@ -346,6 +353,7 @@ export function summarizeSpendingByCategory(transactions, month = monthKey(), li
   for (const transaction of getMonthTransactions(transactions, month)) {
     const amount = safeNumber(transaction.amount, 0);
     if (amount >= 0) continue;
+    if (shouldExcludeFromSpending(transaction)) continue;
     const key = getEffectiveTransactionCategory(transaction);
     totals.set(key, (totals.get(key) || 0) + Math.abs(amount));
   }
