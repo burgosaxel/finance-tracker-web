@@ -1,12 +1,13 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  const isDevServer = command === "serve";
   return {
     plugins: [react()],
-    // GitHub Pages project site path. Override via VITE_BASE_PATH when needed.
-    base: env.VITE_BASE_PATH || "/finance-tracker-web/",
+    // Use root in local dev, but keep the GitHub Pages project path for builds.
+    base: isDevServer ? "/" : env.VITE_BASE_PATH || "/finance-tracker-web/",
     build: {
       outDir: env.VITE_BUILD_OUT_DIR || "dist",
       sourcemap: true,
