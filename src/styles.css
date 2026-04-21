@@ -439,6 +439,10 @@ textarea {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.summaryGrid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .summaryCell {
   border: 1px solid var(--border);
   background: var(--surface-alt);
@@ -450,6 +454,11 @@ textarea {
 
 .summaryCell strong {
   font-size: 0.95rem;
+}
+
+.summaryCell.compact {
+  padding: 6px 8px;
+  gap: 2px;
 }
 
 .compactSubtext {
@@ -613,13 +622,246 @@ tfoot td {
   border-color: var(--toast-error-border);
 }
 
+.authShell {
+  min-height: calc(100vh - 28px);
+  min-height: calc(100dvh - 28px);
+  display: grid;
+  place-items: center;
+  padding: clamp(20px, 6vw, 48px) 0;
+}
+
 .signInCard {
-  max-width: 460px;
-  margin: 80px auto;
-  padding: 20px;
-  background: linear-gradient(180deg, var(--surface-overlay), transparent), var(--surface);
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: clamp(22px, 5vw, 34px);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 30%),
+    linear-gradient(180deg, var(--surface-overlay), transparent),
+    var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px rgba(3, 10, 21, 0.34);
+  display: grid;
+  gap: 24px;
+}
+
+.authBrand {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.authBrandMark {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f8fbff;
+  background: linear-gradient(180deg, var(--button-primary-top), var(--button-primary-bottom));
+  box-shadow: 0 18px 30px rgba(31, 111, 219, 0.28);
+}
+
+.authBrandCopy {
+  display: grid;
+  gap: 8px;
+}
+
+.authBrandCopy h1 {
+  font-size: clamp(2.1rem, 7vw, 3.2rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.authBrandCopy p {
+  margin: 0;
+  font-size: clamp(1rem, 3vw, 1.08rem);
+  max-width: 30ch;
+}
+
+.authPanel {
+  display: grid;
+  gap: 18px;
+  padding: clamp(18px, 4vw, 24px);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
+}
+
+.authPanelIntro {
+  display: grid;
+  gap: 6px;
+}
+
+.authPanelIntro h2 {
+  font-size: 1.55rem;
+  letter-spacing: -0.03em;
+}
+
+.authPanelIntro p {
+  margin: 0;
+}
+
+.authForm {
+  display: grid;
+  gap: 14px;
+}
+
+.authSubmodeTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  border-bottom: 1px solid var(--border);
+}
+
+.authTabButton {
+  border: 0;
+  border-bottom: 4px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 10px 0 12px;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  text-align: left;
+}
+
+.authTabButton:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-primary);
+}
+
+.authTabButton.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+.authField {
+  display: grid;
+  gap: 8px;
+}
+
+.authField span {
+  color: var(--text-secondary);
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.authField input {
+  min-height: 56px;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 1rem;
+}
+
+.authHint {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-alt);
+}
+
+.authFormMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+}
+
+.authLinkButton {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.authLinkButton:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.authLinkButtonCentered {
+  justify-self: center;
+  color: var(--accent);
+  margin-top: -2px;
+}
+
+.authInlineNote {
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.authDivider {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.authDivider::before,
+.authDivider::after {
+  content: "";
+  height: 1px;
+  background: var(--border);
+}
+
+.authConnectList {
+  display: grid;
+  gap: 12px;
+}
+
+.authProviderButton {
+  width: 100%;
+  min-height: 58px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--input-bg);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.authProviderIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #ea4335;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+}
+
+.authStatus {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.authSubmitButton {
+  width: 100%;
+  min-height: 58px;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 
 .neg {
@@ -628,6 +870,594 @@ tfoot td {
 
 .pos {
   color: var(--pos);
+}
+
+.plannerHeader {
+  display: grid;
+  gap: 12px;
+}
+
+.plannerAlerts {
+  display: grid;
+  gap: 8px;
+}
+
+.plannerAlert {
+  border-left: 4px solid var(--accent);
+}
+
+.plannerAlert.warning {
+  border-left-color: var(--warning);
+}
+
+.plannerAlert.danger {
+  border-left-color: var(--danger);
+}
+
+.plannerPaychecks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.plannerPaychecks.simplified {
+  gap: 12px;
+}
+
+.paycheckCard {
+  display: grid;
+  gap: 12px;
+}
+
+.paycheckCard.simplified {
+  gap: 10px;
+}
+
+.paycheckHeader {
+  align-items: flex-start;
+}
+
+.paycheckConfig {
+  justify-content: flex-end;
+}
+
+.plannerPage {
+  gap: 10px;
+}
+
+.plannerTopBar {
+  display: grid;
+  gap: 8px;
+}
+
+.plannerTopMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.92rem;
+}
+
+.plannerTopMetric {
+  white-space: nowrap;
+}
+
+.plannerControlRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.plannerSetupStrip {
+  display: grid;
+  gap: 10px;
+}
+
+.paycheckHeaderCompact {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.paycheckHeaderControls {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inlineField {
+  display: grid;
+  gap: 4px;
+  min-width: 110px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.inlineField.compact {
+  min-width: 88px;
+}
+
+.inlineField.compact input {
+  padding: 6px 8px;
+}
+
+.plannerSummaryGrid {
+  align-items: stretch;
+}
+
+.plannerTableWrap {
+  overflow: auto;
+}
+
+.plannerTable {
+  min-width: 100%;
+}
+
+.plannerTable.compact {
+  table-layout: fixed;
+  font-size: 0.92rem;
+}
+
+.plannerTable.compact th,
+.plannerTable.compact td {
+  padding: 5px 6px;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.plannerTable th,
+.plannerTable td {
+  vertical-align: middle;
+}
+
+.plannerTableWithoutAccount.compact th:nth-child(2),
+.plannerTableWithoutAccount.compact td:nth-child(2),
+.plannerTableWithoutAccount.compact th:nth-child(3),
+.plannerTableWithoutAccount.compact td:nth-child(3),
+.plannerTableWithoutAccount.compact th:nth-child(4),
+.plannerTableWithoutAccount.compact td:nth-child(4) {
+  text-align: center;
+}
+
+.plannerTableWithAccount.compact th:nth-child(1),
+.plannerTableWithAccount.compact td:nth-child(1) {
+  width: 29%;
+}
+
+.plannerTableWithAccount.compact th:nth-child(2),
+.plannerTableWithAccount.compact td:nth-child(2) {
+  width: 9%;
+}
+
+.plannerTableWithAccount.compact th:nth-child(3),
+.plannerTableWithAccount.compact td:nth-child(3) {
+  width: 22%;
+}
+
+.plannerTableWithAccount.compact th:nth-child(4),
+.plannerTableWithAccount.compact td:nth-child(4) {
+  width: 14%;
+}
+
+.plannerTableWithAccount.compact th:nth-child(5),
+.plannerTableWithAccount.compact td:nth-child(5) {
+  width: 26%;
+}
+
+.plannerTableWithoutAccount.compact th:nth-child(1),
+.plannerTableWithoutAccount.compact td:nth-child(1) {
+  width: 45%;
+}
+
+.plannerTableWithoutAccount.compact th:nth-child(2),
+.plannerTableWithoutAccount.compact td:nth-child(2) {
+  width: 12%;
+}
+
+.plannerTableWithoutAccount.compact th:nth-child(3),
+.plannerTableWithoutAccount.compact td:nth-child(3) {
+  width: 16%;
+}
+
+.plannerTableWithoutAccount.compact th:nth-child(4),
+.plannerTableWithoutAccount.compact td:nth-child(4) {
+  width: 27%;
+}
+
+.tableSortButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tableSortButton:hover {
+  color: var(--accent);
+}
+
+.plannerBillTitle {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.plannerVerificationCell {
+  display: grid;
+  gap: 4px;
+}
+
+.plannerRowActions {
+  justify-content: flex-end;
+}
+
+.plannerPaidToggle,
+.plannerBillActionButton {
+  min-width: 0;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4px 6px;
+  font-size: 0.84rem;
+  line-height: 1.15;
+  border-radius: 10px;
+}
+
+.plannerPaidToggle.isPaid,
+.plannerBillActionButton.isPaid {
+  border-color: rgba(22, 163, 74, 0.35);
+  color: var(--success);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.plannerBillActionButton.isHolding {
+  border-color: rgba(85, 166, 255, 0.45);
+  background: rgba(85, 166, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.paycheckAccounts {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.accountBoard {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  align-items: start;
+}
+
+.accountGroup {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 8px;
+  min-width: 0;
+  align-self: start;
+}
+
+.accountGroup .plannerTableWrap {
+  overflow-x: hidden;
+}
+
+.accountGroup .plannerTable.compact td:nth-child(2),
+.accountGroup .plannerTable.compact th:nth-child(2),
+.accountGroup .plannerTable.compact td:nth-child(4),
+.accountGroup .plannerTable.compact th:nth-child(4),
+.accountGroup .plannerTable.compact td:nth-child(5),
+.accountGroup .plannerTable.compact th:nth-child(5) {
+  white-space: nowrap;
+}
+
+.plannerTableWithoutAccount.compact td:nth-child(2),
+.plannerTableWithoutAccount.compact th:nth-child(2) {
+  padding-right: 10px;
+}
+
+.plannerTableWithoutAccount.compact td:nth-child(3),
+.plannerTableWithoutAccount.compact th:nth-child(3) {
+  padding-left: 2px;
+}
+
+.accountGroup .plannerTable.compact td:nth-child(3) span {
+  display: block;
+  line-height: 1.25;
+}
+
+.accountGroup .plannerTable.compact input,
+.accountGroup .plannerTable.compact select,
+.accountGroup .plannerTable.compact td:last-child button {
+  padding: 4px 6px;
+  font-size: 0.84rem;
+}
+
+.accountGroup .plannerTable.compact td:last-child button {
+  width: 100%;
+}
+
+.plannerAmountInput {
+  min-width: 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.plannerDueCell {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.plannerAmountInput::-webkit-outer-spin-button,
+.plannerAmountInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.plannerReviewButton {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 0.84rem;
+  line-height: 1.15;
+  border-radius: 10px;
+}
+
+.plannerAccountSelect {
+  min-width: 0;
+}
+
+.accountGroupHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.accountGroupHeaderActions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.accountGroupTitle {
+  font-weight: 700;
+}
+
+.accountGroupIncomeStatus {
+  margin-top: 6px;
+}
+
+.accountGroupTotals {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.accountBoard > .muted {
+  grid-column: 1 / -1;
+}
+
+.billRowNeedsReview td {
+  border-bottom: 0;
+}
+
+.variableReviewRow td {
+  padding-top: 0;
+}
+
+.variableReview {
+  border: 1px dashed rgba(217, 119, 6, 0.35);
+  background: rgba(217, 119, 6, 0.06);
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.variableReviewHeader {
+  align-items: center;
+}
+
+.setupStepPills {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.onboardingStepPills {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.setupStepPill {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  background: var(--surface-alt);
+}
+
+.setupStepPill span {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--button-bg);
+  font-size: 12px;
+}
+
+.setupStepPill.active {
+  color: var(--text-primary);
+  border-color: var(--accent);
+  background: rgba(47, 140, 255, 0.08);
+}
+
+.setupStepBody {
+  display: grid;
+  gap: 12px;
+}
+
+.onboardingStepContent {
+  display: grid;
+  gap: 12px;
+}
+
+.onboardingDraftList {
+  display: grid;
+  gap: 10px;
+  max-height: 45vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.onboardingDraftCard {
+  display: grid;
+  gap: 10px;
+}
+
+.onboardingDraftActions,
+.onboardingFooterActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.setupBulkBar,
+.setupActionRow,
+.setupFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.setupList {
+  display: grid;
+  gap: 8px;
+}
+
+.setupRow,
+.setupCard {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--surface-alt);
+}
+
+.setupRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(180px, 220px);
+  gap: 8px;
+  align-items: center;
+}
+
+.setupCard {
+  display: grid;
+  gap: 8px;
+}
+
+.setupRowMain {
+  display: grid;
+  gap: 2px;
+}
+
+.setupRowMeta {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.setupSection {
+  display: grid;
+  gap: 8px;
+}
+
+.plannerIssueList {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.plannerIssue {
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+}
+
+.plannerIssue.warning {
+  border-color: rgba(217, 119, 6, 0.35);
+}
+
+.plannerIssue.danger {
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.plannerIssue.success {
+  border-color: rgba(22, 163, 74, 0.35);
+}
+
+.compactIssue {
+  font-size: 0.9rem;
+}
+
+.statusPill.success {
+  color: var(--success);
+}
+
+.statusPill.warning {
+  color: var(--warning);
+}
+
+.statusPill.danger {
+  color: var(--danger);
+}
+
+.fieldNeedsReview {
+  border-color: var(--warning);
+  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.2);
+}
+
+.templateFlags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.accountsOverviewGrid .summaryCell {
+  min-width: 0;
+}
+
+.checkField {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkField input {
+  width: auto;
+}
+
+.compactCheck {
+  font-size: 0.9rem !important;
 }
 
 @media (max-width: 1024px) {
@@ -647,6 +1477,10 @@ tfoot td {
 
   .statsGrid {
     grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+
+  .accountBoard {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
 }
 
@@ -842,6 +1676,133 @@ tfoot td {
     gap: 8px;
     font-size: 0.9rem;
   }
+
+  .summaryGrid.four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .accountsOverviewGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plannerTopMeta,
+  .accountGroupHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .setupRow {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .plannerControlRow {
+    justify-content: flex-start;
+  }
+
+  .paycheckAccounts {
+    grid-template-columns: 1fr;
+  }
+
+  .accountBoard {
+    grid-template-columns: 1fr;
+  }
+
+  .plannerTable.compact {
+    font-size: 0.84rem;
+  }
+
+  .plannerTable.compact th,
+  .plannerTable.compact td {
+    padding: 5px 4px;
+  }
+
+  .plannerTableWithoutAccount.compact th:nth-child(1),
+  .plannerTableWithoutAccount.compact td:nth-child(1) {
+    width: 50%;
+  }
+
+  .plannerTableWithoutAccount.compact th:nth-child(2),
+  .plannerTableWithoutAccount.compact td:nth-child(2) {
+    width: 8%;
+    padding-right: 2px;
+  }
+
+  .plannerTableWithoutAccount.compact th:nth-child(3),
+  .plannerTableWithoutAccount.compact td:nth-child(3) {
+    width: 16%;
+    padding-left: 1px;
+    padding-right: 1px;
+  }
+
+  .plannerTableWithoutAccount.compact th:nth-child(4),
+  .plannerTableWithoutAccount.compact td:nth-child(4) {
+    width: 26%;
+    padding-left: 1px;
+    padding-right: 1px;
+  }
+
+  .tableSortButton,
+  .plannerAmountInput,
+  .plannerPaidToggle,
+  .plannerReviewButton,
+  .plannerBillActionButton {
+    font-size: 0.74rem;
+  }
+
+  .plannerAmountInput,
+  .plannerPaidToggle,
+  .plannerReviewButton,
+  .plannerBillActionButton {
+    padding: 3px;
+  }
+
+  .plannerPaidToggle,
+  .plannerReviewButton,
+  .plannerBillActionButton {
+    border-radius: 8px;
+    line-height: 1.05;
+  }
+
+  .plannerTableWithoutAccount.compact th:nth-child(2),
+  .plannerTableWithoutAccount.compact th:nth-child(3),
+  .plannerTableWithoutAccount.compact th:nth-child(4) {
+    font-size: 0.72rem;
+    letter-spacing: 0.01em;
+  }
+
+  .authShell {
+    min-height: calc(100dvh - 28px - 20px);
+    place-items: start center;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .signInCard {
+    width: 100%;
+    border-radius: 24px;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .authPanel {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .authBrandMark {
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    font-size: 1.05rem;
+  }
+
+  .authBrandCopy h1 {
+    font-size: clamp(1.7rem, 8vw, 2.45rem);
+  }
+
+  .authPanelIntro h2 {
+    font-size: 1.18rem;
+  }
 }
 
 @media (max-width: 640px) {
@@ -875,6 +1836,12 @@ tfoot td {
 }
 
 @media (max-width: 480px) {
+  .authShell {
+    min-height: calc(100dvh - 28px - 20px);
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
   .tableWrap {
     -webkit-overflow-scrolling: touch;
   }
@@ -904,6 +1871,22 @@ tfoot td {
     grid-template-columns: 1fr 1fr;
   }
 
+  .summaryGrid.four {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .accountsOverviewGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dataItemHeader {
+    align-items: flex-start;
+  }
+
+  .setupStepPills {
+    grid-template-columns: 1fr;
+  }
+
   .summaryCell {
     padding: 7px;
   }
@@ -931,5 +1914,127 @@ tfoot td {
     justify-self: end;
     align-self: center;
     white-space: nowrap;
+  }
+
+  .signInCard {
+    padding: 16px;
+    border-radius: 20px;
+    gap: 14px;
+    max-height: calc(100dvh - 28px - 20px - 20px);
+    overflow: auto;
+  }
+
+  .authBrand {
+    gap: 10px;
+  }
+
+  .authBrandCopy {
+    gap: 4px;
+  }
+
+  .authBrandCopy h1 {
+    font-size: clamp(1.45rem, 7.1vw, 1.95rem);
+  }
+
+  .authBrandCopy p {
+    font-size: 0.84rem;
+  }
+
+  .authPanel {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .authSubmodeTabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .authTabButton {
+    padding: 7px 0 9px;
+    font-size: 0.9rem;
+  }
+
+  .authPanelIntro {
+    gap: 2px;
+  }
+
+  .authPanelIntro h2 {
+    font-size: 1rem;
+  }
+
+  .authPanelIntro p,
+  .authInlineNote,
+  .authDivider {
+    font-size: 0.82rem;
+  }
+
+  .authField {
+    gap: 4px;
+  }
+
+  .authField span {
+    font-size: 0.84rem;
+  }
+
+  .authField input,
+  .authSubmitButton {
+    min-height: 44px;
+    font-size: 0.92rem;
+  }
+
+  .authField input {
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  .authSubmitButton {
+    min-height: 46px;
+    border-radius: 16px;
+  }
+
+  .authProviderButton {
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+  }
+
+  .authProviderIcon {
+    width: 24px;
+    height: 24px;
+    font-size: 0.86rem;
+  }
+
+  .authLinkButtonCentered {
+    font-size: 0.88rem;
+  }
+}
+
+@media (max-width: 480px) and (max-height: 780px) {
+  .signInCard {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .authBrandMark {
+    width: 52px;
+    height: 52px;
+    border-radius: 15px;
+    font-size: 0.98rem;
+  }
+
+  .authBrandCopy h1 {
+    font-size: clamp(1.3rem, 6.5vw, 1.8rem);
+  }
+
+  .authPanel {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .authField input,
+  .authSubmitButton,
+  .authProviderButton {
+    min-height: 42px;
   }
 }

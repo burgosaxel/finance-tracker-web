@@ -34,6 +34,7 @@ export default function SettingsPage({
   onToast,
   onError,
   selectedMonth,
+  onOpenOnboarding,
 }) {
   const cfg = { ...DEFAULT_SETTINGS, ...(settings || {}) };
   const [localSettings, setLocalSettings] = useState(cfg);
@@ -51,6 +52,7 @@ export default function SettingsPage({
   async function persistSettings() {
     try {
       await saveSettings(uid, {
+        ...settings,
         utilizationThreshold: safeNumber(localSettings.utilizationThreshold, 30),
         currency: localSettings.currency || "USD",
         monthStartDay: Math.max(1, Math.min(31, safeNumber(localSettings.monthStartDay, 1))),
@@ -198,6 +200,9 @@ export default function SettingsPage({
 
       <section className="card section">
         <h3>App Preferences</h3>
+        <div className="muted pageIntro">
+          Planner settings stay manual-first. Plaid only augments balances and bill verification.
+        </div>
         <div className="formGrid">
           <label>
             Utilization Threshold (%)
@@ -238,6 +243,7 @@ export default function SettingsPage({
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <button type="button" className="primary" onClick={persistSettings}>Save Settings</button>
+          <button type="button" onClick={onOpenOnboarding}>Run Setup Again</button>
         </div>
       </section>
 

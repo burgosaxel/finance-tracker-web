@@ -1,10 +1,10 @@
-const ROUTES = ["dashboard", "budget", "credit-cards", "loans", "bills-income", "transactions", "settings"];
+const ROUTES = ["planner", "bills", "income", "accounts", "activity", "settings"];
 
 export function getRouteFromHash() {
-  const hash = window.location.hash || "#/dashboard";
+  const hash = window.location.hash || "#/planner";
   const raw = hash.replace(/^#\/?/, "").trim().toLowerCase();
   if (ROUTES.includes(raw)) return raw;
-  return "dashboard";
+  return "planner";
 }
 
 export function routeHref(route) {

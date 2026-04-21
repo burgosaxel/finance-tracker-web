@@ -3,6 +3,38 @@ export const DEFAULT_SETTINGS = {
   currency: "USD",
   monthStartDay: 1,
   recommendedPaymentRate: 0.03,
+  paychecks: {
+    slot1: {
+      label: "Paycheck 1",
+      depositDay: 1,
+      expectedIncome: 0,
+    },
+    slot2: {
+      label: "Paycheck 2",
+      depositDay: 15,
+      expectedIncome: 0,
+    },
+    slot3: {
+      label: "Paycheck 3",
+      depositDay: 22,
+      expectedIncome: 0,
+    },
+    slot4: {
+      label: "Paycheck 4",
+      depositDay: 29,
+      expectedIncome: 0,
+    },
+    slot5: {
+      label: "Paycheck 5",
+      depositDay: 31,
+      expectedIncome: 0,
+    },
+    slot6: {
+      label: "Paycheck 6",
+      depositDay: 31,
+      expectedIncome: 0,
+    },
+  },
 };
 
 export function monthKey(date = new Date()) {
@@ -41,6 +73,13 @@ export function formatPercent(value) {
 export function safeNumber(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+export function createId(prefix = "id") {
+  if (typeof globalThis !== "undefined" && globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function computeNextDueDate(dueDay, now = new Date()) {

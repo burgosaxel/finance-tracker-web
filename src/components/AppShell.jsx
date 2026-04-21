@@ -2,12 +2,11 @@ import React, { useEffect, useState } from "react";
 import { routeHref } from "../lib/hashRouter";
 
 const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "budget", label: "Budget" },
-  { id: "credit-cards", label: "Credit Cards" },
-  { id: "loans", label: "Loans" },
-  { id: "bills-income", label: "Bills & Income" },
-  { id: "transactions", label: "Transactions" },
+  { id: "planner", label: "Planner" },
+  { id: "bills", label: "Bill Templates" },
+  { id: "income", label: "Income" },
+  { id: "accounts", label: "Accounts" },
+  { id: "activity", label: "Activity" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -25,7 +24,8 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
   return (
     <div className="appShell">
       <aside className="sidebar card desktopOnly">
-        <div className="sidebarTitle">Finance Tracker</div>
+        <div className="sidebarTitle">BudgetCommand</div>
+        <div className="muted pageIntro">Money operations and paycheck planning.</div>
         <nav className="sidebarNav">
           {NAV_ITEMS.map((item) => (
             <a
@@ -40,7 +40,7 @@ export default function AppShell({ route, user, status, onSignOut, children }) {
       </aside>
       <div className="mainPanel">
         <header className="mobileHeader card">
-          <div className="sidebarTitle">Finance Tracker</div>
+          <div className="sidebarTitle">BudgetCommand</div>
           <button
             type="button"
             className="menuButton"

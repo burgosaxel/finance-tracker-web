@@ -86,7 +86,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
   return (
     <div className="page">
       <div className="row">
-        <h2>Transactions</h2>
+        <h2>Activity / Transactions</h2>
         <div className="spacer" />
         <label>
           Month
@@ -109,7 +109,7 @@ export default function TransactionsPage({ uid, transactions, accounts, settings
         <button type="button" className="primary" onClick={startAdd}>Add Transaction</button>
       </div>
       <p className="muted pageIntro">
-        Activity log for money in and out, with filters for month, account, and category.
+        Secondary workspace for manual entries and linked transaction review. The planner remains the primary workflow.
       </p>
 
       <div className="tableWrap card desktopDataTable">
